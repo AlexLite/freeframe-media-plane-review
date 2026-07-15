@@ -2,18 +2,18 @@
 
 This repository is the deployable source of truth for the Media Plane Review fork of FreeFrame.
 
-Plane is the only user-facing workspace. FreeFrame is an internal media-review engine used for upload, transcode, versioning, frame-accurate comments, annotations, and review status. The fork must stay easy to rebase on validated upstream FreeFrame releases.
+Plane is the only user-facing workspace. FreeFrame is an internal media-review engine used for upload, transcode, versioning, frame-accurate comments, annotations, and review status. The fork must stay easy to update from validated upstream FreeFrame releases.
 
 ## Branches and pull requests
 
-- `develop` is the integration branch and should be the repository default branch.
+- `develop` is the default integration branch.
 - `main` contains production-ready released code.
-- `stable` is a read-only reference for the validated upstream release channel.
+- Upstream release channels such as `upstream/stable` are remote references, not permanent branches in this fork.
 - Create every normal task branch from current `origin/develop` and open its pull request back to `develop`.
 - Use `feat/`, `fix/`, `chore/`, `docs/`, `refactor/`, `test/`, `release/`, and `hotfix/` prefixes with lowercase kebab-case names.
 - Release branches are stabilized from `develop` and merged into `main` only after acceptance validation.
 - Hotfix branches start from `main`, target `main`, and are then merged or cherry-picked into `develop`.
-- Do not push directly to `develop`, `main`, or `stable`, and do not force-push shared branches.
+- Do not push directly to `develop` or `main`, and do not force-push shared branches.
 - Create a local backup branch at the starting SHA before tracked source edits. Keep routine backup branches local; shared immutable rollback points are annotated tags.
 - Never push to the `upstream` remote.
 
@@ -44,12 +44,12 @@ See [`docs/architecture/media-plane-review.md`](./architecture/media-plane-revie
 ## Upstream synchronization
 
 - Add `https://github.com/Techiebutler/freeframe.git` as the local `upstream` remote.
-- Use the validated upstream `stable` branch or an explicitly selected immutable upstream tag as the sync source.
+- Use validated `upstream/stable` or an explicitly selected immutable upstream tag as the sync source.
 - Create a dedicated `chore/sync-upstream-<version>` branch from `develop`.
 - Merge the selected upstream release into that branch, resolve conflicts there, run the full checks, and open a pull request to `develop`.
 - Update [`UPSTREAM_VERSION`](../UPSTREAM_VERSION) in the same pull request.
 - Never merge upstream `main` merely because it is newer.
-- Never move the fork's `stable` branch as part of normal feature work.
+- Do not recreate `stable` or `latest` branches in this fork.
 
 ## Release and deployment
 
