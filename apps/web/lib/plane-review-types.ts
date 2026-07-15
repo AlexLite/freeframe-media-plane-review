@@ -77,3 +77,32 @@ export interface PlaneReviewUploadCompletion {
   asset_id: string
   version_id: string
 }
+
+export interface PlaneReviewCommentAuthor {
+  id: string
+  name: string
+  avatar_url: string | null
+}
+
+export interface PlaneReviewComment {
+  id: string
+  asset_id: string
+  version_id: string
+  parent_id: string | null
+  author_id: string | null
+  timecode_start: number | null
+  timecode_end: number | null
+  body: string
+  resolved: boolean
+  visibility: string
+  created_at: string
+  updated_at: string
+  author: PlaneReviewCommentAuthor | null
+  replies: PlaneReviewComment[]
+}
+
+export interface PlaneReviewCommentCreate {
+  body: string
+  timecode_start?: number
+  timecode_end?: number
+}
