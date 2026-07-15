@@ -70,6 +70,7 @@ class FFmpegTranscoder(BaseTranscoder):
                 "ffmpeg", "-i", input_url,
                 "-vf", "fps=0.1",
                 "-q:v", "2",
+                "-pix_fmt", "yuvj420p",
                 f"{thumb_dir}/thumb_%04d.jpg",
             ]
             self._run(cmd, timeout=600, label="ffmpeg")
@@ -189,6 +190,7 @@ class FFmpegTranscoder(BaseTranscoder):
             thumb_cmd = [
                 "ffmpeg", "-y", "-i", input_url,
                 "-vf", "fps=0.1", "-q:v", "2", "-frames:v", "1",
+                "-pix_fmt", "yuvj420p",
                 str(work_dir / "thumb_%04d.jpg"),
             ]
             self._run(thumb_cmd, label="ffmpeg")
