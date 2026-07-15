@@ -1,6 +1,7 @@
+import os
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy.orm import Session
 
 from ..config import settings
@@ -13,12 +14,20 @@ from ..integrations.plane.authorization import (
 from ..integrations.plane.claims import PlaneTokenError
 from ..integrations.plane.session import PlaneIdentityConflict, exchange_plane_token
 from ..models.activity import ActivityAction, ActivityLog, Notification, NotificationType
-from ..models.asset import Asset
+from ..models.asset import (
+    Asset,
+    AssetType,
+    AssetVersion,
+    FileType,
+    MediaFile,
+    ProcessingStatus,
+)
 from ..models.comment import Annotation, Comment
 from ..models.plane_review import PlaneReviewAssetLink
 from ..routers.assets import _build_asset_response
 from ..routers.comments import _build_comment_response, _create_mentions
-from ..schemas.asset import AssetResponse
+from ..routers.hls_proxy import create_hls_token
+from ..schemas.asset import AssetResponse, StreamUrlResponse
 from ..schemas.comment import CommentCreate, CommentResponse
 from ..schemas.plane_integration import (
     PlaneReviewAssetLinkResponse,
@@ -27,6 +36,13 @@ from ..schemas.plane_integration import (
     PlaneSessionExchangeResponse,
     PlaneShadowUserResponse,
 )
+from ..schemas.upload import ALLOWED_MIME_TYPES, InitiateUploadRequest, InitiateUploadResponse
+from ..services.s3_service import (
+    build_download_filename,
+    create_multipart_upload,
+    generate_presigned_get_url,
+)
+from ..services.storage import upload_guard_error
 
 router = APIRouter(prefix="/integrations/plane", tags=["plane-integration"])
 
@@ -247,3 +263,126 @@ def create_plane_review_comment(
     db.commit()
     db.refresh(comment)
     return _build_comment_response(comment, db, current_user_id=principal.user.id)
+
+
+@router.get(
+    "/assets/{asset_id}/stream",
+    response_model=StreamUrlResponse,
+)
+def get_plane_review_stream_url(
+    version_id: UUID | None = Query(default=None),
+    download: bool = Query(default=False),
+    db: Session = Depends(get_db),
+    asset: Asset = Depends(require_linked_plane_asset("review:read")),
+):
+    """Return a stream or download URL for a context-bound linked asset."""
+
+    if version_id:
+        version = db.query(AssetVersion).filter(
+            AssetVersion.id == version_id,
+            AssetVersion.asset_id == asset.id,
+            AssetVersion.deleted_at.is_(None),
+        ).first()
+    else:
+        version = db.query(AssetVersion).filter(
+            AssetVersion.asset_id == asset.id,
+            AssetVersion.deleted_at.is_(None),
+        ).order_by(AssetVersion.version_number.desc()).first()
+
+    if not version:
+        raise HTTPException(status_code=404, detail="No version found")
+    if version.processing_status != ProcessingStatus.ready:
+        raise HTTPException(status_code=409, detail="Asset version is not ready yet")
+
+    media_file = db.query(MediaFile).filter(MediaFile.version_id == version.id).first()
+    if not media_file:
+        raise HTTPException(status_code=404, detail="Media file not found")
+
+    if asset.asset_type == AssetType.video and media_file.s3_key_processed:
+        if download:
+            s3_key = media_file.s3_key_raw or media_file.s3_key_processed
+            filename = build_download_filename(
+                asset.name,
+                media_file.original_filename or s3_key,
+            )
+            url = generate_presigned_get_url(s3_key, download_filename=filename)
+        else:
+            token = create_hls_token(media_file.s3_key_processed)
+            url = f"/stream/hls/master.m3u8?token={token}"
+    else:
+        s3_key = media_file.s3_key_processed or media_file.s3_key_raw
+        if not s3_key:
+            raise HTTPException(status_code=404, detail="Media file is not available")
+        if download:
+            filename = build_download_filename(
+                asset.name,
+                media_file.original_filename or s3_key,
+            )
+            url = generate_presigned_get_url(s3_key, download_filename=filename)
+        else:
+            url = generate_presigned_get_url(s3_key)
+
+    return StreamUrlResponse(url=url, asset_type=asset.asset_type)
+
+
+@router.post(
+    "/assets/{asset_id}/versions",
+    response_model=InitiateUploadResponse,
+)
+def initiate_plane_review_version(
+    body: InitiateUploadRequest,
+    db: Session = Depends(get_db),
+    asset: Asset = Depends(require_linked_plane_asset("review:upload")),
+    principal: PlaneReviewPrincipal = Depends(require_plane_scope("review:upload")),
+):
+    """Initiate a multipart upload for a new version of a linked asset."""
+
+    if body.mime_type not in ALLOWED_MIME_TYPES:
+        raise HTTPException(status_code=400, detail="Unsupported file type")
+
+    guard_error = upload_guard_error(db, body.file_size_bytes)
+    if guard_error:
+        raise HTTPException(status_code=400, detail=guard_error)
+
+    last_version = db.query(AssetVersion).filter(
+        AssetVersion.asset_id == asset.id,
+        AssetVersion.deleted_at.is_(None),
+    ).order_by(AssetVersion.version_number.desc()).first()
+    next_version_number = (last_version.version_number + 1) if last_version else 1
+
+    version = AssetVersion(
+        asset_id=asset.id,
+        version_number=next_version_number,
+        processing_status=ProcessingStatus.uploading,
+        created_by=principal.user.id,
+    )
+    db.add(version)
+    db.flush()
+
+    ext = os.path.splitext(body.original_filename)[1].lower()
+    s3_key = f"raw/{asset.project_id}/{asset.id}/{version.id}/original{ext}"
+    upload_id = create_multipart_upload(s3_key, body.mime_type)
+
+    file_type_map = {
+        AssetType.image: FileType.image,
+        AssetType.audio: FileType.audio,
+        AssetType.video: FileType.video,
+        AssetType.image_carousel: FileType.image,
+    }
+    media_file = MediaFile(
+        version_id=version.id,
+        file_type=file_type_map.get(asset.asset_type, FileType.video),
+        original_filename=body.original_filename,
+        mime_type=body.mime_type,
+        file_size_bytes=body.file_size_bytes,
+        s3_key_raw=s3_key,
+    )
+    db.add(media_file)
+    db.commit()
+
+    return InitiateUploadResponse(
+        upload_id=upload_id,
+        s3_key=s3_key,
+        asset_id=asset.id,
+        version_id=version.id,
+    )
