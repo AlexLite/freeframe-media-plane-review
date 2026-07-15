@@ -17,7 +17,8 @@ const context = { workspace_id: 'workspace-1', project_id: 'project-1', issue_id
 
 describe('Plane review upload client', () => {
   beforeEach(() => {
-    vi.clearAllMocks()
+    vi.restoreAllMocks()
+    planeReviewRequest.mockReset()
   })
 
   it('uploads ordered multipart chunks and completes the version', async () => {
@@ -95,7 +96,7 @@ describe('Plane review upload client', () => {
   it('rejects incompatible or empty files before creating a version', () => {
     expect(() =>
       validatePlaneReviewFile('image', new File(['video'], 'campaign.mp4', { type: 'video/mp4' })),
-    ).toThrow('Choose a image file')
+    ).toThrow('Choose an image file')
     expect(() =>
       validatePlaneReviewFile('video', new File([], 'empty.mp4', { type: 'video/mp4' })),
     ).toThrow('empty')
