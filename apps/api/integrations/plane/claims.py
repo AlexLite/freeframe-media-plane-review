@@ -20,6 +20,12 @@ class PlaneReviewClaims(BaseModel):
 
     model_config = ConfigDict(extra="forbid")
 
+    iss: str
+    aud: str | list[str]
+    exp: int
+    iat: int | None = None
+    nbf: int | None = None
+    jti: str | None = None
     sub: UUID
     email: str
     name: str
