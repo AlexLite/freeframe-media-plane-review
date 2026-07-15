@@ -37,10 +37,12 @@ export interface PlaneReviewVersionSummary {
   file_size_bytes: number | null
 }
 
+export type PlaneReviewAssetType = 'video' | 'image' | 'image_carousel' | 'audio' | string
+
 export interface PlaneReviewAssetSummary {
   id: string
   name: string
-  asset_type: 'video' | 'image' | 'audio' | string
+  asset_type: PlaneReviewAssetType
   description?: string | null
   thumbnail_url?: string | null
 }
@@ -54,6 +56,24 @@ export interface PlaneReviewBootstrapResponse<TAsset = PlaneReviewAssetSummary> 
 
 export interface PlaneReviewStreamResponse {
   url: string
-  asset_type: 'video' | 'image' | 'audio' | string
+  asset_type: PlaneReviewAssetType
   expires_in: number
+}
+
+export interface PlaneReviewUploadInitiation {
+  upload_id: string
+  s3_key: string
+  asset_id: string
+  version_id: string
+}
+
+export interface PlaneReviewUploadPart {
+  PartNumber: number
+  ETag: string
+}
+
+export interface PlaneReviewUploadCompletion {
+  status: string
+  asset_id: string
+  version_id: string
 }
