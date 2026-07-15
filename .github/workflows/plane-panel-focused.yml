@@ -12,20 +12,24 @@ jobs:
   focused:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v7
-      - uses: actions/setup-node@v6
-        with:
-          node-version: 22
-      - uses: pnpm/action-setup@v6
-        with:
-          version: 10.15.0
-      - run: pnpm install --frozen-lockfile
-        working-directory: apps/web
       - name: Run focused build
-        working-directory: apps/web
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPOSITORY: ${{ github.repository }}
+          REF: ${{ github.event.pull_request.head.sha }}
         run: |
+          curl -fsSL \
+            -H "Authorization: Bearer ${GH_TOKEN}" \
+            -H "X-GitHub-Api-Version: 2022-11-28" \
+            "https://api.github.com/repos/${REPOSITORY}/tarball/${REF}" \
+            -o repo.tar.gz
+          mkdir repo
+          tar -xzf repo.tar.gz -C repo --strip-components=1
+          cd repo/apps/web
+          corepack enable
+          pnpm install --frozen-lockfile >/dev/null 2>&1
           set +e
           pnpm build > /tmp/build.log 2>&1
           status=$?
-          tail -120 /tmp/build.log
+          tail -80 /tmp/build.log
           exit $status
