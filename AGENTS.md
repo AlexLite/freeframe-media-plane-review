@@ -1,172 +1,97 @@
-# AGENTS.md
+# Agent Development Guide
 
-Operational guide for coding agents and contributors working in the **FreeFrame** repo.
-FreeFrame is a self-hostable, open-source alternative to Frame.io — collaborative media
-review, annotation, and approval for images, audio, and video.
+## Fork purpose
 
-This file focuses on **how to make a change that passes CI and review here**. For depth:
+- Treat this repository as the deployable source of truth for the Media Plane Review fork of FreeFrame.
+- Plane is the only user-facing workspace and the canonical source of users, workspaces, projects, work items, and permissions.
+- FreeFrame is a headless media-review engine responsible for uploads, versions, previews, frame-accurate review comments, annotations, and review status.
+- Ordinary work-item comments remain in Plane. Timecoded review comments remain structured FreeFrame data and must not be copied into Plane comment HTML.
+- The MVP is not an archive, DAM, release server, or long-term media store.
 
-- **Architecture:** [`docs/architecture.md`](docs/architecture.md)
-- **Human setup & standards:** [`docs/contributing.md`](docs/contributing.md)
-- **Deployment:** [`docs/deployment.md`](docs/deployment.md)
-- **Live API surface:** http://localhost:8000/docs (Swagger) once the stack is up
+Read [`docs/fork-workflow.md`](./docs/fork-workflow.md), [`docs/architecture/media-plane-review.md`](./docs/architecture/media-plane-review.md), [`CHANGELOG.md`](./CHANGELOG.md), and any applicable nested `AGENTS.md` before making changes.
 
----
+## Repository safety
 
-## Quickstart
+- Start with a read-only audit.
+- Prefer repository changes over host-only fixes so deployments remain reproducible.
+- Never add secrets, runtime `.env` files, database contents, uploaded media, generated bundles, or temporary backups to Git.
+- Do not modify a live deployment, run migrations, rewrite MinIO data, or change production configuration without explicit approval.
+- Never push to the `upstream` remote (`Techiebutler/freeframe`). The writable repository is `AlexLite/freeframe-media-plane-review`.
 
-```bash
-git clone https://github.com/YOUR_USERNAME/freeframe.git
-cd freeframe
-cp .env.example .env
-docker compose -f docker-compose.dev.yml up --build
-# open http://localhost:3000
-```
+## Git workflow
 
-Everything (Postgres, Redis, MinIO, API, Celery workers, web) starts in Docker with hot reload.
+### Permanent branches
 
-### Dev endpoints
+- `develop` is the integration branch and should be configured as the default branch.
+- `main` contains production-ready released code.
+- `stable` is a read-only mirror/reference for the validated upstream FreeFrame release channel.
+- Never commit or push directly to `develop`, `main`, or `stable`.
 
-| What                | URL / address                | Notes                                   |
-|---------------------|------------------------------|-----------------------------------------|
-| Frontend (Next.js)  | http://localhost:3000        | hot reload                              |
-| API (FastAPI)       | http://localhost:8000        |                                         |
-| API docs (Swagger)  | http://localhost:8000/docs   | the fastest way to find an endpoint     |
-| MinIO console       | http://localhost:9001        | S3 API is on :9000                      |
-| Postgres            | `localhost:5433` (dev only)  | host mapping `5433:5432`; in-container and prod it's `5432` |
-| Redis               | `localhost:6379`             |                                         |
+### Task branches and pull requests
 
----
+- Start task branches from an up-to-date `origin/develop`.
+- Use lowercase kebab-case names with `feat/`, `fix/`, `chore/`, `docs/`, `refactor/`, `test/`, `release/`, or `hotfix/` prefixes.
+- Normal task branches target `develop` through a pull request.
+- Release branches start from `develop` and target `main` after acceptance validation.
+- Hotfixes start from and target `main`, then must be merged or cherry-picked back into `develop`.
+- Never force-push shared branches.
+- Before editing tracked source in a local worktree, create a local `backup/*` branch at the exact starting SHA. Keep routine backup branches local; use annotated tags for shared immutable rollback points.
 
-## Repo layout
+### Required checks
 
-```
-freeframe/
-├── apps/
-│   ├── api/                # FastAPI backend
-│   │   ├── main.py         # app entry point
-│   │   ├── config.py       # env-driven settings
-│   │   ├── models/         # SQLAlchemy ORM models
-│   │   ├── schemas/        # Pydantic request/response schemas
-│   │   ├── routers/        # API route handlers
-│   │   ├── services/       # business logic (auth, s3, permissions, …)
-│   │   ├── tasks/          # Celery async tasks (transcode, email)
-│   │   ├── middleware/     # auth, rate limiting, soft delete, setup guard
-│   │   ├── alembic/        # database migrations
-│   │   └── tests/          # pytest suite (mock-DB based — see Gotchas)
-│   └── web/                # Next.js 14 App Router frontend
-│       ├── app/            # routes/pages
-│       ├── components/     # React components
-│       ├── hooks/          # React hooks
-│       ├── lib/            # API client + utilities
-│       └── stores/         # Zustand stores
-└── packages/
-    └── transcoder/         # pluggable transcoder package (FFmpeg default)
-```
+Before editing:
 
----
+1. Run `git status --short` and `git branch --show-current`.
+2. Run `git fetch origin --prune` and verify the task branch is based on current `origin/develop`.
+3. Check for unrelated changes. Never overwrite or discard user work without explicit approval.
+4. Do not use `git add -A` in a mixed worktree.
 
-## Run the checks CI runs
+Before committing:
 
-A PR is mergeable when these are green. **Run them before you say you're done.** CI
-(`.github/workflows/ci.yml`) runs the same commands.
+1. Review the complete diff and stage only task files.
+2. Run relevant backend tests, frontend tests/build, formatting, linting, type checks, migration checks, and security checks.
+3. Update `CHANGELOG.md` for user-visible or operationally relevant changes.
+4. Confirm the change preserves the architecture invariants in `docs/architecture/media-plane-review.md`.
 
-**Backend** (from repo root, or inside the `api` container):
+After pushing:
 
-```bash
-# local (what CI runs)
-python -m pytest apps/api/tests/ -v
+1. Verify the remote branch SHA and open a pull request to the intended base.
+2. Report the commit SHA and CI state.
+3. Do not deploy unless deployment was explicitly requested.
 
-# or inside the running dev container
-docker compose -f docker-compose.dev.yml exec api python -m pytest apps/api/tests/ -v
-```
+## Architecture rules
 
-**Frontend** (workspace filter `web`, run from repo root):
+- Keep Plane authentication integration isolated under `apps/api/integrations/plane/`.
+- The browser and Premiere extension must authenticate through Plane; they must not receive long-lived FreeFrame service credentials.
+- Plane-issued review tokens must be short-lived, audience-bound, issuer-bound, and scoped to a specific workspace/project/work item.
+- Store frame positions as structured fields (`frame_number`, rational FPS, optional range end, version ID), not as parsed text timecodes.
+- Preserve FreeFrame as the source of truth for review versions and timecoded review comments.
+- Avoid broad rewrites of upstream modules. Prefer new integration modules and narrow adapters to reduce upstream merge conflicts.
+- Database schema changes require an explicit migration, tests, rollback notes, and separate approval before deployment.
 
-```bash
-pnpm --filter web build       # must succeed (CI gate)
-pnpm --filter web test
-pnpm --filter web exec tsc --noEmit   # type check
-pnpm --filter web lint
-```
+## Upstream synchronization
 
-> CI ignores changes limited to `*.md`, `docs/**`, `LICENSE`, and the issue/PR templates,
-> so a docs-only PR (like editing this file) will not trigger the test/build jobs.
+- Use `Techiebutler/freeframe` as the `upstream` remote.
+- Sync only from the validated upstream `stable` channel unless an explicit task selects another immutable upstream tag.
+- Perform synchronization in a dedicated `chore/sync-upstream-*` branch and merge through a pull request to `develop`.
+- Record the exact base in [`UPSTREAM_VERSION`](./UPSTREAM_VERSION).
+- Never merge or deploy upstream `main` merely because it is newer.
 
----
+## Release and deployment
 
-## ⚠️ Gotchas that trip up agents
+- Use `v{upstream_version}-mpr.{patch}` for fork release tags.
+- Track the current fork release in [`RELEASE_VERSION`](./RELEASE_VERSION).
+- Deploy only an exact validated commit SHA or annotated release tag.
+- Validate compose configuration before restart and preserve PostgreSQL, Redis, and S3/MinIO state.
+- Do not include temporary review media in routine LXC backups unless explicitly requested; do back up the database and configuration.
+- Do not run destructive cleanup, retention, orphan deletion, or volume removal as part of a generic update.
 
-Read this section before writing backend code or tests.
+## Upstream checks retained by this fork
 
-- **Backend tests run against a fully *mocked* database.** `apps/api/tests/conftest.py`
-  provides a `MagicMock` `Session` (the models use Postgres-specific UUID types that are
-  incompatible with SQLite), so there is **no real DB in tests**. Don't write tests that
-  expect real persistence. Instead patch the query/service layer and drive behavior through
-  the `client` + `mock_db` fixtures. See `apps/api/tests/test_share_session.py` for the
-  pattern (patch `validate_share_link`, exercise the real logic on top). Use the `real_db`
-  fixture only for code paths explicitly designed for a live transactional Postgres.
-
-- **CI has floor guards — never delete or gut tests/core files.** The pipeline fails if:
-  fewer than 5 test files exist, fewer than 40 tests pass, the FastAPI app exposes fewer
-  than 30 routes, or any file on its critical-files allowlist (e.g. `apps/api/main.py`,
-  `routers/share.py`, `services/permissions.py`, key `apps/web` files) goes missing. If a
-  test is genuinely obsolete, replace it — don't remove coverage.
-
-- **Soft delete is universal.** Every entity has a `deleted_at` column. **Never hard-delete
-  in application code**, and always filter `deleted_at.is_(None)` in queries. Deletion is
-  recoverable and audited; retention GC handles eventual hard-deletion.
-
-- **Model change ⇒ Alembic migration.** After editing a SQLAlchemy model:
-  ```bash
-  docker compose -f docker-compose.dev.yml exec api sh -c "cd apps/api && alembic revision --autogenerate -m 'describe change'"
-  ```
-  **Review the generated migration** before committing — autogenerate is not always right.
-
-- **Config is env-driven** (`apps/api/config.py`, `.env.example`). Add new settings there
-  with safe defaults; don't hardcode secrets, endpoints, or limits.
-
----
-
-## Conventions
-
-- **Commits:** [Conventional Commits](https://www.conventionalcommits.org/) style —
-  `feat:`, `fix:`, `chore:`, `docs:`, `refactor:`, optional scope (`fix(share): …`).
-- **One focused change per PR.** Target the `main` branch. Branch names: `feat/<slug>`,
-  `fix/<slug>`.
-- **Tests required** for new behavior or bug fixes (a fix should ship a regression test that
-  fails before and passes after).
-- **CHANGELOG:** add user-facing changes to `CHANGELOG.md` under the **`[Unreleased]`**
-  heading (Keep a Changelog format: `Added` / `Changed` / `Fixed`). Don't invent or cut a
-  version — releases are handled separately.
-- **UI changes:** include before/after screenshots in the PR (see
-  `.github/pull_request_template.md`).
-- **Docs:** update `docs/` or user-facing text when you change behavior.
-
----
-
-## Releases & branches
-
-FreeFrame ships **moving branch pointers** on top of immutable `vX.Y.Z` tags. Know which is which:
-
-- **`main`** — active development. PRs target `main`; it may be ahead of any release.
-- **`stable`** — the last **validated** release. **This is what production self-hosters run** (`git clone -b stable`). Never tell users to run `main` in production, and don't point install/deploy docs at `main` — point them at `stable`.
-- **`latest`** — the newest published release (auto-moved by `.github/workflows/release-pointers.yml`). For early adopters.
-- **`vX.Y.Z`** — immutable release tags; never move or delete them.
-
-Rules for agents:
-
-- **Don't create, move, or force-push `stable` / `latest`** — they are moved only by the release workflows (`release-pointers.yml` on release publish; `promote-stable.yml` manually, which gates on green CI). See [`docs/RELEASING.md`](docs/RELEASING.md).
-- **Don't cut releases or tags** unless explicitly asked — releases are manual and CHANGELOG-driven.
-- Default user-facing install/deploy instructions to `stable` (see the README "Release channels" table).
-
----
-
-## Finding things & getting help
-
-- **An endpoint or schema:** browse http://localhost:8000/docs, or grep `apps/api/routers/`.
-- **Report a bug / request a feature:** use the
-  [issue templates](https://github.com/Techiebutler/freeframe/issues/new/choose).
-- **Security issues:** follow [`SECURITY.md`](SECURITY.md) — do not open a public issue.
-- **License:** contributions are MIT-licensed ([`LICENSE`](LICENSE)).
-```
+- Backend: `python -m pytest apps/api/tests/ -v`
+- Frontend build: `pnpm --filter web build`
+- Frontend tests: `pnpm --filter web test`
+- Frontend types: `pnpm --filter web exec tsc --noEmit`
+- Frontend lint: `pnpm --filter web lint`
+- Model change requires an Alembic migration and explicit review of the generated migration.
+- Add regression tests for new behavior and bug fixes; do not weaken upstream CI floor guards.
