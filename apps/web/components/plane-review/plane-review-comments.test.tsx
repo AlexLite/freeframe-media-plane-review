@@ -1,5 +1,6 @@
 import { render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
+import type { ComponentProps } from 'react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 const getPlaneReviewComments = vi.fn()
@@ -33,8 +34,10 @@ const comment = {
   replies: [],
 }
 
-function renderComments(overrides: Record<string, unknown> = {}) {
-  const props = {
+function renderComments(
+  overrides: Partial<ComponentProps<typeof PlaneReviewComments>> = {},
+) {
+  const props: ComponentProps<typeof PlaneReviewComments> = {
     assetId: 'asset-1',
     versionId: 'version-1',
     canComment: true,
