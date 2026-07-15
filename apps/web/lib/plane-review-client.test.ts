@@ -5,6 +5,7 @@ import {
   exchangePlaneReviewToken,
   getPlaneReviewBootstrap,
   getPlaneReviewSession,
+  getPlaneReviewStream,
 } from './plane-review-client'
 
 const session = {
@@ -36,6 +37,27 @@ describe('plane review client', () => {
     expect(fetchMock).toHaveBeenNthCalledWith(
       2,
       'http://localhost:8000/integrations/plane/assets/asset%2Fid/review',
+      {
+        cache: 'no-store',
+        headers: { Authorization: 'Bearer plane-access' },
+      },
+    )
+  })
+
+  it('requests a specific version stream with the Plane bearer token', async () => {
+    const fetchMock = vi
+      .spyOn(globalThis, 'fetch')
+      .mockResolvedValueOnce(new Response(JSON.stringify(session), { status: 200 }))
+      .mockResolvedValueOnce(
+        new Response(JSON.stringify({ url: 'https://media.example/master.m3u8', asset_type: 'video', expires_in: 3600 }), { status: 200 }),
+      )
+
+    await exchangePlaneReviewToken('plane-token')
+    await getPlaneReviewStream('asset/id', 'version id')
+
+    expect(fetchMock).toHaveBeenNthCalledWith(
+      2,
+      'http://localhost:8000/integrations/plane/assets/asset%2Fid/stream?version_id=version+id',
       {
         cache: 'no-store',
         headers: { Authorization: 'Bearer plane-access' },
