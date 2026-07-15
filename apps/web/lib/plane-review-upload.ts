@@ -88,8 +88,12 @@ export function validatePlaneReviewFile(assetType: string, file: File): void {
   }
 
   const expectedCategory = assetType === 'image_carousel' ? 'image' : assetType
+  if (!['video', 'image', 'audio'].includes(expectedCategory)) {
+    throw new Error('This asset type does not support file upload.')
+  }
   if (mimeCategory(mimeType) !== expectedCategory) {
-    throw new Error(`Choose a ${expectedCategory} file for this asset.`)
+    const article = expectedCategory === 'video' ? 'a' : 'an'
+    throw new Error(`Choose ${article} ${expectedCategory} file for this asset.`)
   }
 
   const totalParts = Math.ceil(file.size / PLANE_REVIEW_UPLOAD_CHUNK_SIZE)
@@ -125,8 +129,8 @@ export async function uploadPlaneReviewFirstVersion({
       signal,
     )
 
-    if (initiation.asset_id !== asset.id) {
-      throw new Error('FreeFrame returned an unexpected upload asset.')
+    if (initiation.asset_id !== asset.id || !initiation.version_id) {
+      throw new Error('FreeFrame returned an unexpected upload context.')
     }
 
     const totalParts = Math.ceil(file.size / PLANE_REVIEW_UPLOAD_CHUNK_SIZE)
@@ -181,6 +185,9 @@ export async function uploadPlaneReviewFirstVersion({
       },
       signal,
     )
+    if (completion.asset_id !== asset.id || completion.version_id !== initiation.version_id) {
+      throw new Error('FreeFrame returned an unexpected completed upload.')
+    }
     onProgress?.(100)
     return completion
   } catch (error) {
