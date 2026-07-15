@@ -1,6 +1,7 @@
+from datetime import datetime
 from uuid import UUID
 
-from pydantic import BaseModel
+from pydantic import BaseModel, ConfigDict
 
 
 class PlaneSessionExchangeRequest(BaseModel):
@@ -27,3 +28,15 @@ class PlaneSessionExchangeResponse(BaseModel):
     user: PlaneShadowUserResponse
     context: PlaneReviewContext
     scopes: list[str]
+
+
+class PlaneReviewAssetLinkResponse(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    asset_id: UUID
+    workspace_id: UUID
+    project_id: UUID
+    issue_id: UUID
+    linked_by: UUID
+    created_at: datetime
+    updated_at: datetime
