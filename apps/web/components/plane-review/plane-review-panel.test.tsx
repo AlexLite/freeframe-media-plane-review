@@ -125,6 +125,25 @@ describe('PlaneReviewPanel', () => {
     expect(getPlaneReviewStream).toHaveBeenCalledWith('asset-1', 'v2')
   })
 
+  it('does not reload a ready stream while polling another pending version', async () => {
+    vi.useFakeTimers()
+    getPlaneReviewBootstrap.mockResolvedValue(bootstrap)
+
+    render(<PlaneReviewPanel assetId="asset-1" integrationToken="integration-token" />)
+    await act(async () => {
+      await Promise.resolve()
+      await Promise.resolve()
+    })
+    expect(getPlaneReviewStream).toHaveBeenCalledTimes(1)
+
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(5_000)
+    })
+
+    expect(getPlaneReviewBootstrap).toHaveBeenCalledTimes(2)
+    expect(getPlaneReviewStream).toHaveBeenCalledTimes(1)
+  })
+
   it('shows a subsequent-version uploader when upload permission is granted', async () => {
     const user = userEvent.setup()
     getPlaneReviewBootstrap.mockResolvedValueOnce({
