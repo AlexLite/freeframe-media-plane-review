@@ -1,10 +1,10 @@
 'use client'
 
 import Hls from 'hls.js'
-import { AlertCircle, FileWarning, Loader2, RefreshCw } from 'lucide-react'
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { AlertCircle, FileWarning, Loader2, RefreshCw, UploadCloud } from 'lucide-react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 
-import { PlaneReviewFirstUpload } from './plane-review-first-upload'
+import { PlaneReviewVersionUpload } from './plane-review-version-upload'
 import { Button } from '@/components/ui/button'
 import {
   exchangePlaneReviewToken,
@@ -14,7 +14,6 @@ import {
 import type {
   PlaneReviewBootstrapResponse,
   PlaneReviewStreamResponse,
-  PlaneReviewVersionSummary,
 } from '@/lib/plane-review-types'
 
 interface PlaneReviewPanelProps {
@@ -22,12 +21,27 @@ interface PlaneReviewPanelProps {
   integrationToken: string
 }
 
+const PROCESSING_POLL_INTERVAL_MS = 5_000
+
 function formatBytes(value: number | null): string {
   if (value === null) return 'Size unavailable'
   if (value < 1024) return `${value} B`
   if (value < 1024 ** 2) return `${(value / 1024).toFixed(1)} KB`
   if (value < 1024 ** 3) return `${(value / 1024 ** 2).toFixed(1)} MB`
   return `${(value / 1024 ** 3).toFixed(1)} GB`
+}
+
+function isPendingStatus(status: string): boolean {
+  return status === 'uploading' || status === 'processing'
+}
+
+function isUnauthorized(error: unknown): boolean {
+  return Boolean(
+    error &&
+      typeof error === 'object' &&
+      'status' in error &&
+      (error as { status?: unknown }).status === 401,
+  )
 }
 
 function MediaPreview({ stream, mimeType }: { stream: PlaneReviewStreamResponse; mimeType: string | null }) {
@@ -71,22 +85,60 @@ export function PlaneReviewPanel({ assetId, integrationToken }: PlaneReviewPanel
   const [stream, setStream] = useState<PlaneReviewStreamResponse | null>(null)
   const [loading, setLoading] = useState(true)
   const [streamLoading, setStreamLoading] = useState(false)
+  const [showVersionUpload, setShowVersionUpload] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
   const selectedVersion = useMemo(
     () => bootstrap?.versions.find((version) => version.id === selectedVersionId) ?? null,
     [bootstrap, selectedVersionId],
   )
+  const pendingVersionSignature = useMemo(
+    () =>
+      bootstrap?.versions
+        .filter((version) => isPendingStatus(version.processing_status))
+        .map((version) => `${version.id}:${version.processing_status}`)
+        .join('|') ?? '',
+    [bootstrap],
+  )
 
-  async function loadBootstrap() {
+  const applyBootstrap = useCallback(
+    (data: PlaneReviewBootstrapResponse, selectNewest: boolean) => {
+      setBootstrap(data)
+      setSelectedVersionId((currentVersionId) => {
+        if (!selectNewest && currentVersionId) {
+          const currentStillExists = data.versions.some((version) => version.id === currentVersionId)
+          if (currentStillExists) return currentVersionId
+        }
+        return data.versions[0]?.id ?? null
+      })
+    },
+    [],
+  )
+
+  const refreshBootstrap = useCallback(
+    async (selectNewest = false) => {
+      let data: PlaneReviewBootstrapResponse
+      try {
+        data = await getPlaneReviewBootstrap(assetId)
+      } catch (caught) {
+        if (!isUnauthorized(caught)) throw caught
+        await exchangePlaneReviewToken(integrationToken)
+        data = await getPlaneReviewBootstrap(assetId)
+      }
+      applyBootstrap(data, selectNewest)
+      setError(null)
+    },
+    [applyBootstrap, assetId, integrationToken],
+  )
+
+  const loadBootstrap = useCallback(async () => {
     setLoading(true)
     setError(null)
     setStream(null)
     try {
       await exchangePlaneReviewToken(integrationToken)
       const data = await getPlaneReviewBootstrap(assetId)
-      setBootstrap(data)
-      setSelectedVersionId(data.versions[0]?.id ?? null)
+      applyBootstrap(data, true)
     } catch (caught) {
       setBootstrap(null)
       setSelectedVersionId(null)
@@ -94,19 +146,57 @@ export function PlaneReviewPanel({ assetId, integrationToken }: PlaneReviewPanel
     } finally {
       setLoading(false)
     }
-  }
+  }, [applyBootstrap, assetId, integrationToken])
 
   useEffect(() => {
+    setShowVersionUpload(false)
     void loadBootstrap()
-  }, [assetId, integrationToken])
+  }, [loadBootstrap])
+
+  useEffect(() => {
+    if (!pendingVersionSignature) return
+
+    let cancelled = false
+    let timeoutId: number | undefined
+
+    const schedule = () => {
+      timeoutId = window.setTimeout(() => void poll(), PROCESSING_POLL_INTERVAL_MS)
+    }
+    const poll = async () => {
+      if (cancelled) return
+      if (document.visibilityState === 'hidden') {
+        schedule()
+        return
+      }
+      try {
+        await refreshBootstrap()
+      } catch {
+        // Keep the last known review state and retry while the version remains pending.
+      }
+      if (!cancelled) schedule()
+    }
+    const handleVisibilityChange = () => {
+      if (document.visibilityState !== 'visible' || cancelled) return
+      if (timeoutId !== undefined) window.clearTimeout(timeoutId)
+      void poll()
+    }
+
+    schedule()
+    document.addEventListener('visibilitychange', handleVisibilityChange)
+    return () => {
+      cancelled = true
+      if (timeoutId !== undefined) window.clearTimeout(timeoutId)
+      document.removeEventListener('visibilitychange', handleVisibilityChange)
+    }
+  }, [pendingVersionSignature, refreshBootstrap])
 
   useEffect(() => {
     let cancelled = false
     setStream(null)
-    if (!selectedVersion || selectedVersion.processing_status !== 'ready') return
+    if (!selectedVersionId || selectedVersion?.processing_status !== 'ready') return
 
     setStreamLoading(true)
-    getPlaneReviewStream(assetId, selectedVersion.id)
+    getPlaneReviewStream(assetId, selectedVersionId)
       .then((value) => {
         if (!cancelled) setStream(value)
       })
@@ -120,7 +210,7 @@ export function PlaneReviewPanel({ assetId, integrationToken }: PlaneReviewPanel
     return () => {
       cancelled = true
     }
-  }, [assetId, selectedVersion])
+  }, [assetId, selectedVersion?.processing_status, selectedVersionId])
 
   if (loading) {
     return (
@@ -151,29 +241,53 @@ export function PlaneReviewPanel({ assetId, integrationToken }: PlaneReviewPanel
           <h2 className="font-medium text-text-primary">{bootstrap.asset.name}</h2>
           <p className="text-xs text-text-tertiary">Plane media review</p>
         </div>
-        {bootstrap.versions.length > 0 && (
-          <select
-            aria-label="Asset version"
-            value={selectedVersionId ?? ''}
-            onChange={(event) => setSelectedVersionId(event.target.value)}
-            className="h-9 rounded-md border border-border bg-bg-tertiary px-3 text-sm text-text-primary outline-none focus:border-border-focus"
-          >
-            {bootstrap.versions.map((version) => (
-              <option key={version.id} value={version.id}>
-                Version {version.version_number} · {version.processing_status}
-              </option>
-            ))}
-          </select>
-        )}
+        <div className="flex flex-wrap items-center gap-2">
+          {bootstrap.permissions.upload && bootstrap.versions.length > 0 && (
+            <Button
+              size="sm"
+              variant="secondary"
+              onClick={() => setShowVersionUpload((current) => !current)}
+            >
+              <UploadCloud className="h-4 w-4" /> New version
+            </Button>
+          )}
+          {bootstrap.versions.length > 0 && (
+            <select
+              aria-label="Asset version"
+              value={selectedVersionId ?? ''}
+              onChange={(event) => setSelectedVersionId(event.target.value)}
+              className="h-9 rounded-md border border-border bg-bg-tertiary px-3 text-sm text-text-primary outline-none focus:border-border-focus"
+            >
+              {bootstrap.versions.map((version) => (
+                <option key={version.id} value={version.id}>
+                  Version {version.version_number} · {version.processing_status}
+                </option>
+              ))}
+            </select>
+          )}
+        </div>
       </header>
+
+      {showVersionUpload && bootstrap.permissions.upload && bootstrap.versions.length > 0 && (
+        <div className="flex justify-center border-b border-border bg-bg-primary p-4">
+          <PlaneReviewVersionUpload
+            asset={bootstrap.asset}
+            context={bootstrap.context}
+            mode="next"
+            onUploaded={() => refreshBootstrap(true)}
+            onDismiss={() => setShowVersionUpload(false)}
+          />
+        </div>
+      )}
 
       <div className="flex min-h-80 items-center justify-center bg-bg-primary p-4">
         {bootstrap.versions.length === 0 ? (
           bootstrap.permissions.upload ? (
-            <PlaneReviewFirstUpload
+            <PlaneReviewVersionUpload
               asset={bootstrap.asset}
               context={bootstrap.context}
-              onUploaded={loadBootstrap}
+              mode="first"
+              onUploaded={() => refreshBootstrap(true)}
             />
           ) : (
             <div className="text-center text-sm text-text-secondary">No versions have been uploaded yet.</div>
@@ -187,6 +301,7 @@ export function PlaneReviewPanel({ assetId, integrationToken }: PlaneReviewPanel
           <div className="flex flex-col items-center gap-2 text-center">
             <Loader2 className="h-7 w-7 animate-spin text-accent" />
             <p className="text-sm text-text-secondary">Version is {selectedVersion?.processing_status}.</p>
+            <p className="text-xs text-text-tertiary">Status refreshes automatically.</p>
           </div>
         ) : streamLoading || !stream ? (
           <Loader2 className="h-7 w-7 animate-spin text-accent" aria-label="Loading media" />
