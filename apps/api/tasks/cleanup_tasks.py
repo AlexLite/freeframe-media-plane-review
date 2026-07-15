@@ -18,6 +18,7 @@ from ..models.folder import Folder
 from ..models.metadata import MetadataField, AssetMetadata, Collection, CollectionShare
 from ..models.branding import ProjectBranding, WatermarkSettings
 from ..models.activity import Mention, ActivityLog, Notification
+from ..models.plane_review import PlaneReviewAssetLink
 from ..services.s3_service import (
     list_stale_multipart_uploads, abort_multipart_upload, delete_object, delete_prefix, list_keys,
 )
@@ -148,6 +149,7 @@ def _purge_asset(db, asset_id, counts: PurgeCounts) -> None:
     db.query(AssetShare).filter(AssetShare.asset_id == asset_id).delete(synchronize_session=False)
     db.query(ActivityLog).filter(ActivityLog.asset_id == asset_id).delete(synchronize_session=False)
     db.query(Notification).filter(Notification.asset_id == asset_id).delete(synchronize_session=False)
+    db.query(PlaneReviewAssetLink).filter(PlaneReviewAssetLink.asset_id == asset_id).delete(synchronize_session=False)
     db.query(Asset).filter(Asset.id == asset_id).delete(synchronize_session=False)
     counts.assets += 1
     db.flush()
