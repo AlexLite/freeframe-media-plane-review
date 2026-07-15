@@ -140,6 +140,7 @@ def test_plane_upload_creates_version_as_shadow_user():
     assert media_file.version_id == version_id
     assert media_file.s3_key_raw.endswith("/original.mp4")
     assert response.upload_id == "multipart-id"
+    assert response.s3_key == media_file.s3_key_raw
     assert response.asset_id == asset.id
     assert response.version_id == version_id
     create_upload.assert_called_once_with(media_file.s3_key_raw, "video/mp4")
