@@ -3,19 +3,25 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+from datetime import datetime, timedelta, timezone
+from uuid import UUID
 
+from jose import JWTError, jwt
 from sqlalchemy.orm import Session
-from sqlalchemy.orm.attributes import flag_modified
 
+from ...config import Settings, settings
 from ...models.user import User, UserStatus
-from ...services.auth_service import create_access_token, create_refresh_token, get_user_by_email
 from .claims import PlaneReviewClaims, PlaneTokenError, decode_plane_review_token
 
-PLANE_USER_PREFERENCE_KEY = "integration_plane_user_id"
+PLANE_REVIEW_SESSION_TYPE = "plane_review_session"
+PLANE_REVIEW_SESSION_EXPIRES_SECONDS = 900
+SUPPORTED_REVIEW_SCOPES = frozenset(
+    {"review:read", "review:comment", "review:upload", "review:manage"}
+)
 
 
 class PlaneIdentityConflict(ValueError):
-    """Raised when an email is already bound to another Plane identity."""
+    """Raised when Plane identity cannot be mapped without ambiguity."""
 
 
 @dataclass(frozen=True)
@@ -23,61 +29,58 @@ class PlaneSession:
     user: User
     claims: PlaneReviewClaims
     access_token: str
-    refresh_token: str
+    scopes: list[str]
+    expires_in: int = PLANE_REVIEW_SESSION_EXPIRES_SECONDS
 
 
-def _stored_plane_user_id(user: User) -> str | None:
-    preferences = user.preferences or {}
-    value = preferences.get(PLANE_USER_PREFERENCE_KEY)
-    return str(value) if value else None
+def _query_user_by_id(db: Session, user_id: UUID) -> User | None:
+    return db.query(User).filter(User.id == user_id, User.deleted_at.is_(None)).first()
+
+
+def _query_user_by_email(db: Session, email: str) -> User | None:
+    return db.query(User).filter(User.email == email, User.deleted_at.is_(None)).first()
 
 
 def get_or_create_plane_user(db: Session, claims: PlaneReviewClaims) -> User:
-    """Resolve a shadow FreeFrame user after the Plane token has been verified.
+    """Resolve a shadow user by immutable Plane UUID, never by email alone.
 
-    Email is used only to locate a candidate account. Once linked, the immutable
-    Plane UUID is authoritative and prevents account takeover through email reuse.
+    The FreeFrame shadow-user UUID intentionally equals the Plane user UUID. This
+    avoids a second identity mapping table and makes the Plane UUID authoritative.
+    Existing standalone users are never silently adopted by matching email.
     """
 
-    plane_user_id = str(claims.sub)
-    user = get_user_by_email(db, claims.email)
-
+    user = _query_user_by_id(db, claims.sub)
     if user:
-        stored_plane_user_id = _stored_plane_user_id(user)
-        if stored_plane_user_id and stored_plane_user_id != plane_user_id:
-            raise PlaneIdentityConflict("Email is linked to another Plane user")
         if user.status == UserStatus.deactivated:
             raise PlaneIdentityConflict("FreeFrame shadow account is deactivated")
+        if user.email != claims.email:
+            raise PlaneIdentityConflict("Plane user UUID conflicts with another FreeFrame identity")
 
         changed = False
-        preferences = dict(user.preferences or {})
-        if not stored_plane_user_id:
-            preferences[PLANE_USER_PREFERENCE_KEY] = plane_user_id
-            user.preferences = preferences
-            flag_modified(user, "preferences")
-            changed = True
         if user.name != claims.name:
             user.name = claims.name
             changed = True
         if not user.email_verified:
             user.email_verified = True
             changed = True
-        if user.status != UserStatus.active:
-            user.status = UserStatus.active
-            changed = True
         if changed:
             db.commit()
             db.refresh(user)
         return user
 
+    email_owner = _query_user_by_email(db, claims.email)
+    if email_owner:
+        raise PlaneIdentityConflict("Email belongs to another FreeFrame identity")
+
     user = User(
+        id=claims.sub,
         email=claims.email,
         name=claims.name,
         password_hash=None,
         status=UserStatus.active,
         email_verified=True,
         is_superadmin=False,
-        preferences={PLANE_USER_PREFERENCE_KEY: plane_user_id},
+        preferences={},
     )
     db.add(user)
     db.commit()
@@ -85,17 +88,69 @@ def get_or_create_plane_user(db: Session, claims: PlaneReviewClaims) -> User:
     return user
 
 
-def exchange_plane_token(db: Session, token: str) -> PlaneSession:
-    """Validate a Plane token, map its identity, and issue FreeFrame session tokens."""
+def normalize_review_scopes(scopes: list[str]) -> list[str]:
+    """Validate and de-duplicate Plane-granted review scopes."""
 
-    claims = decode_plane_review_token(token)
-    if "review:read" not in claims.scopes:
+    unknown = set(scopes) - SUPPORTED_REVIEW_SCOPES
+    if unknown:
+        raise PlaneTokenError("Plane review token contains unsupported scopes")
+    if "review:read" not in scopes:
         raise PlaneTokenError("Plane review token is missing review:read scope")
+    return list(dict.fromkeys(scopes))
 
+
+def create_plane_review_session_token(
+    user: User,
+    claims: PlaneReviewClaims,
+    scopes: list[str],
+    *,
+    config: Settings = settings,
+) -> str:
+    now = datetime.now(timezone.utc)
+    payload = {
+        "type": PLANE_REVIEW_SESSION_TYPE,
+        "sub": str(user.id),
+        "plane_user_id": str(claims.sub),
+        "workspace_id": str(claims.workspace_id),
+        "project_id": str(claims.project_id),
+        "issue_id": str(claims.issue_id),
+        "scopes": scopes,
+        "iat": now,
+        "exp": now + timedelta(seconds=PLANE_REVIEW_SESSION_EXPIRES_SECONDS),
+    }
+    return jwt.encode(payload, config.jwt_secret, algorithm=config.jwt_algorithm)
+
+
+def decode_plane_review_session_token(
+    token: str,
+    *,
+    config: Settings = settings,
+) -> dict:
+    """Decode only Plane review sessions; standalone tokens are rejected."""
+
+    try:
+        payload = jwt.decode(token, config.jwt_secret, algorithms=[config.jwt_algorithm])
+    except JWTError as exc:
+        raise PlaneTokenError("Invalid Plane review session") from exc
+    if payload.get("type") != PLANE_REVIEW_SESSION_TYPE:
+        raise PlaneTokenError("Invalid Plane review session type")
+    return payload
+
+
+def exchange_plane_token(
+    db: Session,
+    token: str,
+    *,
+    config: Settings = settings,
+) -> PlaneSession:
+    """Validate a Plane token, map identity, and issue one scoped session token."""
+
+    claims = decode_plane_review_token(token, config=config)
+    scopes = normalize_review_scopes(claims.scopes)
     user = get_or_create_plane_user(db, claims)
     return PlaneSession(
         user=user,
         claims=claims,
-        access_token=create_access_token(str(user.id)),
-        refresh_token=create_refresh_token(str(user.id)),
+        scopes=scopes,
+        access_token=create_plane_review_session_token(user, claims, scopes, config=config),
     )
