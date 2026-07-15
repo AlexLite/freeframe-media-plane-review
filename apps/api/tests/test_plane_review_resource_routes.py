@@ -66,7 +66,11 @@ def test_list_plane_review_comments_returns_only_public_top_level_comments():
 def test_plane_review_comment_rejects_internal_visibility():
     principal = _principal("review:comment")
     asset = SimpleNamespace(id=uuid4())
-    body = CommentCreate(body="private note", visibility="internal")
+    body = CommentCreate(
+        body="private note",
+        version_id=None,
+        visibility="internal",
+    )
 
     with pytest.raises(HTTPException) as exc:
         create_plane_review_comment(
@@ -83,7 +87,11 @@ def test_plane_review_comment_rejects_internal_visibility():
 def test_plane_review_comment_is_public_and_owned_by_shadow_user():
     principal = _principal("review:comment")
     asset = SimpleNamespace(id=uuid4(), created_by=uuid4())
-    body = CommentCreate(body="Frame 120 needs a trim", timecode_start=5.0)
+    body = CommentCreate(
+        body="Frame 120 needs a trim",
+        version_id=None,
+        timecode_start=5.0,
+    )
     db = MagicMock()
 
     with (
