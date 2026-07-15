@@ -102,7 +102,7 @@ export function validatePlaneReviewFile(assetType: string, file: File): void {
   }
 }
 
-export async function uploadPlaneReviewFirstVersion({
+export async function uploadPlaneReviewVersion({
   asset,
   context,
   file,
