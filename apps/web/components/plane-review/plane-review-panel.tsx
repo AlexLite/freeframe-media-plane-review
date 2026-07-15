@@ -4,6 +4,7 @@ import Hls from 'hls.js'
 import { AlertCircle, FileWarning, Loader2, RefreshCw } from 'lucide-react'
 import { useEffect, useMemo, useRef, useState } from 'react'
 
+import { PlaneReviewFirstUpload } from './plane-review-first-upload'
 import { Button } from '@/components/ui/button'
 import {
   exchangePlaneReviewToken,
@@ -168,7 +169,15 @@ export function PlaneReviewPanel({ assetId, integrationToken }: PlaneReviewPanel
 
       <div className="flex min-h-80 items-center justify-center bg-bg-primary p-4">
         {bootstrap.versions.length === 0 ? (
-          <div className="text-center text-sm text-text-secondary">No versions have been uploaded yet.</div>
+          bootstrap.permissions.upload ? (
+            <PlaneReviewFirstUpload
+              asset={bootstrap.asset}
+              context={bootstrap.context}
+              onUploaded={loadBootstrap}
+            />
+          ) : (
+            <div className="text-center text-sm text-text-secondary">No versions have been uploaded yet.</div>
+          )
         ) : selectedVersion?.processing_status === 'failed' ? (
           <div className="flex flex-col items-center gap-2 text-center">
             <FileWarning className="h-8 w-8 text-status-error" />
