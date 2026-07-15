@@ -1,0 +1,56 @@
+name: Apply Plane GC Fix
+
+on:
+  pull_request:
+    branches: [develop]
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    if: github.head_ref == 'feat/plane-review-asset-authorization'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: ${{ github.head_ref }}
+      - name: Apply exact cleanup patch
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+
+          cleanup = Path('apps/api/tasks/cleanup_tasks.py')
+          text = cleanup.read_text(encoding='utf-8')
+          old_import = 'from ..models.activity import Mention, ActivityLog, Notification\n'
+          new_import = old_import + 'from ..models.plane_review import PlaneReviewAssetLink\n'
+          if old_import not in text or 'from ..models.plane_review import PlaneReviewAssetLink\n' in text:
+              raise SystemExit('cleanup import anchor missing or already patched')
+          text = text.replace(old_import, new_import, 1)
+          old_delete = '    db.query(Notification).filter(Notification.asset_id == asset_id).delete(synchronize_session=False)\n    db.query(Asset).filter(Asset.id == asset_id).delete(synchronize_session=False)\n'
+          new_delete = '    db.query(Notification).filter(Notification.asset_id == asset_id).delete(synchronize_session=False)\n    db.query(PlaneReviewAssetLink).filter(PlaneReviewAssetLink.asset_id == asset_id).delete(synchronize_session=False)\n    db.query(Asset).filter(Asset.id == asset_id).delete(synchronize_session=False)\n'
+          if old_delete not in text:
+              raise SystemExit('cleanup delete anchor missing')
+          cleanup.write_text(text.replace(old_delete, new_delete, 1), encoding='utf-8')
+
+          test = Path('apps/api/tests/test_cleanup_soft_deleted.py')
+          text = test.read_text(encoding='utf-8')
+          old_model_import = '    import apps.api.models.instance_settings  # noqa: F401\n'
+          new_model_import = old_model_import + '    import apps.api.models.plane_review  # noqa: F401\n'
+          if old_model_import not in text or '    import apps.api.models.plane_review  # noqa: F401\n' in text:
+              raise SystemExit('test import anchor missing or already patched')
+          text = text.replace(old_model_import, new_model_import, 1)
+          old_known = '        ("activity_logs", "asset_id"), ("notifications", "asset_id"), ("approvals", "asset_id"),\n'
+          new_known = '        ("activity_logs", "asset_id"), ("notifications", "asset_id"), ("approvals", "asset_id"),\n        ("plane_review_asset_links", "asset_id"),\n'
+          if old_known not in text:
+              raise SystemExit('known handled anchor missing')
+          test.write_text(text.replace(old_known, new_known, 1), encoding='utf-8')
+          PY
+          rm .github/workflows/apply-plane-gc-fix.yml
+      - name: Commit patch
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add apps/api/tasks/cleanup_tasks.py apps/api/tests/test_cleanup_soft_deleted.py .github/workflows/apply-plane-gc-fix.yml
+          git commit -m 'fix(plane): purge review links before assets'
+          git push origin HEAD:${{ github.head_ref }}
