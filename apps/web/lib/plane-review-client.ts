@@ -2,6 +2,8 @@ import { ApiError } from './api'
 import type {
   PlaneReviewAssetSummary,
   PlaneReviewBootstrapResponse,
+  PlaneReviewComment,
+  PlaneReviewCommentCreate,
   PlaneReviewStreamResponse,
   PlaneSessionExchangeResponse,
 } from './plane-review-types'
@@ -126,5 +128,45 @@ export function getPlaneReviewStream(
   const query = new URLSearchParams({ version_id: versionId })
   return planeReviewRequest(
     `/integrations/plane/assets/${encodeURIComponent(assetId)}/stream?${query.toString()}`,
+  )
+}
+
+function planeReviewCommentPath(assetId: string, versionId: string): string {
+  return `/integrations/plane/assets/${encodeURIComponent(assetId)}/versions/${encodeURIComponent(versionId)}/comments`
+}
+
+export function getPlaneReviewComments(
+  assetId: string,
+  versionId: string,
+): Promise<PlaneReviewComment[]> {
+  return planeReviewRequest(planeReviewCommentPath(assetId, versionId))
+}
+
+export function createPlaneReviewComment(
+  assetId: string,
+  versionId: string,
+  body: PlaneReviewCommentCreate,
+): Promise<PlaneReviewComment> {
+  return planeReviewRequest(planeReviewCommentPath(assetId, versionId), {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body),
+  })
+}
+
+export function resolvePlaneReviewComment(
+  assetId: string,
+  commentId: string,
+): Promise<PlaneReviewComment> {
+  return planeReviewRequest(
+    `/integrations/plane/assets/${encodeURIComponent(assetId)}/comments/${encodeURIComponent(commentId)}/resolve`,
+    { method: 'POST' },
+  )
+}
+
+export function deletePlaneReviewComment(assetId: string, commentId: string): Promise<void> {
+  return planeReviewRequest(
+    `/integrations/plane/assets/${encodeURIComponent(assetId)}/comments/${encodeURIComponent(commentId)}`,
+    { method: 'DELETE' },
   )
 }
