@@ -1,0 +1,31 @@
+name: Plane Panel Focused
+
+on:
+  pull_request:
+    branches:
+      - develop
+
+permissions:
+  contents: read
+
+jobs:
+  focused:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 22
+      - uses: pnpm/action-setup@v6
+        with:
+          version: 10.15.0
+      - run: pnpm install --frozen-lockfile
+        working-directory: apps/web
+      - name: Run focused build
+        working-directory: apps/web
+        run: |
+          set +e
+          pnpm build > /tmp/build.log 2>&1
+          status=$?
+          tail -120 /tmp/build.log
+          exit $status
