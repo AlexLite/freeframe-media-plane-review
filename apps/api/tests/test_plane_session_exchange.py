@@ -3,13 +3,13 @@ from unittest.mock import MagicMock, patch
 from uuid import uuid4
 
 import pytest
-from jose import jwt
 
 from apps.api.config import Settings
 from apps.api.integrations.plane.claims import PlaneReviewClaims, PlaneTokenError
 from apps.api.integrations.plane.session import (
     PLANE_REVIEW_SESSION_EXPIRES_SECONDS,
     PLANE_REVIEW_SESSION_TYPE,
+    PLANE_USER_PREFERENCE_KEY,
     PlaneIdentityConflict,
     create_plane_review_session_token,
     decode_plane_review_session_token,
@@ -55,7 +55,7 @@ def _existing_user(claims: PlaneReviewClaims, **overrides):
         "id": claims.sub,
         "email": claims.email,
         "name": claims.name,
-        "preferences": {},
+        "preferences": {PLANE_USER_PREFERENCE_KEY: str(claims.sub)},
         "status": UserStatus.active,
         "email_verified": True,
         "password_hash": None,
@@ -98,12 +98,36 @@ def test_existing_shadow_user_profile_is_refreshed():
     db.refresh.assert_called_once_with(user)
 
 
-def test_plane_uuid_collision_with_different_email_is_rejected():
-    claims = _claims()
-    user = _existing_user(claims, email="standalone@example.test")
-    db = _mock_query_results(user)
+def test_existing_shadow_user_email_can_follow_plane_identity():
+    claims = _claims(email="new-address@example.test")
+    user = _existing_user(claims, email="old-address@example.test")
+    db = _mock_query_results(user, None)
 
-    with pytest.raises(PlaneIdentityConflict, match="UUID conflicts"):
+    result = get_or_create_plane_user(db, claims)
+
+    assert result.email == "new-address@example.test"
+    db.commit.assert_called_once()
+    db.refresh.assert_called_once_with(user)
+
+
+def test_shadow_user_email_change_rejects_another_email_owner():
+    claims = _claims(email="owned@example.test")
+    user = _existing_user(claims, email="old-address@example.test")
+    email_owner = _existing_user(claims, id=uuid4(), email=claims.email)
+    db = _mock_query_results(user, email_owner)
+
+    with pytest.raises(PlaneIdentityConflict, match="Email belongs"):
+        get_or_create_plane_user(db, claims)
+
+    db.commit.assert_not_called()
+
+
+def test_matching_uuid_without_plane_marker_is_not_adopted():
+    claims = _claims()
+    standalone_user = _existing_user(claims, preferences={})
+    db = _mock_query_results(standalone_user)
+
+    with pytest.raises(PlaneIdentityConflict, match="standalone identity"):
         get_or_create_plane_user(db, claims)
 
     db.commit.assert_not_called()
@@ -120,7 +144,7 @@ def test_existing_email_is_not_silently_adopted_as_plane_identity():
     db.add.assert_not_called()
 
 
-def test_new_shadow_user_uses_plane_uuid_and_is_not_superadmin():
+def test_new_shadow_user_uses_plane_uuid_and_provenance_marker():
     claims = _claims()
     db = _mock_query_results(None, None)
 
@@ -128,6 +152,7 @@ def test_new_shadow_user_uses_plane_uuid_and_is_not_superadmin():
 
     assert user.id == claims.sub
     assert user.email == claims.email
+    assert user.preferences[PLANE_USER_PREFERENCE_KEY] == str(claims.sub)
     assert user.is_superadmin is False
     assert user.email_verified is True
     assert user.password_hash is None
