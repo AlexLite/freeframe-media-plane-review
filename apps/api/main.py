@@ -24,6 +24,7 @@ from .routers import (
     metadata,
     notifications,
     plane_integration,
+    plane_upload_lifecycle,
     projects,
     setup,
     share,
@@ -95,6 +96,7 @@ app.include_router(folders.router)
 app.include_router(hls_proxy.router)
 app.include_router(instance_settings.router)
 app.include_router(plane_integration.router)
+app.include_router(plane_upload_lifecycle.router)
 
 
 @app.get("/health")
