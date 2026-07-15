@@ -36,7 +36,10 @@ describe('plane review client', () => {
     expect(fetchMock).toHaveBeenNthCalledWith(
       2,
       'http://localhost:8000/integrations/plane/assets/asset%2Fid/review',
-      { headers: { Authorization: 'Bearer plane-access' } },
+      {
+        cache: 'no-store',
+        headers: { Authorization: 'Bearer plane-access' },
+      },
     )
   })
 
