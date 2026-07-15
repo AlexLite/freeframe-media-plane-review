@@ -1,6 +1,7 @@
 import os
 from pathlib import Path
 from urllib.parse import urlparse
+
 from pydantic import model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
@@ -13,6 +14,7 @@ def _is_aws_endpoint(url: str) -> bool:
     """True if `url`'s host is an AWS S3 endpoint (an ``*.amazonaws.com`` host)."""
     host = (urlparse(url).hostname or "").lower()
     return host == "amazonaws.com" or host.endswith(".amazonaws.com")
+
 
 # Find .env file - check current dir, then project root
 # __file__ = apps/api/config.py, so parent.parent = project root
@@ -29,11 +31,12 @@ def _find_env_file() -> str:
             return str(p.resolve())
     return ".env"
 
+
 class Settings(BaseSettings):
     model_config = SettingsConfigDict(
         env_file=_find_env_file(),
         env_file_encoding="utf-8",
-        extra="ignore"  # Ignore extra env vars not in model
+        extra="ignore",  # Ignore extra env vars not in model
     )
 
     database_url: str
@@ -44,13 +47,24 @@ class Settings(BaseSettings):
     s3_access_key: str = "minioadmin"
     s3_secret_key: str = "minioadmin"
     s3_region: str = "us-east-1"
-    s3_public_endpoint: str | None = None  # External URL for presigned URLs (e.g. http://localhost:9000 when S3_ENDPOINT is http://minio:9000)
+    s3_public_endpoint: str | None = None  # External URL for presigned URLs
     jwt_secret: str
     jwt_algorithm: str = "HS256"
     access_token_expire_minutes: int = 15
     refresh_token_expire_days: int = 7
     frontend_url: str = "http://localhost:3000"
     transcoder_engine: str = "ffmpeg"
+
+    # Media Plane integration. Disabled by default so upstream standalone behavior
+    # remains unchanged until the fork is explicitly configured as a headless
+    # review engine behind Plane.
+    media_plane_mode: bool = False
+    plane_base_url: str | None = None
+    plane_jwt_secret: str | None = None
+    plane_jwt_algorithm: str = "HS256"
+    plane_token_issuer: str = "media-plane"
+    plane_token_audience: str = "freeframe-review"
+    plane_token_leeway_seconds: int = 30
 
     # Maximum size (bytes) for a single uploaded file. 0 = unlimited (no per-file cap).
     # Note: S3 multipart still caps effective size at ~10,000 parts x chunk size.
@@ -73,19 +87,19 @@ class Settings(BaseSettings):
     # Worker concurrency settings
     transcoding_concurrency: int = 2  # Number of concurrent video transcoding jobs
     email_concurrency: int = 2  # Number of concurrent email sending jobs
-    
+
     # Email settings - supports AWS SES or any SMTP server
     # If mail_provider is "ses", uses AWS SES with aws_mail_* credentials
     # If mail_provider is "smtp", uses standard SMTP with smtp_* settings
     mail_provider: str = "ses"  # "ses" or "smtp"
     mail_from_address: str = "noreply@example.com"
     mail_from_name: str = "FreeFrame"
-    
+
     # AWS SES settings
     aws_mail_access_key_id: str | None = None
     aws_mail_secret_access_key: str | None = None
     aws_mail_region: str = "ap-south-1"
-    
+
     # SMTP settings (for non-SES providers like SendGrid, Mailgun, self-hosted)
     smtp_host: str | None = None
     smtp_port: int = 587
@@ -113,5 +127,36 @@ class Settings(BaseSettings):
                     f"leave S3_ENDPOINT unset."
                 )
         return self
+
+    @model_validator(mode="after")
+    def _check_media_plane_configuration(self):
+        """Require a complete trust boundary when Media Plane mode is enabled."""
+        if self.plane_token_leeway_seconds < 0:
+            raise ValueError("PLANE_TOKEN_LEEWAY_SECONDS cannot be negative")
+
+        if not self.media_plane_mode:
+            return self
+
+        missing = []
+        if not (self.plane_base_url or "").strip():
+            missing.append("PLANE_BASE_URL")
+        if not (self.plane_jwt_secret or "").strip():
+            missing.append("PLANE_JWT_SECRET")
+        if missing:
+            raise ValueError(
+                "MEDIA_PLANE_MODE=true requires " + ", ".join(missing)
+            )
+
+        parsed = urlparse(self.plane_base_url or "")
+        if parsed.scheme not in {"http", "https"} or not parsed.netloc:
+            raise ValueError("PLANE_BASE_URL must be an absolute http(s) URL")
+
+        if self.plane_jwt_secret == self.jwt_secret:
+            raise ValueError(
+                "PLANE_JWT_SECRET must be different from the normal FreeFrame JWT_SECRET"
+            )
+
+        return self
+
 
 settings = Settings()
