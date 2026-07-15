@@ -24,6 +24,7 @@ from .routers import (
     metadata,
     notifications,
     plane_integration,
+    plane_review_bootstrap,
     plane_upload_lifecycle,
     projects,
     setup,
@@ -96,8 +97,8 @@ app.include_router(folders.router)
 app.include_router(hls_proxy.router)
 app.include_router(instance_settings.router)
 app.include_router(plane_integration.router)
-# Keep upload lifecycle isolated from the session/resource router to reduce stacked-PR conflicts.
 app.include_router(plane_upload_lifecycle.router)
+app.include_router(plane_review_bootstrap.router)
 
 
 @app.get("/health")
