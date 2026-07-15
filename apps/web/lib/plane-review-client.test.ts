@@ -2,11 +2,15 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 import {
   clearPlaneReviewSession,
+  createPlaneReviewComment,
+  deletePlaneReviewComment,
   exchangePlaneReviewToken,
   getPlaneReviewBootstrap,
+  getPlaneReviewComments,
   getPlaneReviewSession,
   getPlaneReviewStream,
   planeReviewRequest,
+  resolvePlaneReviewComment,
 } from './plane-review-client'
 
 const session = {
@@ -63,6 +67,57 @@ describe('plane review client', () => {
         cache: 'no-store',
         headers: { Authorization: 'Bearer plane-access' },
       },
+    )
+  })
+
+  it('uses context-scoped comment routes and JSON payloads', async () => {
+    const comment = {
+      id: 'comment-1',
+      asset_id: 'asset/id',
+      version_id: 'version id',
+      body: 'Fix this cut',
+    }
+    const fetchMock = vi
+      .spyOn(globalThis, 'fetch')
+      .mockResolvedValueOnce(new Response(JSON.stringify(session), { status: 200 }))
+      .mockResolvedValueOnce(new Response(JSON.stringify([]), { status: 200 }))
+      .mockResolvedValueOnce(new Response(JSON.stringify(comment), { status: 201 }))
+      .mockResolvedValueOnce(new Response(JSON.stringify({ ...comment, resolved: true }), { status: 200 }))
+      .mockResolvedValueOnce(new Response(null, { status: 204 }))
+
+    await exchangePlaneReviewToken('plane-token')
+    await getPlaneReviewComments('asset/id', 'version id')
+    await createPlaneReviewComment('asset/id', 'version id', {
+      body: 'Fix this cut',
+      timecode_start: 12.5,
+    })
+    await resolvePlaneReviewComment('asset/id', 'comment/1')
+    await deletePlaneReviewComment('asset/id', 'comment/1')
+
+    expect(fetchMock).toHaveBeenNthCalledWith(
+      2,
+      'http://localhost:8000/integrations/plane/assets/asset%2Fid/versions/version%20id/comments',
+      { cache: 'no-store', headers: { Authorization: 'Bearer plane-access' } },
+    )
+    expect(fetchMock).toHaveBeenNthCalledWith(
+      3,
+      'http://localhost:8000/integrations/plane/assets/asset%2Fid/versions/version%20id/comments',
+      {
+        method: 'POST',
+        cache: 'no-store',
+        headers: { 'Content-Type': 'application/json', Authorization: 'Bearer plane-access' },
+        body: JSON.stringify({ body: 'Fix this cut', timecode_start: 12.5 }),
+      },
+    )
+    expect(fetchMock).toHaveBeenNthCalledWith(
+      4,
+      'http://localhost:8000/integrations/plane/assets/asset%2Fid/comments/comment%2F1/resolve',
+      { method: 'POST', cache: 'no-store', headers: { Authorization: 'Bearer plane-access' } },
+    )
+    expect(fetchMock).toHaveBeenNthCalledWith(
+      5,
+      'http://localhost:8000/integrations/plane/assets/asset%2Fid/comments/comment%2F1',
+      { method: 'DELETE', cache: 'no-store', headers: { Authorization: 'Bearer plane-access' } },
     )
   })
 
