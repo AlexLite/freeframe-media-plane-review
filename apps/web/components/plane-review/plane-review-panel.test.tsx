@@ -12,6 +12,7 @@ vi.mock('@/lib/plane-review-client', () => ({
   exchangePlaneReviewToken: (...args: unknown[]) => exchangePlaneReviewToken(...args),
   getPlaneReviewBootstrap: (...args: unknown[]) => getPlaneReviewBootstrap(...args),
   getPlaneReviewStream: (...args: unknown[]) => getPlaneReviewStream(...args),
+  planeReviewRequest: vi.fn(),
 }))
 
 vi.mock('hls.js', () => ({
@@ -83,6 +84,27 @@ describe('PlaneReviewPanel', () => {
 
     expect(await screen.findByText('Version is processing.')).toBeInTheDocument()
     expect(getPlaneReviewStream).toHaveBeenCalledTimes(1)
+  })
+
+  it('shows first-version upload only when the Plane session grants upload', async () => {
+    getPlaneReviewBootstrap.mockResolvedValueOnce({
+      ...bootstrap,
+      versions: [],
+      permissions: { ...bootstrap.permissions, upload: true },
+    })
+    render(<PlaneReviewPanel assetId="asset-1" integrationToken="integration-token" />)
+
+    expect(await screen.findByText('Upload the first version')).toBeInTheDocument()
+    expect(screen.getByLabelText('Choose first review file')).toBeInTheDocument()
+    expect(getPlaneReviewStream).not.toHaveBeenCalled()
+  })
+
+  it('keeps an empty asset read-only without upload scope', async () => {
+    getPlaneReviewBootstrap.mockResolvedValueOnce({ ...bootstrap, versions: [] })
+    render(<PlaneReviewPanel assetId="asset-1" integrationToken="integration-token" />)
+
+    expect(await screen.findByText('No versions have been uploaded yet.')).toBeInTheDocument()
+    expect(screen.queryByLabelText('Choose first review file')).not.toBeInTheDocument()
   })
 
   it('shows a retry action when bootstrap fails', async () => {
