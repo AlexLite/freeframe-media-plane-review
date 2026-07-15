@@ -2,7 +2,7 @@ name: CI
 
 on:
   push:
-    branches: [main]
+    branches: [develop, main]
     paths-ignore:
       - "*.md"
       - "docs/**"
@@ -12,7 +12,7 @@ on:
       - ".github/FUNDING.yml"
       - ".github/dependabot.yml"
   pull_request:
-    branches: [main]
+    branches: [develop, main]
     paths-ignore:
       - "*.md"
       - "docs/**"
@@ -218,7 +218,7 @@ jobs:
         run: pip install -r apps/api/requirements.txt
 
       - name: Check Python syntax
-        run: python -m py_compile apps/api/main.py
+        run: python -m py_compile apps/api/main.py apps/api/config.py apps/api/integrations/plane/claims.py
 
       - name: Set up Node.js
         uses: actions/setup-node@v6
