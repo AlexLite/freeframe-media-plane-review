@@ -2,6 +2,7 @@ import ast
 from pathlib import Path
 
 
+# Temporary CI-only probe; removed after the current Alembic head is captured.
 def test_report_current_alembic_heads():
     versions_dir = Path(__file__).parents[1] / "alembic" / "versions"
     revisions: dict[str, str | tuple[str, ...] | None] = {}
