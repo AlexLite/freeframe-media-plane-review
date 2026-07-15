@@ -25,7 +25,7 @@ jobs:
         shell: bash
         run: |
           set +e
-          pnpm --dir apps/web exec vitest run \
+          pnpm --filter web exec vitest run \
             lib/plane-review-client.test.ts \
             lib/plane-review-upload.test.ts \
             components/plane-review/plane-review-first-upload.test.tsx \
