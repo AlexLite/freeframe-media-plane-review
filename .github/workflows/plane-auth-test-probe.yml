@@ -27,9 +27,12 @@ jobs:
         with:
           python-version: "3.12"
       - run: pip install -r apps/api/requirements.txt
-      - name: Run focused tests
+      - name: Run database migrations
+        working-directory: apps/api
+        run: alembic upgrade head
+      - name: Run full backend tests
         continue-on-error: true
-        run: python -m pytest apps/api/tests/test_plane_review_asset_authorization.py -vv --tb=long > plane-auth-test-output.txt 2>&1
+        run: python -m pytest apps/api/tests/ -vv --tb=long > plane-auth-test-output.txt 2>&1
       - uses: actions/upload-artifact@v4
         with:
           name: plane-auth-test-output
