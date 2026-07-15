@@ -12,6 +12,7 @@ from apps.api.models.project import Project, ProjectMember, ProjectRole, Project
 from apps.api.models.user import UserStatus
 from apps.api.routers.plane_review_catalog import (
     _ensure_catalog_project,
+    _escaped_contains,
     _managed_project_description,
     _validate_managed_project,
     create_plane_review_catalog_asset,
@@ -47,6 +48,10 @@ def test_catalog_project_id_is_stable_and_context_scoped():
     assert first == second
     assert first != plane_review_catalog_project_id(uuid4(), principal.project_id)
     assert first != plane_review_catalog_project_id(principal.workspace_id, uuid4())
+
+
+def test_catalog_search_escapes_sql_wildcards_and_escape_character():
+    assert _escaped_contains(r"cut_100%\\final") == r"cut\_100\%\\\\final"
 
 
 def test_ensure_catalog_project_provisions_private_team_project_and_owner():
