@@ -59,7 +59,7 @@ describe('PlaneReviewFirstUpload', () => {
 
     await user.upload(
       screen.getByLabelText('Choose first review file'),
-      new File(['image'], 'poster.jpg', { type: 'image/jpeg' }),
+      new File(['video'], 'campaign.mp4', { type: 'video/mp4' }),
     )
 
     expect(screen.getByText('Choose a video file for this asset.')).toBeInTheDocument()
