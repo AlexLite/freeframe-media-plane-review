@@ -8,6 +8,7 @@ from uuid import UUID
 
 from jose import JWTError, jwt
 from sqlalchemy.orm import Session
+from sqlalchemy.orm.attributes import flag_modified
 
 from ...config import Settings, settings
 from ...models.user import User, UserStatus
@@ -15,6 +16,7 @@ from .claims import PlaneReviewClaims, PlaneTokenError, decode_plane_review_toke
 
 PLANE_REVIEW_SESSION_TYPE = "plane_review_session"
 PLANE_REVIEW_SESSION_EXPIRES_SECONDS = 900
+PLANE_USER_PREFERENCE_KEY = "integration_plane_user_id"
 SUPPORTED_REVIEW_SCOPES = frozenset(
     {"review:read", "review:comment", "review:upload", "review:manage"}
 )
@@ -41,22 +43,36 @@ def _query_user_by_email(db: Session, email: str) -> User | None:
     return db.query(User).filter(User.email == email, User.deleted_at.is_(None)).first()
 
 
+def _plane_user_id(user: User) -> str | None:
+    value = (user.preferences or {}).get(PLANE_USER_PREFERENCE_KEY)
+    return str(value) if value else None
+
+
 def get_or_create_plane_user(db: Session, claims: PlaneReviewClaims) -> User:
     """Resolve a shadow user by immutable Plane UUID, never by email alone.
 
-    The FreeFrame shadow-user UUID intentionally equals the Plane user UUID. This
-    avoids a second identity mapping table and makes the Plane UUID authoritative.
-    Existing standalone users are never silently adopted by matching email.
+    The FreeFrame shadow-user UUID equals the Plane user UUID, while an explicit
+    preference marker records that the row was created for Plane. This prevents
+    an unrelated standalone user with a coincidentally matching UUID from being
+    silently adopted. Email and display name remain mutable Plane-owned profile
+    attributes.
     """
 
+    plane_user_id = str(claims.sub)
     user = _query_user_by_id(db, claims.sub)
     if user:
+        if _plane_user_id(user) != plane_user_id:
+            raise PlaneIdentityConflict("Plane user UUID conflicts with a standalone identity")
         if user.status == UserStatus.deactivated:
             raise PlaneIdentityConflict("FreeFrame shadow account is deactivated")
-        if user.email != claims.email:
-            raise PlaneIdentityConflict("Plane user UUID conflicts with another FreeFrame identity")
 
         changed = False
+        if user.email != claims.email:
+            email_owner = _query_user_by_email(db, claims.email)
+            if email_owner and email_owner.id != user.id:
+                raise PlaneIdentityConflict("Email belongs to another FreeFrame identity")
+            user.email = claims.email
+            changed = True
         if user.name != claims.name:
             user.name = claims.name
             changed = True
@@ -80,7 +96,7 @@ def get_or_create_plane_user(db: Session, claims: PlaneReviewClaims) -> User:
         status=UserStatus.active,
         email_verified=True,
         is_superadmin=False,
-        preferences={},
+        preferences={PLANE_USER_PREFERENCE_KEY: plane_user_id},
     )
     db.add(user)
     db.commit()
