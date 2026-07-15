@@ -96,6 +96,7 @@ app.include_router(folders.router)
 app.include_router(hls_proxy.router)
 app.include_router(instance_settings.router)
 app.include_router(plane_integration.router)
+# Keep upload lifecycle isolated from the session/resource router to reduce stacked-PR conflicts.
 app.include_router(plane_upload_lifecycle.router)
 
 
