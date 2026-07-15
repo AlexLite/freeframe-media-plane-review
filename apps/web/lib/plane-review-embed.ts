@@ -29,7 +29,7 @@ export function parseAllowedOrigins(value: string | undefined): string[] {
     })
     .filter((origin): origin is string => origin !== null)
 
-  return [...new Set(origins)]
+  return Array.from(new Set(origins))
 }
 
 export function isAllowedPlaneOrigin(origin: string, allowedOrigins: readonly string[]): boolean {
