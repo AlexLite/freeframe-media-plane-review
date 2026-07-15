@@ -49,7 +49,7 @@ def get_plane_review_bootstrap(
                 version_number=version.version_number,
                 processing_status=version.processing_status.value,
                 created_by=version.created_by,
-                created_at=version.created_at.isoformat() if version.created_at else None,
+                created_at=version.created_at,
                 original_filename=media_file.original_filename if media_file else None,
                 mime_type=media_file.mime_type if media_file else None,
                 file_size_bytes=media_file.file_size_bytes if media_file else None,
