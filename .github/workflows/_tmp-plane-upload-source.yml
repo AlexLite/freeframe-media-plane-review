@@ -1,9 +1,9 @@
 name: Inspect existing upload client
 
 on:
-  push:
+  pull_request:
     branches:
-      - feat/plane-review-first-upload
+      - feat/plane-review-asset-catalog
 
 permissions:
   contents: read
