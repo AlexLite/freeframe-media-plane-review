@@ -7,12 +7,20 @@ import { PlaneReviewPanel } from './plane-review-panel'
 const exchangePlaneReviewToken = vi.fn()
 const getPlaneReviewBootstrap = vi.fn()
 const getPlaneReviewStream = vi.fn()
+const getPlaneReviewSession = vi.fn()
 
 vi.mock('@/lib/plane-review-client', () => ({
   exchangePlaneReviewToken: (...args: unknown[]) => exchangePlaneReviewToken(...args),
   getPlaneReviewBootstrap: (...args: unknown[]) => getPlaneReviewBootstrap(...args),
   getPlaneReviewStream: (...args: unknown[]) => getPlaneReviewStream(...args),
+  getPlaneReviewSession: () => getPlaneReviewSession(),
   planeReviewRequest: vi.fn(),
+}))
+
+vi.mock('./plane-review-comments', () => ({
+  PlaneReviewComments: ({ versionId }: { versionId: string }) => (
+    <div data-testid="plane-review-comments">Comments for {versionId}</div>
+  ),
 }))
 
 vi.mock('hls.js', () => ({
@@ -56,6 +64,7 @@ describe('PlaneReviewPanel', () => {
   beforeEach(() => {
     vi.clearAllMocks()
     exchangePlaneReviewToken.mockResolvedValue({ access_token: 'token' })
+    getPlaneReviewSession.mockReturnValue({ user: { id: 'u1' } })
     getPlaneReviewBootstrap.mockResolvedValue(bootstrap)
     getPlaneReviewStream.mockResolvedValue({
       url: 'https://media.example/master.m3u8',
@@ -76,6 +85,7 @@ describe('PlaneReviewPanel', () => {
     expect(exchangePlaneReviewToken).toHaveBeenCalledWith('integration-token')
     expect(screen.getByText('campaign-v2.mp4')).toBeInTheDocument()
     expect(screen.getByText('1.0 MB')).toBeInTheDocument()
+    expect(screen.getByText('Comments for v2')).toBeInTheDocument()
   })
 
   it('does not request a stream for a processing version', async () => {
@@ -88,6 +98,7 @@ describe('PlaneReviewPanel', () => {
 
     expect(await screen.findByText('Version is processing.')).toBeInTheDocument()
     expect(screen.getByText('Status refreshes automatically.')).toBeInTheDocument()
+    expect(screen.getByText('Comments for v1')).toBeInTheDocument()
     expect(getPlaneReviewStream).toHaveBeenCalledTimes(1)
   })
 
@@ -167,6 +178,7 @@ describe('PlaneReviewPanel', () => {
 
     expect(await screen.findByText('Upload the first version')).toBeInTheDocument()
     expect(screen.getByLabelText('Choose first review file')).toBeInTheDocument()
+    expect(screen.queryByTestId('plane-review-comments')).not.toBeInTheDocument()
     expect(getPlaneReviewStream).not.toHaveBeenCalled()
   })
 
