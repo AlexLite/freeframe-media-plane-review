@@ -1,5 +1,6 @@
 import { ApiError } from './api'
 import type {
+  PlaneReviewAssetSummary,
   PlaneReviewBootstrapResponse,
   PlaneReviewStreamResponse,
   PlaneSessionExchangeResponse,
@@ -79,7 +80,7 @@ export async function planeReviewRequest<T>(path: string): Promise<T> {
   return parseResponse<T>(response)
 }
 
-export function getPlaneReviewBootstrap<TAsset = Record<string, unknown>>(
+export function getPlaneReviewBootstrap<TAsset = PlaneReviewAssetSummary>(
   assetId: string,
 ): Promise<PlaneReviewBootstrapResponse<TAsset>> {
   return planeReviewRequest(`/integrations/plane/assets/${encodeURIComponent(assetId)}/review`)
