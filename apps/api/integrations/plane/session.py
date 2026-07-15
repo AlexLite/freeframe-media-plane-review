@@ -8,7 +8,6 @@ from uuid import UUID
 
 from jose import JWTError, jwt
 from sqlalchemy.orm import Session
-from sqlalchemy.orm.attributes import flag_modified
 
 from ...config import Settings, settings
 from ...models.user import User, UserStatus
