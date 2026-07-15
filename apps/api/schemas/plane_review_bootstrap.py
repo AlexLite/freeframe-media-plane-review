@@ -1,4 +1,3 @@
-from datetime import datetime
 from uuid import UUID
 
 from pydantic import BaseModel
@@ -24,7 +23,7 @@ class PlaneReviewVersionSummary(BaseModel):
     version_number: int
     processing_status: str
     created_by: UUID
-    created_at: datetime | None = None
+    created_at: str | None = None
     original_filename: str | None = None
     mime_type: str | None = None
     file_size_bytes: int | None = None
