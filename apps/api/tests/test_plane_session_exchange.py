@@ -73,9 +73,12 @@ def test_existing_unlinked_email_is_safely_bound_to_plane_identity():
     )
     db = MagicMock()
 
-    with patch(
-        "apps.api.integrations.plane.session.get_user_by_email",
-        return_value=user,
+    with (
+        patch(
+            "apps.api.integrations.plane.session.get_user_by_email",
+            return_value=user,
+        ),
+        patch("apps.api.integrations.plane.session.flag_modified") as mark_dirty,
     ):
         result = get_or_create_plane_user(db, claims)
 
@@ -83,6 +86,7 @@ def test_existing_unlinked_email_is_safely_bound_to_plane_identity():
     assert result.name == claims.name
     assert result.email_verified is True
     assert result.status == UserStatus.active
+    mark_dirty.assert_called_once_with(user, "preferences")
     db.commit.assert_called_once()
     db.refresh.assert_called_once_with(user)
 
