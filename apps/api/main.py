@@ -25,6 +25,7 @@ from .routers import (
     notifications,
     plane_integration,
     plane_review_bootstrap,
+    plane_review_link_lifecycle,
     plane_upload_lifecycle,
     projects,
     setup,
@@ -99,6 +100,7 @@ app.include_router(instance_settings.router)
 app.include_router(plane_integration.router)
 app.include_router(plane_upload_lifecycle.router)
 app.include_router(plane_review_bootstrap.router)
+app.include_router(plane_review_link_lifecycle.router)
 
 
 @app.get("/health")
