@@ -37,9 +37,23 @@ export interface PlaneReviewVersionSummary {
   file_size_bytes: number | null
 }
 
-export interface PlaneReviewBootstrapResponse<TAsset = Record<string, unknown>> {
+export interface PlaneReviewAssetSummary {
+  id: string
+  name: string
+  asset_type: 'video' | 'image' | 'audio' | string
+  description?: string | null
+  thumbnail_url?: string | null
+}
+
+export interface PlaneReviewBootstrapResponse<TAsset = PlaneReviewAssetSummary> {
   context: PlaneReviewContext
   asset: TAsset
   versions: PlaneReviewVersionSummary[]
   permissions: PlaneReviewPermissions
+}
+
+export interface PlaneReviewStreamResponse {
+  url: string
+  asset_type: 'video' | 'image' | 'audio' | string
+  expires_in: number
 }
