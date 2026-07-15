@@ -4,11 +4,13 @@ import Hls from 'hls.js'
 import { AlertCircle, FileWarning, Loader2, RefreshCw, UploadCloud } from 'lucide-react'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 
+import { PlaneReviewComments } from './plane-review-comments'
 import { PlaneReviewVersionUpload } from './plane-review-version-upload'
 import { Button } from '@/components/ui/button'
 import {
   exchangePlaneReviewToken,
   getPlaneReviewBootstrap,
+  getPlaneReviewSession,
   getPlaneReviewStream,
 } from '@/lib/plane-review-client'
 import type {
@@ -19,6 +21,11 @@ import type {
 interface PlaneReviewPanelProps {
   assetId: string
   integrationToken: string
+}
+
+interface SeekRequest {
+  time: number
+  nonce: number
 }
 
 const PROCESSING_POLL_INTERVAL_MS = 5_000
@@ -44,8 +51,19 @@ function isUnauthorized(error: unknown): boolean {
   )
 }
 
-function MediaPreview({ stream, mimeType }: { stream: PlaneReviewStreamResponse; mimeType: string | null }) {
+function MediaPreview({
+  stream,
+  mimeType,
+  seekRequest,
+  onTimeChange,
+}: {
+  stream: PlaneReviewStreamResponse
+  mimeType: string | null
+  seekRequest: SeekRequest
+  onTimeChange: (time: number) => void
+}) {
   const videoRef = useRef<HTMLVideoElement>(null)
+  const audioRef = useRef<HTMLAudioElement>(null)
 
   useEffect(() => {
     if (stream.asset_type !== 'video' || !videoRef.current) return
@@ -63,11 +81,32 @@ function MediaPreview({ stream, mimeType }: { stream: PlaneReviewStreamResponse;
     return () => hls.destroy()
   }, [stream])
 
+  useEffect(() => {
+    const media = stream.asset_type === 'video' ? videoRef.current : audioRef.current
+    if (!media || seekRequest.nonce === 0) return
+    media.currentTime = seekRequest.time
+  }, [seekRequest, stream.asset_type])
+
   if (stream.asset_type === 'video') {
-    return <video ref={videoRef} controls className="h-full w-full bg-black object-contain" />
+    return (
+      <video
+        ref={videoRef}
+        controls
+        onTimeUpdate={(event) => onTimeChange(event.currentTarget.currentTime)}
+        className="h-full w-full bg-black object-contain"
+      />
+    )
   }
   if (stream.asset_type === 'audio') {
-    return <audio controls src={stream.url} className="w-full" />
+    return (
+      <audio
+        ref={audioRef}
+        controls
+        src={stream.url}
+        onTimeUpdate={(event) => onTimeChange(event.currentTarget.currentTime)}
+        className="w-full"
+      />
+    )
   }
   if (stream.asset_type === 'image' || mimeType?.startsWith('image/')) {
     return <img src={stream.url} alt="Review asset" className="h-full w-full object-contain" />
@@ -86,6 +125,8 @@ export function PlaneReviewPanel({ assetId, integrationToken }: PlaneReviewPanel
   const [loading, setLoading] = useState(true)
   const [streamLoading, setStreamLoading] = useState(false)
   const [showVersionUpload, setShowVersionUpload] = useState(false)
+  const [playbackTime, setPlaybackTime] = useState(0)
+  const [seekRequest, setSeekRequest] = useState<SeekRequest>({ time: 0, nonce: 0 })
   const [error, setError] = useState<string | null>(null)
 
   const selectedVersion = useMemo(
@@ -152,6 +193,11 @@ export function PlaneReviewPanel({ assetId, integrationToken }: PlaneReviewPanel
     setShowVersionUpload(false)
     void loadBootstrap()
   }, [loadBootstrap])
+
+  useEffect(() => {
+    setPlaybackTime(0)
+    setSeekRequest({ time: 0, nonce: 0 })
+  }, [selectedVersionId])
 
   useEffect(() => {
     if (!pendingVersionSignature) return
@@ -234,6 +280,11 @@ export function PlaneReviewPanel({ assetId, integrationToken }: PlaneReviewPanel
 
   if (!bootstrap) return null
 
+  const session = getPlaneReviewSession()
+  const canUseTimecode =
+    selectedVersion?.processing_status === 'ready' &&
+    (stream?.asset_type === 'video' || stream?.asset_type === 'audio')
+
   return (
     <section className="overflow-hidden rounded-lg border border-border bg-bg-secondary">
       <header className="flex flex-wrap items-center justify-between gap-3 border-b border-border px-4 py-3">
@@ -280,35 +331,55 @@ export function PlaneReviewPanel({ assetId, integrationToken }: PlaneReviewPanel
         </div>
       )}
 
-      <div className="flex min-h-80 items-center justify-center bg-bg-primary p-4">
-        {bootstrap.versions.length === 0 ? (
-          bootstrap.permissions.upload ? (
-            <PlaneReviewVersionUpload
-              asset={bootstrap.asset}
-              context={bootstrap.context}
-              mode="first"
-              onUploaded={() => refreshBootstrap(true)}
-            />
+      <div className={selectedVersion ? 'grid lg:grid-cols-[minmax(0,1fr)_22rem]' : ''}>
+        <div className="flex min-h-80 items-center justify-center bg-bg-primary p-4">
+          {bootstrap.versions.length === 0 ? (
+            bootstrap.permissions.upload ? (
+              <PlaneReviewVersionUpload
+                asset={bootstrap.asset}
+                context={bootstrap.context}
+                mode="first"
+                onUploaded={() => refreshBootstrap(true)}
+              />
+            ) : (
+              <div className="text-center text-sm text-text-secondary">No versions have been uploaded yet.</div>
+            )
+          ) : selectedVersion?.processing_status === 'failed' ? (
+            <div className="flex flex-col items-center gap-2 text-center">
+              <FileWarning className="h-8 w-8 text-status-error" />
+              <p className="text-sm text-text-secondary">This version failed to process.</p>
+            </div>
+          ) : selectedVersion?.processing_status !== 'ready' ? (
+            <div className="flex flex-col items-center gap-2 text-center">
+              <Loader2 className="h-7 w-7 animate-spin text-accent" />
+              <p className="text-sm text-text-secondary">Version is {selectedVersion?.processing_status}.</p>
+              <p className="text-xs text-text-tertiary">Status refreshes automatically.</p>
+            </div>
+          ) : streamLoading || !stream ? (
+            <Loader2 className="h-7 w-7 animate-spin text-accent" aria-label="Loading media" />
           ) : (
-            <div className="text-center text-sm text-text-secondary">No versions have been uploaded yet.</div>
-          )
-        ) : selectedVersion?.processing_status === 'failed' ? (
-          <div className="flex flex-col items-center gap-2 text-center">
-            <FileWarning className="h-8 w-8 text-status-error" />
-            <p className="text-sm text-text-secondary">This version failed to process.</p>
-          </div>
-        ) : selectedVersion?.processing_status !== 'ready' ? (
-          <div className="flex flex-col items-center gap-2 text-center">
-            <Loader2 className="h-7 w-7 animate-spin text-accent" />
-            <p className="text-sm text-text-secondary">Version is {selectedVersion?.processing_status}.</p>
-            <p className="text-xs text-text-tertiary">Status refreshes automatically.</p>
-          </div>
-        ) : streamLoading || !stream ? (
-          <Loader2 className="h-7 w-7 animate-spin text-accent" aria-label="Loading media" />
-        ) : (
-          <div className="flex h-[28rem] w-full items-center justify-center">
-            <MediaPreview stream={stream} mimeType={selectedVersion.mime_type} />
-          </div>
+            <div className="flex h-[28rem] w-full items-center justify-center">
+              <MediaPreview
+                stream={stream}
+                mimeType={selectedVersion.mime_type}
+                seekRequest={seekRequest}
+                onTimeChange={setPlaybackTime}
+              />
+            </div>
+          )}
+        </div>
+
+        {selectedVersion && (
+          <PlaneReviewComments
+            assetId={assetId}
+            versionId={selectedVersion.id}
+            canComment={bootstrap.permissions.comment}
+            canManage={bootstrap.permissions.manage}
+            currentUserId={session?.user.id ?? null}
+            currentTime={playbackTime}
+            canUseTimecode={canUseTimecode}
+            onSeek={(time) => setSeekRequest((current) => ({ time, nonce: current.nonce + 1 }))}
+          />
         )}
       </div>
 
