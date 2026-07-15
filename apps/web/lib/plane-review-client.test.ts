@@ -6,6 +6,7 @@ import {
   getPlaneReviewBootstrap,
   getPlaneReviewSession,
   getPlaneReviewStream,
+  planeReviewRequest,
 } from './plane-review-client'
 
 const session = {
@@ -61,6 +62,34 @@ describe('plane review client', () => {
       {
         cache: 'no-store',
         headers: { Authorization: 'Bearer plane-access' },
+      },
+    )
+  })
+
+  it('supports authenticated JSON mutations and empty success responses', async () => {
+    const fetchMock = vi
+      .spyOn(globalThis, 'fetch')
+      .mockResolvedValueOnce(new Response(JSON.stringify(session), { status: 200 }))
+      .mockResolvedValueOnce(new Response(null, { status: 204 }))
+
+    await exchangePlaneReviewToken('plane-token')
+    await planeReviewRequest<void>('/integrations/plane/assets/a/versions/v/upload/abort', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ upload_id: 'upload-1' }),
+    })
+
+    expect(fetchMock).toHaveBeenNthCalledWith(
+      2,
+      'http://localhost:8000/integrations/plane/assets/a/versions/v/upload/abort',
+      {
+        method: 'POST',
+        cache: 'no-store',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: 'Bearer plane-access',
+        },
+        body: JSON.stringify({ upload_id: 'upload-1' }),
       },
     )
   })
