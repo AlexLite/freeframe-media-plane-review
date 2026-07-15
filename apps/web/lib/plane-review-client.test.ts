@@ -54,11 +54,11 @@ describe('plane review client', () => {
       .spyOn(globalThis, 'fetch')
       .mockResolvedValueOnce(new Response(JSON.stringify(session), { status: 200 }))
       .mockResolvedValueOnce(
-        new Response(JSON.stringify({ url: 'https://media.example/master.m3u8', asset_type: 'video', expires_in: 3600 }), { status: 200 }),
+        new Response(JSON.stringify({ url: '/stream/hls/master.m3u8?token=scoped', asset_type: 'video', expires_in: 3600 }), { status: 200 }),
       )
 
     await exchangePlaneReviewToken('plane-token')
-    await getPlaneReviewStream('asset/id', 'version id')
+    const stream = await getPlaneReviewStream('asset/id', 'version id')
 
     expect(fetchMock).toHaveBeenNthCalledWith(
       2,
@@ -68,6 +68,7 @@ describe('plane review client', () => {
         headers: { Authorization: 'Bearer plane-access' },
       },
     )
+    expect(stream.url).toBe('http://localhost:8000/stream/hls/master.m3u8?token=scoped')
   })
 
   it('uses context-scoped comment routes and JSON payloads', async () => {

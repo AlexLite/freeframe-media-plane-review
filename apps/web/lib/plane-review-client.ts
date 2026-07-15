@@ -121,14 +121,20 @@ export function getPlaneReviewBootstrap<TAsset = PlaneReviewAssetSummary>(
   return planeReviewRequest(`/integrations/plane/assets/${encodeURIComponent(assetId)}/review`)
 }
 
-export function getPlaneReviewStream(
+export async function getPlaneReviewStream(
   assetId: string,
   versionId: string,
 ): Promise<PlaneReviewStreamResponse> {
   const query = new URLSearchParams({ version_id: versionId })
-  return planeReviewRequest(
+  const stream = await planeReviewRequest<PlaneReviewStreamResponse>(
     `/integrations/plane/assets/${encodeURIComponent(assetId)}/stream?${query.toString()}`,
   )
+  if (!stream.url.startsWith('/')) return stream
+
+  return {
+    ...stream,
+    url: `${API_URL.replace(/\/$/, '')}${stream.url}`,
+  }
 }
 
 function planeReviewCommentPath(assetId: string, versionId: string): string {
