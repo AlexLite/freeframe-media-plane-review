@@ -51,6 +51,7 @@ export async function exchangePlaneReviewToken(
 ): Promise<PlaneSessionExchangeResponse> {
   const response = await fetch(`${API_URL}/integrations/plane/session`, {
     method: 'POST',
+    cache: 'no-store',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ token }),
   })
@@ -70,6 +71,7 @@ export async function planeReviewRequest<T>(path: string): Promise<T> {
   }
 
   const response = await fetch(`${API_URL}${path}`, {
+    cache: 'no-store',
     headers: { Authorization: `Bearer ${state.accessToken}` },
   })
   if (response.status === 401) clearPlaneReviewSession()
