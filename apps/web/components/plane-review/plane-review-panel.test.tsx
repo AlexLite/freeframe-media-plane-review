@@ -1,6 +1,6 @@
-import { render, screen, waitFor } from '@testing-library/react'
+import { act, render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 import { PlaneReviewPanel } from './plane-review-panel'
 
@@ -64,6 +64,10 @@ describe('PlaneReviewPanel', () => {
     })
   })
 
+  afterEach(() => {
+    vi.useRealTimers()
+  })
+
   it('exchanges the token, loads bootstrap and requests the newest ready version', async () => {
     render(<PlaneReviewPanel assetId="asset-1" integrationToken="integration-token" />)
 
@@ -83,7 +87,55 @@ describe('PlaneReviewPanel', () => {
     await user.selectOptions(select, 'v1')
 
     expect(await screen.findByText('Version is processing.')).toBeInTheDocument()
+    expect(screen.getByText('Status refreshes automatically.')).toBeInTheDocument()
     expect(getPlaneReviewStream).toHaveBeenCalledTimes(1)
+  })
+
+  it('polls a processing version and loads its stream when it becomes ready', async () => {
+    vi.useFakeTimers()
+    const processingBootstrap = {
+      ...bootstrap,
+      versions: [{ ...bootstrap.versions[0], processing_status: 'processing' }],
+    }
+    const readyBootstrap = {
+      ...bootstrap,
+      versions: [{ ...bootstrap.versions[0], processing_status: 'ready' }],
+    }
+    getPlaneReviewBootstrap
+      .mockResolvedValueOnce(processingBootstrap)
+      .mockResolvedValueOnce(readyBootstrap)
+
+    render(<PlaneReviewPanel assetId="asset-1" integrationToken="integration-token" />)
+    await act(async () => {
+      await Promise.resolve()
+      await Promise.resolve()
+    })
+
+    expect(screen.getByText('Version is processing.')).toBeInTheDocument()
+    expect(getPlaneReviewStream).not.toHaveBeenCalled()
+
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(5_000)
+    })
+
+    expect(getPlaneReviewBootstrap).toHaveBeenCalledTimes(2)
+    await act(async () => {
+      await Promise.resolve()
+    })
+    expect(getPlaneReviewStream).toHaveBeenCalledWith('asset-1', 'v2')
+  })
+
+  it('shows a subsequent-version uploader when upload permission is granted', async () => {
+    const user = userEvent.setup()
+    getPlaneReviewBootstrap.mockResolvedValueOnce({
+      ...bootstrap,
+      permissions: { ...bootstrap.permissions, upload: true },
+    })
+    render(<PlaneReviewPanel assetId="asset-1" integrationToken="integration-token" />)
+
+    await user.click(await screen.findByRole('button', { name: 'New version' }))
+    expect(screen.getByText('Upload a new version')).toBeInTheDocument()
+    expect(screen.getByLabelText('Choose new review version file')).toBeInTheDocument()
   })
 
   it('shows first-version upload only when the Plane session grants upload', async () => {
