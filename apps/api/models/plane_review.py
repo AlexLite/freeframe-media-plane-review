@@ -5,7 +5,10 @@ from sqlalchemy import DateTime, ForeignKey, Index, UniqueConstraint, func
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, mapped_column
 
-from ..database import Base
+try:
+    from ..database import Base
+except ImportError:
+    from database import Base
 
 
 class PlaneReviewAssetLink(Base):
