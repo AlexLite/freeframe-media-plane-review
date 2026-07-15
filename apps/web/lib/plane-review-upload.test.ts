@@ -8,7 +8,7 @@ vi.mock('./plane-review-client', () => ({
 
 import {
   PLANE_REVIEW_UPLOAD_CHUNK_SIZE,
-  uploadPlaneReviewFirstVersion,
+  uploadPlaneReviewVersion,
   validatePlaneReviewFile,
 } from './plane-review-upload'
 
@@ -21,10 +21,10 @@ describe('Plane review upload client', () => {
     planeReviewRequest.mockReset()
   })
 
-  it('uploads ordered multipart chunks and completes the version', async () => {
+  it('uploads ordered multipart chunks and completes the next version', async () => {
     const file = new File(
       [new Uint8Array(PLANE_REVIEW_UPLOAD_CHUNK_SIZE + 1)],
-      'campaign.mp4',
+      'campaign-v3.mp4',
       { type: 'video/mp4' },
     )
     const onProgress = vi.fn()
@@ -33,18 +33,18 @@ describe('Plane review upload client', () => {
         upload_id: 'upload-1',
         s3_key: 'raw/project/asset/version/original.mp4',
         asset_id: asset.id,
-        version_id: 'version-1',
+        version_id: 'version-3',
       })
       .mockResolvedValueOnce({ presigned_url: 'https://storage.example/part-1', part_number: 1 })
       .mockResolvedValueOnce({ presigned_url: 'https://storage.example/part-2', part_number: 2 })
-      .mockResolvedValueOnce({ status: 'processing', asset_id: asset.id, version_id: 'version-1' })
+      .mockResolvedValueOnce({ status: 'processing', asset_id: asset.id, version_id: 'version-3' })
 
     const fetchMock = vi
       .spyOn(globalThis, 'fetch')
       .mockResolvedValueOnce(new Response(null, { status: 200, headers: { ETag: '"etag-1"' } }))
       .mockResolvedValueOnce(new Response(null, { status: 200, headers: { ETag: '"etag-2"' } }))
 
-    const result = await uploadPlaneReviewFirstVersion({ asset, context, file, onProgress })
+    const result = await uploadPlaneReviewVersion({ asset, context, file, onProgress })
 
     expect(result.status).toBe('processing')
     expect(fetchMock).toHaveBeenCalledTimes(2)
@@ -83,7 +83,7 @@ describe('Plane review upload client', () => {
       .mockResolvedValueOnce(undefined)
     vi.spyOn(globalThis, 'fetch').mockResolvedValueOnce(new Response(null, { status: 500 }))
 
-    await expect(uploadPlaneReviewFirstVersion({ asset, context, file })).rejects.toThrow(
+    await expect(uploadPlaneReviewVersion({ asset, context, file })).rejects.toThrow(
       'Upload part 1 failed',
     )
 
