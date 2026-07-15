@@ -1,6 +1,7 @@
 import { ApiError } from './api'
 import type {
   PlaneReviewBootstrapResponse,
+  PlaneReviewStreamResponse,
   PlaneSessionExchangeResponse,
 } from './plane-review-types'
 
@@ -82,4 +83,14 @@ export function getPlaneReviewBootstrap<TAsset = Record<string, unknown>>(
   assetId: string,
 ): Promise<PlaneReviewBootstrapResponse<TAsset>> {
   return planeReviewRequest(`/integrations/plane/assets/${encodeURIComponent(assetId)}/review`)
+}
+
+export function getPlaneReviewStream(
+  assetId: string,
+  versionId: string,
+): Promise<PlaneReviewStreamResponse> {
+  const query = new URLSearchParams({ version_id: versionId })
+  return planeReviewRequest(
+    `/integrations/plane/assets/${encodeURIComponent(assetId)}/stream?${query.toString()}`,
+  )
 }
