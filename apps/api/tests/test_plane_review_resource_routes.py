@@ -68,7 +68,7 @@ def test_plane_review_comment_rejects_internal_visibility():
     asset = SimpleNamespace(id=uuid4())
     body = CommentCreate(
         body="private note",
-        version_id=None,
+        version_id=uuid4(),
         visibility="internal",
     )
 
@@ -89,7 +89,7 @@ def test_plane_review_comment_is_public_and_owned_by_shadow_user():
     asset = SimpleNamespace(id=uuid4(), created_by=uuid4())
     body = CommentCreate(
         body="Frame 120 needs a trim",
-        version_id=None,
+        version_id=uuid4(),
         timecode_start=5.0,
     )
     db = MagicMock()
@@ -112,5 +112,6 @@ def test_plane_review_comment_is_public_and_owned_by_shadow_user():
     assert comment.author_id == principal.user.id
     assert comment.visibility == "public"
     assert comment.asset_id == asset.id
+    assert comment.version_id == body.version_id
     assert result.body == body.body
     db.commit.assert_called_once()
