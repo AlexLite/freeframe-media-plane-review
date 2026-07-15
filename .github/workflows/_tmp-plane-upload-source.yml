@@ -1,0 +1,32 @@
+name: Inspect existing upload client
+
+on:
+  push:
+    branches:
+      - feat/plane-review-first-upload
+
+permissions:
+  contents: read
+
+jobs:
+  inspect:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - name: Collect upload-related web sources
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p /tmp/upload-source
+          grep -RIlE 'presign-part|upload_id|multipart|part_number|PartNumber|ETag' apps/web \
+            --include='*.ts' --include='*.tsx' > /tmp/upload-files.txt || true
+          while IFS= read -r file; do
+            [ -n "$file" ] || continue
+            cp --parents "$file" /tmp/upload-source/
+          done < /tmp/upload-files.txt
+          cp /tmp/upload-files.txt /tmp/upload-source/files.txt
+      - uses: actions/upload-artifact@v4
+        with:
+          name: existing-upload-sources
+          path: /tmp/upload-source
+          if-no-files-found: error
