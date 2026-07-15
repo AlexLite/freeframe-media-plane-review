@@ -1,0 +1,27 @@
+name: Plane Routes Focused
+
+on:
+  pull_request:
+    branches:
+      - develop
+
+permissions:
+  contents: read
+
+jobs:
+  focused:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.12'
+      - name: Run focused backend tests
+        working-directory: apps/api
+        run: |
+          python -m pip install -q -r requirements.txt
+          set +e
+          pytest -q tests/test_plane_review_resource_routes.py tests/test_plane_review_stream_upload.py > /tmp/pytest.log 2>&1
+          status=$?
+          tail -120 /tmp/pytest.log
+          exit $status
