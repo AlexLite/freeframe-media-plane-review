@@ -22,10 +22,10 @@ Read [`docs/fork-workflow.md`](./docs/fork-workflow.md), [`docs/architecture/med
 
 ### Permanent branches
 
-- `develop` is the integration branch and should be configured as the default branch.
+- `develop` is the default integration branch.
 - `main` contains production-ready released code.
-- `stable` is a read-only mirror/reference for the validated upstream FreeFrame release channel.
-- Never commit or push directly to `develop`, `main`, or `stable`.
+- Upstream release channels such as `upstream/stable` are remote references, not permanent branches in this fork.
+- Never commit or push directly to `develop` or `main`.
 
 ### Task branches and pull requests
 
@@ -72,7 +72,7 @@ After pushing:
 ## Upstream synchronization
 
 - Use `Techiebutler/freeframe` as the `upstream` remote.
-- Sync only from the validated upstream `stable` channel unless an explicit task selects another immutable upstream tag.
+- Sync only from the validated `upstream/stable` channel or an explicitly selected immutable upstream tag.
 - Perform synchronization in a dedicated `chore/sync-upstream-*` branch and merge through a pull request to `develop`.
 - Record the exact base in [`UPSTREAM_VERSION`](./UPSTREAM_VERSION).
 - Never merge or deploy upstream `main` merely because it is newer.
