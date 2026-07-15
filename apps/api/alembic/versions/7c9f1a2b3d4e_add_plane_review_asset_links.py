@@ -1,4 +1,4 @@
-"""add Plane review asset links
+"""Add Plane review asset links.
 
 Revision ID: 7c9f1a2b3d4e
 Revises: 54b1ad156f8f
@@ -7,8 +7,8 @@ Create Date: 2026-07-15
 
 from collections.abc import Sequence
 
-from alembic import op
 import sqlalchemy as sa
+from alembic import op
 from sqlalchemy.dialects import postgresql
 
 
