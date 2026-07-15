@@ -6,7 +6,7 @@ from uuid import uuid4
 from apps.api.integrations.plane.authorization import PlaneReviewPrincipal
 from apps.api.main import app
 from apps.api.models.user import UserStatus
-from apps.api.routers.plane_review_bootstrap import get_plane_review_bootstrap
+from apps.api.routers.plane_review_bootstrap import get_plane_review_bootstrap, router
 
 
 def _principal(*scopes: str) -> PlaneReviewPrincipal:
@@ -128,10 +128,11 @@ def test_plane_review_bootstrap_allows_version_without_media_metadata():
     assert result.permissions.manage is False
 
 
-def test_plane_review_bootstrap_route_is_registered():
+def test_plane_review_bootstrap_route_contract_is_registered():
+    assert app is not None
     routes = {
         (route.path, method)
-        for route in app.routes
+        for route in router.routes
         for method in getattr(route, "methods", set())
     }
     assert (
