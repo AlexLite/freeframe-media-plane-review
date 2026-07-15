@@ -1,0 +1,55 @@
+name: Alembic Head Probe
+
+on:
+  pull_request:
+    branches: [develop]
+
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - name: Compute Alembic heads
+        run: |
+          python - <<'PY'
+          import ast
+          from pathlib import Path
+
+          versions = Path('apps/api/alembic/versions')
+          revisions = {}
+          for path in versions.glob('*.py'):
+              tree = ast.parse(path.read_text(encoding='utf-8'))
+              revision = None
+              down_revision = None
+              for node in tree.body:
+                  if not isinstance(node, (ast.Assign, ast.AnnAssign)):
+                      continue
+                  targets = node.targets if isinstance(node, ast.Assign) else [node.target]
+                  for target in targets:
+                      if not isinstance(target, ast.Name) or target.id not in {'revision', 'down_revision'}:
+                          continue
+                      try:
+                          value = ast.literal_eval(node.value)
+                      except (ValueError, TypeError):
+                          continue
+                      if target.id == 'revision':
+                          revision = value
+                      else:
+                          down_revision = value
+              if revision:
+                  revisions[revision] = down_revision
+
+          parents = set()
+          for value in revisions.values():
+              if isinstance(value, (tuple, list)):
+                  parents.update(item for item in value if item)
+              elif value:
+                  parents.add(value)
+          heads = sorted(set(revisions) - parents)
+          Path('alembic-heads.txt').write_text('\n'.join(heads) + '\n', encoding='utf-8')
+          print(heads)
+          PY
+      - uses: actions/upload-artifact@v4
+        with:
+          name: alembic-heads
+          path: alembic-heads.txt
