@@ -18,22 +18,51 @@ interface PlaneSessionState {
 let state: PlaneSessionState | null = null
 
 function errorDetail(body: unknown, fallback: string): string {
-  if (!body || typeof body !== 'object' || !('detail' in body)) return fallback
-  const detail = (body as { detail?: unknown }).detail
-  return typeof detail === 'string' ? detail : JSON.stringify(detail)
+  if (!body || typeof body !== 'object') return fallback
+  if ('detail' in body) {
+    const detail = (body as { detail?: unknown }).detail
+    return typeof detail === 'string' ? detail : JSON.stringify(detail)
+  }
+  if ('error' in body && typeof (body as { error?: unknown }).error === 'string') {
+    return (body as { error: string }).error
+  }
+  return fallback
 }
 
 async function parseResponse<T>(response: Response): Promise<T> {
-  if (!response.ok) {
-    let body: unknown
+  if (response.status === 204) {
+    if (!response.ok) throw new ApiError(response.status, response.statusText)
+    return undefined as T
+  }
+
+  const text = await response.text()
+  let body: unknown
+  if (text) {
     try {
-      body = await response.json()
+      body = JSON.parse(text)
     } catch {
-      body = undefined
+      if (response.ok) throw new ApiError(502, 'FreeFrame returned an invalid response')
     }
+  }
+
+  if (!response.ok) {
     throw new ApiError(response.status, errorDetail(body, response.statusText))
   }
-  return (await response.json()) as T
+  return body as T
+}
+
+function authorizedHeaders(headers: HeadersInit | undefined, accessToken: string): HeadersInit {
+  if (!headers) return { Authorization: `Bearer ${accessToken}` }
+  if (!Array.isArray(headers) && !(headers instanceof Headers)) {
+    return { ...headers, Authorization: `Bearer ${accessToken}` }
+  }
+
+  const normalized: Record<string, string> = {}
+  new Headers(headers).forEach((value, key) => {
+    normalized[key] = value
+  })
+  normalized.Authorization = `Bearer ${accessToken}`
+  return normalized
 }
 
 export function clearPlaneReviewSession(): void {
@@ -66,15 +95,19 @@ export async function exchangePlaneReviewToken(
   return session
 }
 
-export async function planeReviewRequest<T>(path: string): Promise<T> {
+export async function planeReviewRequest<T>(
+  path: string,
+  init: RequestInit = {},
+): Promise<T> {
   const session = getPlaneReviewSession()
   if (!session || !state) {
     throw new ApiError(401, 'Plane review session is missing or expired')
   }
 
   const response = await fetch(`${API_URL}${path}`, {
+    ...init,
     cache: 'no-store',
-    headers: { Authorization: `Bearer ${state.accessToken}` },
+    headers: authorizedHeaders(init.headers, state.accessToken),
   })
   if (response.status === 401) clearPlaneReviewSession()
   return parseResponse<T>(response)
