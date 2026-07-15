@@ -7,16 +7,23 @@ class PlaneSessionExchangeRequest(BaseModel):
     token: str
 
 
+class PlaneShadowUserResponse(BaseModel):
+    id: UUID
+    plane_user_id: UUID
+    email: str
+    name: str
+
+
 class PlaneReviewContext(BaseModel):
     workspace_id: UUID
     project_id: UUID
     issue_id: UUID
-    scopes: list[str]
 
 
 class PlaneSessionExchangeResponse(BaseModel):
     access_token: str
-    refresh_token: str
     token_type: str = "bearer"
-    user_id: UUID
+    expires_in: int
+    user: PlaneShadowUserResponse
     context: PlaneReviewContext
+    scopes: list[str]
