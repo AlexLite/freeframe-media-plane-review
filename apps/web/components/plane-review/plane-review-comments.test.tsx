@@ -94,6 +94,22 @@ describe('PlaneReviewComments', () => {
     expect(await screen.findByText('New note')).toBeInTheDocument()
   })
 
+  it('does not attach playback time when the media type has no timeline', async () => {
+    const user = userEvent.setup()
+    renderComments({ canUseTimecode: false })
+    await screen.findByText('Tighten this transition')
+
+    expect(screen.getByRole('checkbox')).toBeDisabled()
+    await user.type(screen.getByLabelText('Review comment'), 'Image note')
+    await user.click(screen.getByRole('button', { name: 'Comment' }))
+
+    await waitFor(() =>
+      expect(createPlaneReviewComment).toHaveBeenCalledWith('asset-1', 'version-1', {
+        body: 'Image note',
+      }),
+    )
+  })
+
   it('resolves and deletes an owned comment', async () => {
     const user = userEvent.setup()
     renderComments()
