@@ -1,3 +1,6 @@
+from fractions import Fraction
+from math import isfinite
+
 from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
 
@@ -17,6 +20,32 @@ from ..schemas.plane_review_bootstrap import (
 )
 
 router = APIRouter(prefix="/integrations/plane", tags=["plane-integration"])
+
+
+def _finite_non_negative(value):
+    return (
+        float(value)
+        if isinstance(value, (int, float))
+        and not isinstance(value, bool)
+        and isfinite(float(value))
+        and float(value) >= 0
+        else None
+    )
+
+
+def _version_timing(media_file: MediaFile | None):
+    if not media_file:
+        return None, None, None
+
+    duration_seconds = _finite_non_negative(
+        getattr(media_file, "duration_seconds", None)
+    )
+    fps = _finite_non_negative(getattr(media_file, "fps", None))
+    if not fps or fps <= 0:
+        return duration_seconds, None, None
+
+    rational = Fraction(str(fps)).limit_denominator(1_000_000)
+    return duration_seconds, rational.numerator, rational.denominator
 
 
 @router.get(
@@ -43,6 +72,7 @@ def get_plane_review_bootstrap(
     version_summaries: list[PlaneReviewVersionSummary] = []
     for version in versions:
         media_file = db.query(MediaFile).filter(MediaFile.version_id == version.id).first()
+        duration_seconds, fps_numerator, fps_denominator = _version_timing(media_file)
         version_summaries.append(
             PlaneReviewVersionSummary(
                 id=version.id,
@@ -53,6 +83,9 @@ def get_plane_review_bootstrap(
                 original_filename=media_file.original_filename if media_file else None,
                 mime_type=media_file.mime_type if media_file else None,
                 file_size_bytes=media_file.file_size_bytes if media_file else None,
+                duration_seconds=duration_seconds,
+                fps_numerator=fps_numerator,
+                fps_denominator=fps_denominator,
             )
         )
 
