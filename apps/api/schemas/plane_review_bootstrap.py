@@ -27,6 +27,9 @@ class PlaneReviewVersionSummary(BaseModel):
     original_filename: str | None = None
     mime_type: str | None = None
     file_size_bytes: int | None = None
+    duration_seconds: float | None = None
+    fps_numerator: int | None = None
+    fps_denominator: int | None = None
 
 
 class PlaneReviewBootstrapResponse(BaseModel):
