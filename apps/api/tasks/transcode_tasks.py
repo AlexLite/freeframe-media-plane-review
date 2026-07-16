@@ -82,11 +82,19 @@ def process_asset(self, asset_id: str, version_id: str):
         db.close()
 
 
+def _apply_video_metadata(media_file, metadata):
+    media_file.duration_seconds = metadata.duration_seconds
+    media_file.width = metadata.width
+    media_file.height = metadata.height
+    media_file.fps = metadata.fps
+
+
 def _process_video(db, asset, version, media_file, s3, output_prefix):
     from packages.transcoder.ffmpeg_transcoder import FFmpegTranscoder
     from packages.transcoder.base import TranscodeJob
 
     transcoder = FFmpegTranscoder(s3, settings.s3_bucket, settings.s3_endpoint)
+    metadata = _run_async(transcoder.get_video_metadata(media_file.s3_key_raw))
     job = TranscodeJob(
         media_id=str(asset.id),
         version_id=str(version.id),
@@ -98,6 +106,7 @@ def _process_video(db, asset, version, media_file, s3, output_prefix):
     if not result.success:
         raise RuntimeError(f"Transcode failed: {result.error}")
 
+    _apply_video_metadata(media_file, metadata)
     media_file.s3_key_processed = result.hls_prefix
     if result.thumbnail_keys:
         media_file.s3_key_thumbnail = result.thumbnail_keys[0]
