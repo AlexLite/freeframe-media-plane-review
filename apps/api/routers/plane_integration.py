@@ -32,11 +32,12 @@ from ..schemas.comment import CommentCreate, CommentResponse
 from ..schemas.plane_integration import (
     PlaneReviewAssetLinkResponse,
     PlaneReviewContext,
+    PlaneReviewVersionCreateRequest,
     PlaneSessionExchangeRequest,
     PlaneSessionExchangeResponse,
     PlaneShadowUserResponse,
 )
-from ..schemas.upload import ALLOWED_MIME_TYPES, InitiateUploadRequest, InitiateUploadResponse
+from ..schemas.upload import ALLOWED_MIME_TYPES, InitiateUploadResponse
 from ..services.s3_service import (
     build_download_filename,
     create_multipart_upload,
@@ -330,13 +331,15 @@ def get_plane_review_stream_url(
     response_model=InitiateUploadResponse,
 )
 def initiate_plane_review_version(
-    body: InitiateUploadRequest,
+    body: PlaneReviewVersionCreateRequest,
     db: Session = Depends(get_db),
     asset: Asset = Depends(require_linked_plane_asset("review:upload")),
     principal: PlaneReviewPrincipal = Depends(require_plane_scope("review:upload")),
 ):
     """Initiate a multipart upload for a new version of a linked asset."""
 
+    if body.asset_id != asset.id:
+        raise HTTPException(status_code=400, detail="Upload asset context does not match the route")
     if body.mime_type not in ALLOWED_MIME_TYPES:
         raise HTTPException(status_code=400, detail="Unsupported file type")
 
