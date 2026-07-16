@@ -2,11 +2,14 @@ from __future__ import annotations
 
 from pydantic import BaseModel, Field, field_validator, model_validator
 
+from .comment import AnnotationData
+
 
 class PlaneReviewCommentCreate(BaseModel):
     body: str = Field(min_length=1, max_length=5000)
     timecode_start: float | None = Field(default=None, ge=0)
     timecode_end: float | None = Field(default=None, ge=0)
+    annotation: AnnotationData | None = None
 
     @field_validator("body")
     @classmethod

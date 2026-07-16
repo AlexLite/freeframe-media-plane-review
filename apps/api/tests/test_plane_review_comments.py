@@ -14,6 +14,7 @@ from apps.api.routers.plane_review_comments import (
     resolve_plane_review_comment,
     router,
 )
+from apps.api.schemas.comment import AnnotationData
 from apps.api.schemas.plane_review_comment import PlaneReviewCommentCreate
 
 
@@ -92,6 +93,37 @@ def test_create_comment_rejects_version_from_another_asset():
 
     assert exc.value.status_code == 404
     db.add.assert_not_called()
+
+
+def test_create_comment_persists_drawing_annotation():
+    principal = _principal("review:comment")
+    asset = SimpleNamespace(id=uuid4())
+    version = SimpleNamespace(id=uuid4(), asset_id=asset.id)
+    db = _db_returning(version)
+    response = Response()
+    drawing_data = {"objects": [{"type": "Path"}], "_canvasWidth": 1280}
+
+    with patch(
+        "apps.api.routers.plane_review_comments._build_comment_response",
+        return_value={"id": "comment"},
+    ):
+        create_plane_review_comment(
+            version_id=version.id,
+            body=PlaneReviewCommentCreate(
+                body="Mark this frame",
+                timecode_start=3.5,
+                annotation=AnnotationData(drawing_data=drawing_data),
+            ),
+            response=response,
+            db=db,
+            asset=asset,
+            principal=principal,
+        )
+
+    comment, annotation = [call.args[0] for call in db.add.call_args_list]
+    assert annotation.comment_id == comment.id
+    assert annotation.drawing_data == drawing_data
+    db.flush.assert_called_once()
 
 
 def test_resolve_toggles_only_public_comment_on_linked_asset():

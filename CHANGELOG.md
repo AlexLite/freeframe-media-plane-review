@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+- The Plane integration review workspace now reuses FreeFrame Fabric.js annotations, persists drawing data with version-bound public comments, and restores drawings from the comment panel.
+- Plane integration UI copy now comes from typed Russian and English locale dictionaries, selected by the locale in the origin-checked Plane initialization message.
+
+### Changed
+- The Plane review panel now fills its modal host with a responsive player/comments split instead of sizing itself as an inline card.
+
 ## [1.4.1] - 2026-07-09
 
 ### Fixed

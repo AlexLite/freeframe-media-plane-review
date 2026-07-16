@@ -6,6 +6,8 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 
 import { PlaneReviewComments } from './plane-review-comments'
 import { PlaneReviewVersionUpload } from './plane-review-version-upload'
+import { AnnotationCanvas } from '@/components/review/annotation-canvas'
+import { AnnotationOverlay } from '@/components/review/annotation-overlay'
 import { Button } from '@/components/ui/button'
 import {
   exchangePlaneReviewToken,
@@ -17,6 +19,8 @@ import type {
   PlaneReviewBootstrapResponse,
   PlaneReviewStreamResponse,
 } from '@/lib/plane-review-types'
+import { usePlaneReviewI18n, type PlaneReviewMessageKey } from '@/lib/plane-review-i18n'
+import { useReviewStore } from '@/stores/review-store'
 
 interface PlaneReviewPanelProps {
   assetId: string
@@ -30,12 +34,21 @@ interface SeekRequest {
 
 const PROCESSING_POLL_INTERVAL_MS = 5_000
 
-function formatBytes(value: number | null): string {
-  if (value === null) return 'Size unavailable'
+function formatBytes(value: number | null, locale: string, unavailable: string): string {
+  if (value === null) return unavailable
+  const format = (size: number) =>
+    new Intl.NumberFormat(locale, { minimumFractionDigits: 1, maximumFractionDigits: 1 }).format(size)
   if (value < 1024) return `${value} B`
-  if (value < 1024 ** 2) return `${(value / 1024).toFixed(1)} KB`
-  if (value < 1024 ** 3) return `${(value / 1024 ** 2).toFixed(1)} MB`
-  return `${(value / 1024 ** 3).toFixed(1)} GB`
+  if (value < 1024 ** 2) return `${format(value / 1024)} KB`
+  if (value < 1024 ** 3) return `${format(value / 1024 ** 2)} MB`
+  return `${format(value / 1024 ** 3)} GB`
+}
+
+function statusKey(status: string): PlaneReviewMessageKey | null {
+  if (status === 'uploading' || status === 'processing' || status === 'ready' || status === 'failed') {
+    return `status.${status}`
+  }
+  return null
 }
 
 function isPendingStatus(status: string): boolean {
@@ -62,6 +75,8 @@ function MediaPreview({
   seekRequest: SeekRequest
   onTimeChange: (time: number) => void
 }) {
+  const { t } = usePlaneReviewI18n()
+  const isDrawingMode = useReviewStore((state) => state.isDrawingMode)
   const videoRef = useRef<HTMLVideoElement>(null)
   const audioRef = useRef<HTMLAudioElement>(null)
 
@@ -87,8 +102,14 @@ function MediaPreview({
     media.currentTime = seekRequest.time
   }, [seekRequest, stream.asset_type])
 
+  useEffect(() => {
+    if (isDrawingMode) videoRef.current?.pause()
+  }, [isDrawingMode])
+
+  let media: React.ReactNode
+
   if (stream.asset_type === 'video') {
-    return (
+    media = (
       <video
         ref={videoRef}
         controls
@@ -96,9 +117,8 @@ function MediaPreview({
         className="h-full w-full bg-black object-contain"
       />
     )
-  }
-  if (stream.asset_type === 'audio') {
-    return (
+  } else if (stream.asset_type === 'audio') {
+    media = (
       <audio
         ref={audioRef}
         controls
@@ -107,18 +127,29 @@ function MediaPreview({
         className="w-full"
       />
     )
+  } else if (stream.asset_type === 'image' || mimeType?.startsWith('image/')) {
+    media = <img src={stream.url} alt={t('panel.media_alt')} className="h-full w-full object-contain" />
+  } else {
+    media = (
+      <a href={stream.url} target="_blank" rel="noreferrer" className="text-sm text-accent hover:underline">
+        {t('panel.open_media')}
+      </a>
+    )
   }
-  if (stream.asset_type === 'image' || mimeType?.startsWith('image/')) {
-    return <img src={stream.url} alt="Review asset" className="h-full w-full object-contain" />
-  }
+
+  const canAnnotate = stream.asset_type !== 'audio'
   return (
-    <a href={stream.url} target="_blank" rel="noreferrer" className="text-sm text-accent hover:underline">
-      Open media file
-    </a>
+    <div className="relative flex h-full w-full items-center justify-center overflow-hidden">
+      {media}
+      {canAnnotate && <AnnotationOverlay />}
+      {canAnnotate && <AnnotationCanvas />}
+    </div>
   )
 }
 
 export function PlaneReviewPanel({ assetId, integrationToken }: PlaneReviewPanelProps) {
+  const { locale, t } = usePlaneReviewI18n()
+  const resetReviewStore = useReviewStore((state) => state.reset)
   const [bootstrap, setBootstrap] = useState<PlaneReviewBootstrapResponse | null>(null)
   const [selectedVersionId, setSelectedVersionId] = useState<string | null>(null)
   const [stream, setStream] = useState<PlaneReviewStreamResponse | null>(null)
@@ -183,11 +214,11 @@ export function PlaneReviewPanel({ assetId, integrationToken }: PlaneReviewPanel
     } catch (caught) {
       setBootstrap(null)
       setSelectedVersionId(null)
-      setError(caught instanceof Error ? caught.message : 'Unable to load Plane review')
+      setError(t('panel.load_error'))
     } finally {
       setLoading(false)
     }
-  }, [applyBootstrap, assetId, integrationToken])
+  }, [applyBootstrap, assetId, integrationToken, t])
 
   useEffect(() => {
     setShowVersionUpload(false)
@@ -197,7 +228,8 @@ export function PlaneReviewPanel({ assetId, integrationToken }: PlaneReviewPanel
   useEffect(() => {
     setPlaybackTime(0)
     setSeekRequest({ time: 0, nonce: 0 })
-  }, [selectedVersionId])
+    resetReviewStore()
+  }, [resetReviewStore, selectedVersionId])
 
   useEffect(() => {
     if (!pendingVersionSignature) return
@@ -247,7 +279,7 @@ export function PlaneReviewPanel({ assetId, integrationToken }: PlaneReviewPanel
         if (!cancelled) setStream(value)
       })
       .catch((caught) => {
-        if (!cancelled) setError(caught instanceof Error ? caught.message : 'Unable to load media stream')
+        if (!cancelled) setError(t('panel.stream_error'))
       })
       .finally(() => {
         if (!cancelled) setStreamLoading(false)
@@ -256,12 +288,12 @@ export function PlaneReviewPanel({ assetId, integrationToken }: PlaneReviewPanel
     return () => {
       cancelled = true
     }
-  }, [assetId, selectedVersion?.processing_status, selectedVersionId])
+  }, [assetId, selectedVersion?.processing_status, selectedVersionId, t])
 
   if (loading) {
     return (
       <div className="flex min-h-64 items-center justify-center rounded-lg border border-border bg-bg-secondary">
-        <Loader2 className="h-6 w-6 animate-spin text-accent" aria-label="Loading review" />
+        <Loader2 className="h-6 w-6 animate-spin text-accent" aria-label={t('panel.loading_review')} />
       </div>
     )
   }
@@ -272,7 +304,7 @@ export function PlaneReviewPanel({ assetId, integrationToken }: PlaneReviewPanel
         <AlertCircle className="h-7 w-7 text-status-error" />
         <p className="text-sm text-text-secondary">{error}</p>
         <Button size="sm" variant="secondary" onClick={() => void loadBootstrap()}>
-          <RefreshCw className="h-4 w-4" /> Retry
+          <RefreshCw className="h-4 w-4" /> {t('panel.retry')}
         </Button>
       </div>
     )
@@ -286,11 +318,11 @@ export function PlaneReviewPanel({ assetId, integrationToken }: PlaneReviewPanel
     (stream?.asset_type === 'video' || stream?.asset_type === 'audio')
 
   return (
-    <section className="overflow-hidden rounded-lg border border-border bg-bg-secondary">
+    <section className="flex h-[calc(100vh-1.5rem)] min-h-[32rem] flex-col overflow-hidden rounded-lg border border-border bg-bg-secondary sm:h-[calc(100vh-2rem)]">
       <header className="flex flex-wrap items-center justify-between gap-3 border-b border-border px-4 py-3">
         <div>
           <h2 className="font-medium text-text-primary">{bootstrap.asset.name}</h2>
-          <p className="text-xs text-text-tertiary">Plane media review</p>
+          <p className="text-xs text-text-tertiary">{t('panel.subtitle')}</p>
         </div>
         <div className="flex flex-wrap items-center gap-2">
           {bootstrap.permissions.upload && bootstrap.versions.length > 0 && (
@@ -299,19 +331,24 @@ export function PlaneReviewPanel({ assetId, integrationToken }: PlaneReviewPanel
               variant="secondary"
               onClick={() => setShowVersionUpload((current) => !current)}
             >
-              <UploadCloud className="h-4 w-4" /> New version
+              <UploadCloud className="h-4 w-4" /> {t('panel.new_version')}
             </Button>
           )}
           {bootstrap.versions.length > 0 && (
             <select
-              aria-label="Asset version"
+              aria-label={t('panel.asset_version')}
               value={selectedVersionId ?? ''}
               onChange={(event) => setSelectedVersionId(event.target.value)}
               className="h-9 rounded-md border border-border bg-bg-tertiary px-3 text-sm text-text-primary outline-none focus:border-border-focus"
             >
               {bootstrap.versions.map((version) => (
                 <option key={version.id} value={version.id}>
-                  Version {version.version_number} · {version.processing_status}
+                  {t('panel.version_option', {
+                    version: version.version_number,
+                    status: statusKey(version.processing_status)
+                      ? t(statusKey(version.processing_status) as PlaneReviewMessageKey)
+                      : version.processing_status,
+                  })}
                 </option>
               ))}
             </select>
@@ -331,8 +368,8 @@ export function PlaneReviewPanel({ assetId, integrationToken }: PlaneReviewPanel
         </div>
       )}
 
-      <div className={selectedVersion ? 'grid lg:grid-cols-[minmax(0,1fr)_22rem]' : ''}>
-        <div className="flex min-h-80 items-center justify-center bg-bg-primary p-4">
+      <div className={selectedVersion ? 'grid min-h-0 flex-1 lg:grid-cols-[minmax(0,1fr)_24rem]' : 'min-h-0 flex-1'}>
+        <div className="flex h-full min-h-80 items-center justify-center bg-bg-primary p-4">
           {bootstrap.versions.length === 0 ? (
             bootstrap.permissions.upload ? (
               <PlaneReviewVersionUpload
@@ -342,23 +379,29 @@ export function PlaneReviewPanel({ assetId, integrationToken }: PlaneReviewPanel
                 onUploaded={() => refreshBootstrap(true)}
               />
             ) : (
-              <div className="text-center text-sm text-text-secondary">No versions have been uploaded yet.</div>
+              <div className="text-center text-sm text-text-secondary">{t('panel.no_versions')}</div>
             )
           ) : selectedVersion?.processing_status === 'failed' ? (
             <div className="flex flex-col items-center gap-2 text-center">
               <FileWarning className="h-8 w-8 text-status-error" />
-              <p className="text-sm text-text-secondary">This version failed to process.</p>
+              <p className="text-sm text-text-secondary">{t('panel.processing_failed')}</p>
             </div>
           ) : selectedVersion?.processing_status !== 'ready' ? (
             <div className="flex flex-col items-center gap-2 text-center">
               <Loader2 className="h-7 w-7 animate-spin text-accent" />
-              <p className="text-sm text-text-secondary">Version is {selectedVersion?.processing_status}.</p>
-              <p className="text-xs text-text-tertiary">Status refreshes automatically.</p>
+              <p className="text-sm text-text-secondary">
+                {t('panel.processing_status', {
+                  status: selectedVersion && statusKey(selectedVersion.processing_status)
+                    ? t(statusKey(selectedVersion.processing_status) as PlaneReviewMessageKey)
+                    : (selectedVersion?.processing_status ?? ''),
+                })}
+              </p>
+              <p className="text-xs text-text-tertiary">{t('panel.status_refresh')}</p>
             </div>
           ) : streamLoading || !stream ? (
-            <Loader2 className="h-7 w-7 animate-spin text-accent" aria-label="Loading media" />
+            <Loader2 className="h-7 w-7 animate-spin text-accent" aria-label={t('panel.loading_media')} />
           ) : (
-            <div className="flex h-[28rem] w-full items-center justify-center">
+            <div className="flex h-full min-h-[28rem] w-full items-center justify-center">
               <MediaPreview
                 stream={stream}
                 mimeType={selectedVersion.mime_type}
@@ -378,6 +421,7 @@ export function PlaneReviewPanel({ assetId, integrationToken }: PlaneReviewPanel
             currentUserId={session?.user.id ?? null}
             currentTime={playbackTime}
             canUseTimecode={canUseTimecode}
+            canAnnotate={bootstrap.asset.asset_type !== 'audio'}
             onSeek={(time) => setSeekRequest((current) => ({ time, nonce: current.nonce + 1 }))}
           />
         )}
@@ -385,8 +429,10 @@ export function PlaneReviewPanel({ assetId, integrationToken }: PlaneReviewPanel
 
       {selectedVersion && (
         <footer className="flex flex-wrap items-center justify-between gap-2 border-t border-border px-4 py-3 text-xs text-text-tertiary">
-          <span>{selectedVersion.original_filename ?? `Version ${selectedVersion.version_number}`}</span>
-          <span>{formatBytes(selectedVersion.file_size_bytes)}</span>
+          <span>
+            {selectedVersion.original_filename ?? t('panel.version', { version: selectedVersion.version_number })}
+          </span>
+          <span>{formatBytes(selectedVersion.file_size_bytes, locale, t('panel.size_unavailable'))}</span>
         </footer>
       )}
     </section>

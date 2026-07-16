@@ -6,6 +6,7 @@ export interface PlaneReviewEmbedInitMessage {
   type: typeof PLANE_REVIEW_INIT_MESSAGE
   assetId: string
   integrationToken: string
+  locale?: string
 }
 
 export interface PlaneReviewEmbedResizeMessage {
@@ -47,6 +48,8 @@ export function isPlaneReviewEmbedInitMessage(value: unknown): value is PlaneRev
     candidate.assetId.length <= 256 &&
     typeof candidate.integrationToken === 'string' &&
     candidate.integrationToken.trim().length > 0 &&
-    candidate.integrationToken.length <= 16_384
+    candidate.integrationToken.length <= 16_384 &&
+    (candidate.locale === undefined ||
+      (typeof candidate.locale === 'string' && candidate.locale.length <= 35))
   )
 }

@@ -97,7 +97,7 @@ describe('PlaneReviewVersionUpload', () => {
       new File(['video'], 'campaign.mp4', { type: 'video/mp4' }),
     )
 
-    expect(screen.getByText('Choose a video file for this asset.')).toBeInTheDocument()
+    expect(screen.getByText('Unable to use this file.')).toBeInTheDocument()
     expect(uploadPlaneReviewVersion).not.toHaveBeenCalled()
   })
 

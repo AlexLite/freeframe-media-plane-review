@@ -16,6 +16,7 @@ vi.mock('@/lib/plane-review-client', () => ({
 }))
 
 import { PlaneReviewComments } from './plane-review-comments'
+import { useReviewStore } from '@/stores/review-store'
 
 const comment = {
   id: 'comment-1',
@@ -31,6 +32,7 @@ const comment = {
   created_at: '2026-07-15T10:00:00Z',
   updated_at: '2026-07-15T10:00:00Z',
   author: { id: 'user-1', name: 'Alex', avatar_url: null },
+  annotation: null,
   replies: [],
 }
 
@@ -45,6 +47,7 @@ function renderComments(
     currentUserId: 'user-1',
     currentTime: 12.345,
     canUseTimecode: true,
+    canAnnotate: true,
     onSeek: vi.fn(),
     ...overrides,
   }
@@ -55,6 +58,7 @@ function renderComments(
 describe('PlaneReviewComments', () => {
   beforeEach(() => {
     vi.clearAllMocks()
+    useReviewStore.getState().reset()
     getPlaneReviewComments.mockResolvedValue([comment])
     createPlaneReviewComment.mockResolvedValue({
       ...comment,
@@ -106,6 +110,34 @@ describe('PlaneReviewComments', () => {
     await waitFor(() =>
       expect(createPlaneReviewComment).toHaveBeenCalledWith('asset-1', 'version-1', {
         body: 'Image note',
+      }),
+    )
+  })
+
+  it('submits a drawing annotation with the current media time', async () => {
+    const user = userEvent.setup()
+    useReviewStore.getState().setPendingAnnotation({
+      objects: [{ type: 'Path' }],
+      _canvasWidth: 1280,
+      _canvasHeight: 720,
+    })
+    renderComments()
+    await screen.findByText('Tighten this transition')
+
+    await user.type(screen.getByLabelText('Review comment'), 'Mark this frame')
+    await user.click(screen.getByRole('button', { name: 'Comment' }))
+
+    await waitFor(() =>
+      expect(createPlaneReviewComment).toHaveBeenCalledWith('asset-1', 'version-1', {
+        body: 'Mark this frame',
+        timecode_start: 12.345,
+        annotation: {
+          drawing_data: {
+            objects: [{ type: 'Path' }],
+            _canvasWidth: 1280,
+            _canvasHeight: 720,
+          },
+        },
       }),
     )
   })

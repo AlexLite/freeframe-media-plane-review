@@ -10,6 +10,7 @@ import {
   validatePlaneReviewFile,
 } from '@/lib/plane-review-upload'
 import type { PlaneReviewAssetSummary, PlaneReviewContext } from '@/lib/plane-review-types'
+import { usePlaneReviewI18n, type PlaneReviewMessageKey } from '@/lib/plane-review-i18n'
 
 interface PlaneReviewVersionUploadProps {
   asset: PlaneReviewAssetSummary
@@ -19,11 +20,13 @@ interface PlaneReviewVersionUploadProps {
   onDismiss?: () => void
 }
 
-function formatBytes(value: number): string {
+function formatBytes(value: number, locale: string): string {
+  const format = (size: number) =>
+    new Intl.NumberFormat(locale, { minimumFractionDigits: 1, maximumFractionDigits: 1 }).format(size)
   if (value < 1024) return `${value} B`
-  if (value < 1024 ** 2) return `${(value / 1024).toFixed(1)} KB`
-  if (value < 1024 ** 3) return `${(value / 1024 ** 2).toFixed(1)} MB`
-  return `${(value / 1024 ** 3).toFixed(1)} GB`
+  if (value < 1024 ** 2) return `${format(value / 1024)} KB`
+  if (value < 1024 ** 3) return `${format(value / 1024 ** 2)} MB`
+  return `${format(value / 1024 ** 3)} GB`
 }
 
 export function PlaneReviewVersionUpload({
@@ -33,6 +36,7 @@ export function PlaneReviewVersionUpload({
   onUploaded,
   onDismiss,
 }: PlaneReviewVersionUploadProps) {
+  const { locale, t } = usePlaneReviewI18n()
   const inputRef = useRef<HTMLInputElement>(null)
   const controllerRef = useRef<AbortController | null>(null)
   const [file, setFile] = useState<File | null>(null)
@@ -59,10 +63,10 @@ export function PlaneReviewVersionUpload({
     try {
       validatePlaneReviewFile(asset.asset_type, nextFile)
       setFile(nextFile)
-    } catch (caught) {
+    } catch {
       setFile(null)
       event.currentTarget.value = ''
-      setError(caught instanceof Error ? caught.message : 'Unable to use this file.')
+      setError(t('upload.invalid_file'))
     }
   }
 
@@ -89,7 +93,7 @@ export function PlaneReviewVersionUpload({
       onDismiss?.()
     } catch (caught) {
       const cancelled = caught instanceof DOMException && caught.name === 'AbortError'
-      setError(cancelled ? 'Upload cancelled.' : caught instanceof Error ? caught.message : 'Upload failed.')
+      setError(cancelled ? t('upload.cancelled') : t('upload.failed'))
     } finally {
       if (controllerRef.current === controller) controllerRef.current = null
       setUploading(false)
@@ -100,12 +104,13 @@ export function PlaneReviewVersionUpload({
     controllerRef.current?.abort()
   }
 
-  const mediaType = asset.asset_type === 'image_carousel' ? 'image' : asset.asset_type
-  const title = mode === 'first' ? 'Upload the first version' : 'Upload a new version'
+  const mediaKey = `media.${asset.asset_type}` as PlaneReviewMessageKey
+  const mediaType = t(mediaKey)
+  const title = mode === 'first' ? t('upload.first_title') : t('upload.next_title')
   const description =
     mode === 'first'
-      ? `Choose a ${mediaType} file for this Plane review asset.`
-      : `Choose a ${mediaType} file to add as the next review version.`
+      ? t('upload.first_description', { mediaType })
+      : t('upload.next_description', { mediaType })
 
   return (
     <div className="w-full max-w-xl rounded-lg border border-border bg-bg-secondary p-5">
@@ -125,26 +130,26 @@ export function PlaneReviewVersionUpload({
         accept={planeReviewFileAccept(asset.asset_type)}
         disabled={uploading}
         onChange={handleFileChange}
-        aria-label={mode === 'first' ? 'Choose first review file' : 'Choose new review version file'}
+        aria-label={mode === 'first' ? t('upload.first_file_label') : t('upload.next_file_label')}
         className="block w-full rounded-md border border-border bg-bg-primary px-3 py-2 text-sm text-text-secondary file:mr-3 file:rounded file:border-0 file:bg-bg-tertiary file:px-3 file:py-1.5 file:text-sm file:text-text-primary disabled:opacity-60"
       />
 
       {file && (
         <div className="mt-3 flex items-center justify-between gap-3 text-xs text-text-secondary">
           <span className="min-w-0 truncate">{file.name}</span>
-          <span className="shrink-0">{formatBytes(file.size)}</span>
+          <span className="shrink-0">{formatBytes(file.size, locale)}</span>
         </div>
       )}
 
       {uploading && (
         <div className="mt-4">
           <div className="mb-1 flex items-center justify-between text-xs text-text-secondary">
-            <span>Uploading</span>
+            <span>{t('upload.progress')}</span>
             <span>{progress}%</span>
           </div>
           <div
             role="progressbar"
-            aria-label="Upload progress"
+            aria-label={t('upload.progress_label')}
             aria-valuemin={0}
             aria-valuemax={100}
             aria-valuenow={progress}
@@ -160,18 +165,18 @@ export function PlaneReviewVersionUpload({
       <div className="mt-4 flex justify-end gap-2">
         {uploading ? (
           <Button size="sm" variant="secondary" onClick={handleCancel}>
-            <X className="h-4 w-4" /> Cancel
+            <X className="h-4 w-4" /> {t('upload.cancel')}
           </Button>
         ) : (
           onDismiss && (
             <Button size="sm" variant="secondary" onClick={onDismiss}>
-              Close
+              {t('upload.close')}
             </Button>
           )
         )}
         <Button size="sm" disabled={!file || uploading} onClick={() => void handleUpload()}>
           {uploading ? <Loader2 className="h-4 w-4 animate-spin" /> : <UploadCloud className="h-4 w-4" />}
-          Upload
+          {t('upload.submit')}
         </Button>
       </div>
     </div>

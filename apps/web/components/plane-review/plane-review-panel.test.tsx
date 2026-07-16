@@ -195,7 +195,7 @@ describe('PlaneReviewPanel', () => {
     const user = userEvent.setup()
     render(<PlaneReviewPanel assetId="asset-1" integrationToken="integration-token" />)
 
-    expect(await screen.findByText('Session denied')).toBeInTheDocument()
+    expect(await screen.findByText('Unable to load Plane review.')).toBeInTheDocument()
     await user.click(screen.getByRole('button', { name: /retry/i }))
     expect(await screen.findByText('Campaign cut')).toBeInTheDocument()
     expect(getPlaneReviewBootstrap).toHaveBeenCalledTimes(2)

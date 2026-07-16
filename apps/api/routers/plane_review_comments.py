@@ -13,7 +13,7 @@ from ..integrations.plane.authorization import (
     require_plane_scope,
 )
 from ..models.asset import Asset, AssetVersion
-from ..models.comment import Comment
+from ..models.comment import Annotation, Comment
 from ..routers.comments import _build_comment_response
 from ..schemas.comment import CommentResponse
 from ..schemas.plane_review_comment import PlaneReviewCommentCreate
@@ -111,6 +111,16 @@ def create_plane_review_comment(
         visibility="public",
     )
     db.add(comment)
+    db.flush()
+    if body.annotation:
+        db.add(
+            Annotation(
+                comment_id=comment.id,
+                drawing_data=body.annotation.drawing_data,
+                frame_number=body.annotation.frame_number,
+                carousel_position=body.annotation.carousel_position,
+            )
+        )
     db.commit()
     db.refresh(comment)
     _private_no_store(response)

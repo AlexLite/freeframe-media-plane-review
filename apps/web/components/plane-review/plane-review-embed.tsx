@@ -4,6 +4,7 @@ import { ShieldAlert } from 'lucide-react'
 import { useEffect, useRef, useState } from 'react'
 
 import { PlaneReviewPanel } from './plane-review-panel'
+import { PlaneReviewLocaleProvider, usePlaneReviewI18n } from '@/lib/plane-review-i18n'
 import {
   PLANE_REVIEW_READY_MESSAGE,
   PLANE_REVIEW_RESIZE_MESSAGE,
@@ -22,6 +23,20 @@ interface EmbedConfig {
 }
 
 export function PlaneReviewEmbed({ allowedOrigins }: PlaneReviewEmbedProps) {
+  const [locale, setLocale] = useState<string | undefined>(undefined)
+
+  return (
+    <PlaneReviewLocaleProvider locale={locale}>
+      <PlaneReviewEmbedContent allowedOrigins={allowedOrigins} onLocale={setLocale} />
+    </PlaneReviewLocaleProvider>
+  )
+}
+
+function PlaneReviewEmbedContent({
+  allowedOrigins,
+  onLocale,
+}: PlaneReviewEmbedProps & { onLocale: (locale: string | undefined) => void }) {
+  const { t } = usePlaneReviewI18n()
   const [config, setConfig] = useState<EmbedConfig | null>(null)
   const [rejected, setRejected] = useState(false)
   const containerRef = useRef<HTMLDivElement>(null)
@@ -36,6 +51,7 @@ export function PlaneReviewEmbed({ allowedOrigins }: PlaneReviewEmbedProps) {
       if (!isPlaneReviewEmbedInitMessage(event.data)) return
 
       setRejected(false)
+      onLocale(event.data.locale)
       setConfig({
         assetId: event.data.assetId.trim(),
         integrationToken: event.data.integrationToken.trim(),
@@ -55,7 +71,7 @@ export function PlaneReviewEmbed({ allowedOrigins }: PlaneReviewEmbedProps) {
     }
 
     return () => window.removeEventListener('message', handleMessage)
-  }, [allowedOrigins])
+  }, [allowedOrigins, onLocale])
 
   useEffect(() => {
     if (!config || !containerRef.current || typeof ResizeObserver === 'undefined') return
@@ -78,9 +94,7 @@ export function PlaneReviewEmbed({ allowedOrigins }: PlaneReviewEmbedProps) {
       <main className="flex min-h-screen items-center justify-center bg-bg-primary p-6">
         <div className="max-w-md rounded-lg border border-status-error/30 bg-status-error/5 p-6 text-center">
           <ShieldAlert className="mx-auto mb-3 h-8 w-8 text-status-error" />
-          <p className="text-sm text-text-secondary">
-            Plane embed origins are not configured.
-          </p>
+          <p className="text-sm text-text-secondary">{t('embed.origins_not_configured')}</p>
         </div>
       </main>
     )
@@ -91,7 +105,7 @@ export function PlaneReviewEmbed({ allowedOrigins }: PlaneReviewEmbedProps) {
       <main className="flex min-h-screen items-center justify-center bg-bg-primary p-6">
         <div className="max-w-md rounded-lg border border-status-error/30 bg-status-error/5 p-6 text-center">
           <ShieldAlert className="mx-auto mb-3 h-8 w-8 text-status-error" />
-          <p className="text-sm text-text-secondary">This Plane origin is not allowed.</p>
+          <p className="text-sm text-text-secondary">{t('embed.origin_not_allowed')}</p>
         </div>
       </main>
     )
@@ -107,7 +121,7 @@ export function PlaneReviewEmbed({ allowedOrigins }: PlaneReviewEmbedProps) {
         />
       ) : (
         <div className="flex min-h-64 items-center justify-center rounded-lg border border-border bg-bg-secondary p-6 text-center">
-          <p className="text-sm text-text-secondary">Waiting for Plane review context…</p>
+          <p className="text-sm text-text-secondary">{t('embed.waiting_context')}</p>
         </div>
       )}
     </main>

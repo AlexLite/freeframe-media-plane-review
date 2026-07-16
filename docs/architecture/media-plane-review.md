@@ -142,7 +142,14 @@ FreeFrame can expose an internal integration API, but it should not force the Pl
 
 ## UI direction
 
-The preferred Plane UI is:
+The current staging UI is:
+
+1. a compact Review widget on the work item with explicit linked, unlinked, and permission-limited states;
+2. a centered, near-full-screen Plane modal that mounts the scoped cross-origin FreeFrame review application only while open;
+3. a responsive player/comments split with version switching, uploads, timecoded comments, and Fabric.js annotations;
+4. integration UI copy resolved from FreeFrame locale dictionaries using the active locale sent by Plane.
+
+The longer-term preferred Plane UI remains:
 
 1. a compact Review widget on the work item with thumbnail, current version, status, and open-comment count;
 2. a Plane-native full-screen Review workspace/drawer with player, versions, comments, annotations, and timeline;

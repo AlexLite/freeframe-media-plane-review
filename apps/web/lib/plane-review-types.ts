@@ -98,6 +98,13 @@ export interface PlaneReviewComment {
   created_at: string
   updated_at: string
   author: PlaneReviewCommentAuthor | null
+  annotation: {
+    id: string
+    comment_id: string
+    drawing_data: Record<string, unknown>
+    frame_number: number | null
+    carousel_position: number | null
+  } | null
   replies: PlaneReviewComment[]
 }
 
@@ -105,4 +112,7 @@ export interface PlaneReviewCommentCreate {
   body: string
   timecode_start?: number
   timecode_end?: number
+  annotation?: {
+    drawing_data: Record<string, unknown>
+  }
 }
