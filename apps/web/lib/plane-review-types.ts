@@ -35,6 +35,9 @@ export interface PlaneReviewVersionSummary {
   original_filename: string | null
   mime_type: string | null
   file_size_bytes: number | null
+  duration_seconds?: number | null
+  fps_numerator?: number | null
+  fps_denominator?: number | null
 }
 
 export type PlaneReviewAssetType = 'video' | 'image' | 'image_carousel' | 'audio' | string
