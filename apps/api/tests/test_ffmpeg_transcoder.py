@@ -194,8 +194,8 @@ def test_run_returns_stdout():
         mock_result.stdout = "output data"
         mock_run.return_value = mock_result
 
-    result = FFmpegTranscoder._run(["echo", "hello"], label="test")
-    assert result == "output data"
+        result = FFmpegTranscoder._run(["echo", "hello"], label="test")
+        assert result == "output data"
 
 
 def test_generate_thumbnails_uses_full_range_jpeg_pixel_format():
