@@ -12,7 +12,7 @@ on:
       - ".github/FUNDING.yml"
       - ".github/dependabot.yml"
   pull_request:
-    branches: [develop, main]
+    branches: [develop, main, integration/plane-review]
     paths-ignore:
       - "*.md"
       - "docs/**"
