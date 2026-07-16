@@ -12,6 +12,7 @@ from apps.api.routers.plane_integration import (
     get_plane_review_stream_url,
     initiate_plane_review_version,
 )
+from apps.api.schemas.plane_integration import PlaneReviewVersionCreateRequest
 
 
 def _principal(*scopes: str) -> PlaneReviewPrincipal:
@@ -98,7 +99,8 @@ def test_plane_upload_creates_version_as_shadow_user():
         project_id=uuid4(),
         asset_type=AssetType.video,
     )
-    body = SimpleNamespace(
+    body = PlaneReviewVersionCreateRequest(
+        asset_id=asset.id,
         original_filename="next-cut.MP4",
         mime_type="video/mp4",
         file_size_bytes=1024,
@@ -154,7 +156,8 @@ def test_plane_upload_guard_failure_creates_no_database_rows():
         project_id=uuid4(),
         asset_type=AssetType.video,
     )
-    body = SimpleNamespace(
+    body = PlaneReviewVersionCreateRequest(
+        asset_id=asset.id,
         original_filename="too-large.mp4",
         mime_type="video/mp4",
         file_size_bytes=10_000,
