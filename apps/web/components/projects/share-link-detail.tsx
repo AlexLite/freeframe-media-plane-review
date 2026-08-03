@@ -26,6 +26,7 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { api } from "@/lib/api";
+import { useI18n } from "@/hooks/use-i18n";
 import { ShareLinkActivityPanel } from "@/components/projects/share-link-activity";
 import type { ShareLink, ShareLinkAppearance } from "@/types";
 
@@ -565,6 +566,7 @@ export function ShareLinkContent({
   onUpdate,
 }: ShareLinkContentProps) {
   const { shareLink, immediateUpdate } = useShareLinkData(token);
+  const { locale, formatCount } = useI18n();
 
   const [localTitle, setLocalTitle] = React.useState("");
   const [localDescription, setLocalDescription] = React.useState("");
@@ -662,7 +664,7 @@ export function ShareLinkContent({
           className="flex items-center gap-1.5 text-sm text-text-secondary hover:text-text-primary transition-colors"
         >
           <ArrowLeft className="h-4 w-4" />
-          All Share Links
+          {locale === "ru" ? "Все ссылки общего доступа" : "All Share Links"}
         </button>
 
         {/* Editable title */}
@@ -688,7 +690,7 @@ export function ShareLinkContent({
               immediateUpdate({ description: localDescription || null });
             }
           }}
-          placeholder="Add a description..."
+          placeholder={locale === "ru" ? "Добавьте описание..." : "Add a description..."}
           rows={2}
           className="w-full bg-transparent text-sm text-text-secondary placeholder:text-text-tertiary outline-none border-none resize-none focus:ring-0"
         />
@@ -700,8 +702,11 @@ export function ShareLinkContent({
             {previewFolders.length > 0 && (
               <>
                 <span className="text-xs text-text-tertiary font-medium uppercase tracking-wider">
-                  {previewFolders.length}{" "}
-                  {previewFolders.length === 1 ? "Folder" : "Folders"}
+                  {formatCount(
+                    previewFolders.length,
+                    ["folder", "folders", "folders"],
+                    ["папка", "папки", "папок"],
+                  )}
                 </span>
                 <div className="grid grid-cols-3 gap-3">
                   {previewFolders.map((folder) => (
@@ -743,8 +748,11 @@ export function ShareLinkContent({
             {previewThumbnails.length > 0 && (
               <>
                 <span className="text-xs text-text-tertiary font-medium uppercase tracking-wider">
-                  {previewThumbnails.length}{" "}
-                  {previewThumbnails.length === 1 ? "Asset" : "Assets"}
+                  {formatCount(
+                    previewThumbnails.length,
+                    ["asset", "assets", "assets"],
+                    ["материал", "материала", "материалов"],
+                  )}
                 </span>
                 <div className="grid grid-cols-3 gap-3">
                   {previewThumbnails.slice(0, 6).map((asset) => (

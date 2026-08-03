@@ -41,7 +41,7 @@ export default function RootLayout({
         />
         <script
           dangerouslySetInnerHTML={{
-            __html: `(function(){try{var d=JSON.parse(localStorage.getItem('ff-locale')||'{}');var l=d.state&&d.state.locale||'en';document.documentElement.lang=l}catch(e){document.documentElement.lang='en'}})()`,
+            __html: `(function(){try{var d=JSON.parse(localStorage.getItem('ff-locale')||'{}');var f=location.pathname.indexOf('/share/')===0?'ru':'en';var l=d.state&&d.state.locale||f;document.documentElement.lang=l}catch(e){document.documentElement.lang=location.pathname.indexOf('/share/')===0?'ru':'en'}})()`,
           }}
         />
       </head>

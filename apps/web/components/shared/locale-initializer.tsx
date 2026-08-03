@@ -29,7 +29,7 @@ export function LocaleInitializer() {
     }
 
     if (!localStorage.getItem(LOCALE_STORAGE_KEY)) {
-      applyLocale(navigator.language.toLowerCase().startsWith('ru') ? 'ru' : 'en')
+      applyLocale('ru')
     }
   }, [applyLocale])
 
