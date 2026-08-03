@@ -3,6 +3,7 @@ import { DM_Sans } from "next/font/google";
 import { ToastProvider } from "@/components/shared/toast";
 import { ThemeInitializer } from "@/components/shared/theme-initializer";
 import { LocaleInitializer } from "@/components/shared/locale-initializer";
+import { LegacyLocaleBridge } from "@/components/shared/legacy-locale-bridge";
 import "./globals.css";
 
 const dmSans = DM_Sans({
@@ -47,6 +48,7 @@ export default function RootLayout({
       <body className={`${dmSans.variable} font-sans antialiased`}>
         <ThemeInitializer />
         <LocaleInitializer />
+        <LegacyLocaleBridge />
         <ToastProvider>{children}</ToastProvider>
       </body>
     </html>
