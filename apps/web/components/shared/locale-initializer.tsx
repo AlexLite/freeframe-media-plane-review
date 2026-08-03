@@ -12,7 +12,7 @@ export function LocaleInitializer() {
 
   useEffect(() => {
     applyLocale(locale)
-  }, []) // eslint-disable-line react-hooks/exhaustive-deps
+  }, [applyLocale, locale])
 
   useEffect(() => {
     if (user?.preferences) syncFromServer(user.preferences)
