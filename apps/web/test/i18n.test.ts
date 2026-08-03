@@ -18,6 +18,13 @@ describe('i18n formatting', () => {
     expect(translate('ru', 'missing.key')).toBe('missing.key')
   })
 
+  it('covers notifications, uploads, storage and command palette in Russian', () => {
+    expect(translate('ru', 'notifications.empty')).toBe('Уведомлений пока нет')
+    expect(translate('ru', 'uploads.noFailed')).toBe('Нет загрузок с ошибкой')
+    expect(translate('ru', 'storage.limitGb')).toBe('Лимит хранилища (ГБ)')
+    expect(translate('ru', 'command.search')).toContain('Найдите проект')
+  })
+
   it('selects Russian plural forms', () => {
     const forms = ['проект', 'проекта', 'проектов'] as const
     expect(plural('ru', 1, forms)).toBe('проект')
