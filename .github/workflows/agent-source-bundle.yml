@@ -1,27 +1,73 @@
-name: Agent source bundle
+name: Agent localization validation
 
 on:
   push:
     branches:
       - agent/freeframe-ru-localization
-  pull_request:
-    types: [opened, synchronize, reopened]
+    paths-ignore:
+      - '.agent-validation/**'
 
 permissions:
-  contents: read
+  contents: write
 
 jobs:
-  bundle:
+  validate:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout branch
         uses: actions/checkout@v4
-      - name: Create source archive
-        run: |
-          tar --exclude=.git -czf /tmp/freeframe-source.tar.gz .
-      - name: Upload source archive
-        uses: actions/upload-artifact@v4
         with:
-          name: freeframe-source
-          path: /tmp/freeframe-source.tar.gz
-          retention-days: 1
+          ref: agent/freeframe-ru-localization
+
+      - name: Set up pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 10.15.0
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+          cache-dependency-path: pnpm-lock.yaml
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Run tests and production build
+        id: validation
+        shell: bash
+        run: |
+          set +e
+          pnpm --filter web test > /tmp/freeframe-tests.log 2>&1
+          TEST_STATUS=$?
+          pnpm --filter web build > /tmp/freeframe-build.log 2>&1
+          BUILD_STATUS=$?
+
+          mkdir -p .agent-validation
+          {
+            echo "commit=${GITHUB_SHA}"
+            echo "tests=${TEST_STATUS}"
+            echo "build=${BUILD_STATUS}"
+            echo
+            echo "--- test output ---"
+            tail -n 160 /tmp/freeframe-tests.log
+            echo
+            echo "--- build output ---"
+            tail -n 200 /tmp/freeframe-build.log
+          } > .agent-validation/result.txt
+
+          echo "test_status=${TEST_STATUS}" >> "$GITHUB_OUTPUT"
+          echo "build_status=${BUILD_STATUS}" >> "$GITHUB_OUTPUT"
+
+      - name: Publish validation result
+        run: |
+          git config user.name "freeframe-validation-bot"
+          git config user.email "actions@users.noreply.github.com"
+          git add .agent-validation/result.txt
+          git commit -m "chore: record localization validation [skip ci]" || true
+          git push origin HEAD:agent/freeframe-ru-localization
+
+      - name: Fail when validation failed
+        if: steps.validation.outputs.test_status != '0' || steps.validation.outputs.build_status != '0'
+        run: exit 1
