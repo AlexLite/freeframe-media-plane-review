@@ -1,7 +1,7 @@
 'use client'
 
 import * as React from 'react'
-import { useParams } from 'next/navigation'
+import { useParams, useSearchParams } from 'next/navigation'
 import useSWR, { mutate as globalMutate } from 'swr'
 import * as Tabs from '@radix-ui/react-tabs'
 import * as Switch from '@radix-ui/react-switch'
@@ -586,13 +586,16 @@ function MetadataTab({ projectId }: { projectId: string }) {
 
 export default function ProjectSettingsPage() {
   const params = useParams()
+  const searchParams = useSearchParams()
   const projectId = params.id as string
+  const requestedTab = searchParams.get('tab')
+  const defaultTab = requestedTab === 'watermark' || requestedTab === 'metadata' ? requestedTab : 'branding'
 
   return (
     <div className="p-6 space-y-6 max-w-3xl">
       <h1 className="text-xl font-semibold text-text-primary">Project Settings</h1>
 
-      <Tabs.Root defaultValue="branding">
+      <Tabs.Root defaultValue={defaultTab}>
         <Tabs.List className="flex items-center gap-1 border-b border-border -mb-px">
           {[
             { value: 'branding', label: 'Branding', icon: Palette },

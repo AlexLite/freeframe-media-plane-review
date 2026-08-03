@@ -141,6 +141,24 @@ const russianUi: Record<string, string> = {
   'Continue': 'Продолжить',
   'Name and email required': 'Укажите имя и email',
   'Copied!': 'Скопировано!',
+  'Configure watermark': 'Настроить водяной знак',
+  'Branding': 'Брендинг',
+  'Metadata Fields': 'Поля метаданных',
+  'Enable watermark': 'Включить водяной знак',
+  'Burn user identity into shared media': 'Накладывать данные пользователя на опубликованные материалы',
+  'Position': 'Положение',
+  'Center': 'По центру',
+  'Corner': 'В углу',
+  'Tiled': 'Мозаикой',
+  'Content': 'Содержимое',
+  'User email': 'Email пользователя',
+  'User name': 'Имя пользователя',
+  'Custom text': 'Свой текст',
+  'Custom watermark text': 'Текст водяного знака',
+  'Confidential': 'Конфиденциально',
+  'Opacity:': 'Прозрачность:',
+  'Save watermark': 'Сохранить водяной знак',
+  'Watermark settings saved.': 'Настройки водяного знака сохранены.',
   'Comment mode': 'Режим комментариев',
   'Detailed mode includes timecodes and drawing': 'Подробный режим включает таймкоды и рисование',
   'Detailed': 'Подробные',
@@ -279,6 +297,9 @@ export function translateLegacyUiText(locale: Locale, source: string): string {
 
   const membersOf = trimmed.match(/^Members of (.+)$/)
   if (membersOf) return preserveWhitespace(source, `Участники проекта «${membersOf[1]}»`)
+
+  const opacity = trimmed.match(/^Opacity:\s*(.+)$/)
+  if (opacity) return preserveWhitespace(source, `Прозрачность: ${opacity[1]}`)
 
   const replies = trimmed.match(/^(\d+) (reply|replies)$/i)
   if (replies) {

@@ -1,13 +1,15 @@
 'use client'
 
 import * as React from 'react'
+import Link from 'next/link'
 import * as Dialog from '@radix-ui/react-dialog'
 import * as Switch from '@radix-ui/react-switch'
-import { X, ImagePlus, Globe, Lock } from 'lucide-react'
+import { X, ImagePlus, Globe, Lock, Droplets } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { getGradientForProject } from '@/lib/gradient-utils'
 import { api } from '@/lib/api'
 import { Button } from '@/components/ui/button'
+import { useI18n } from '@/hooks/use-i18n'
 import type { Project } from '@/types'
 
 interface ProjectSettingsDialogProps {
@@ -23,6 +25,7 @@ export function ProjectSettingsDialog({
   onOpenChange,
   onUpdated,
 }: ProjectSettingsDialogProps) {
+  const { locale } = useI18n()
   const [name, setName] = React.useState(project.name)
   const [description, setDescription] = React.useState(project.description || '')
   const [isPublic, setIsPublic] = React.useState(project.is_public ?? false)
@@ -190,13 +193,23 @@ export function ProjectSettingsDialog({
           </div>
 
           {/* Footer */}
-          <div className="flex items-center justify-end gap-2 px-6 py-4 border-t border-border">
+          <div className="flex items-center justify-between gap-2 px-6 py-4 border-t border-border">
             <Dialog.Close asChild>
-              <Button variant="secondary" size="sm">Cancel</Button>
+              <Button asChild variant="secondary" size="sm">
+                <Link href={`/projects/${project.id}/settings?tab=watermark`}>
+                  <Droplets className="h-4 w-4" />
+                  {locale === 'ru' ? 'Настроить водяной знак' : 'Configure watermark'}
+                </Link>
+              </Button>
             </Dialog.Close>
-            <Button size="sm" onClick={handleSave} loading={saving} disabled={!name.trim()}>
-              Save
-            </Button>
+            <div className="flex items-center gap-2">
+              <Dialog.Close asChild>
+                <Button variant="secondary" size="sm">Cancel</Button>
+              </Dialog.Close>
+              <Button size="sm" onClick={handleSave} loading={saving} disabled={!name.trim()}>
+                Save
+              </Button>
+            </div>
           </div>
         </Dialog.Content>
       </Dialog.Portal>

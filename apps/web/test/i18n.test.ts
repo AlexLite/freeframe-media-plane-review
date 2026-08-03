@@ -107,6 +107,10 @@ describe('i18n formatting', () => {
     expect(translateLegacyUiText('ru', 'Enter your name and email to comment on this shared asset.')).toBe('Введите имя и email, чтобы комментировать этот материал.')
     expect(translateLegacyUiText('ru', 'Name and email required')).toBe('Укажите имя и email')
     expect(translateLegacyUiText('ru', 'Copied!')).toBe('Скопировано!')
+    expect(translateLegacyUiText('ru', 'Configure watermark')).toBe('Настроить водяной знак')
+    expect(translateLegacyUiText('ru', 'Enable watermark')).toBe('Включить водяной знак')
+    expect(translateLegacyUiText('ru', 'Save watermark')).toBe('Сохранить водяной знак')
+    expect(translateLegacyUiText('ru', 'Opacity: 30%')).toBe('Прозрачность: 30%')
   })
 
   it('maps technical errors to localized user-facing messages', () => {
