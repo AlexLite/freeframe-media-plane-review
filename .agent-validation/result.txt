@@ -1,6 +1,6 @@
-commit=14bdadc044001889c77dd9298aa8210b25d0b5c7
-tests=1
-build=1
+commit=0b8bf9c9f892e8cd823d192f068a5a3fc839767f
+tests=0
+build=0
 
 --- test output ---
 
@@ -13,61 +13,31 @@ Set `VITE_CONFIG_NATIVE_IGNORE_WARNING=true` to suppress this warning.[39m
 
 [1m[30m[46m RUN [49m[39m[22m [36mv4.1.10 [39m[90m/home/runner/work/freeframe-media-plane-review/freeframe-media-plane-review/apps/web[39m
 
- [32m✓[39m lib/__tests__/utils.test.ts [2m([22m[2m32 tests[22m[2m)[22m[32m 24[2mms[22m[39m
- [32m✓[39m lib/__tests__/api.test.ts [2m([22m[2m5 tests[22m[2m)[22m[32m 13[2mms[22m[39m
- [32m✓[39m hooks/__tests__/use-sse.test.ts [2m([22m[2m10 tests[22m[2m)[22m[32m 57[2mms[22m[39m
- [32m✓[39m stores/__tests__/notification-store.test.ts [2m([22m[2m6 tests[22m[2m)[22m[32m 10[2mms[22m[39m
+ [32m✓[39m lib/__tests__/api.test.ts [2m([22m[2m5 tests[22m[2m)[22m[32m 15[2mms[22m[39m
+ [32m✓[39m lib/__tests__/utils.test.ts [2m([22m[2m32 tests[22m[2m)[22m[32m 25[2mms[22m[39m
+ [32m✓[39m hooks/__tests__/use-sse.test.ts [2m([22m[2m10 tests[22m[2m)[22m[32m 51[2mms[22m[39m
+ [32m✓[39m stores/__tests__/notification-store.test.ts [2m([22m[2m6 tests[22m[2m)[22m[32m 11[2mms[22m[39m
  [32m✓[39m stores/__tests__/auth-store.test.ts [2m([22m[2m6 tests[22m[2m)[22m[32m 10[2mms[22m[39m
- [31m❯[39m test/i18n.test.ts [2m([22m[2m6 tests[22m[2m | [22m[31m1 failed[39m[2m)[22m[32m 42[2mms[22m[39m
-     [32m✓[39m translates semantic keys in both directions[32m 4[2mms[22m[39m
-     [32m✓[39m selects Russian plural forms[32m 1[2mms[22m[39m
-     [32m✓[39m formats counts, numbers, bytes and dates with the selected locale[32m 26[2mms[22m[39m
-     [32m✓[39m localizes legacy static strings, counts and English dates[32m 1[2mms[22m[39m
-[31m     [31m×[31m localizes review, sharing, guest and admin legacy strings[39m[32m 8[2mms[22m[39m
-     [32m✓[39m maps technical errors to localized user-facing messages[32m 1[2mms[22m[39m
+ [32m✓[39m test/i18n.test.ts [2m([22m[2m6 tests[22m[2m)[22m[32m 259[2mms[22m[39m
  [32m✓[39m stores/__tests__/review-store.test.ts [2m([22m[2m7 tests[22m[2m)[22m[32m 9[2mms[22m[39m
- [32m✓[39m components/review/__tests__/version-switcher.test.tsx [2m([22m[2m3 tests[22m[2m)[22m[32m 99[2mms[22m[39m
- [32m✓[39m components/__tests__/empty-state.test.tsx [2m([22m[2m8 tests[22m[2m)[22m[32m 210[2mms[22m[39m
- [32m✓[39m components/__tests__/avatar.test.tsx [2m([22m[2m8 tests[22m[2m)[22m[32m 61[2mms[22m[39m
- [32m✓[39m components/__tests__/skeleton.test.tsx [2m([22m[2m7 tests[22m[2m)[22m[32m 65[2mms[22m[39m
- [32m✓[39m lib/__tests__/auth.test.ts [2m([22m[2m7 tests[22m[2m)[22m[32m 15[2mms[22m[39m
- [32m✓[39m components/__tests__/button.test.tsx [2m([22m[2m7 tests[22m[2m)[22m[32m 294[2mms[22m[39m
- [32m✓[39m components/settings/__tests__/instance-settings-tab.test.tsx [2m([22m[2m3 tests[22m[2m)[22m[33m 302[2mms[22m[39m
- [32m✓[39m components/__tests__/input.test.tsx [2m([22m[2m7 tests[22m[2m)[22m[32m 274[2mms[22m[39m
- [32m✓[39m test/locale-store.test.ts [2m([22m[2m3 tests[22m[2m)[22m[32m 25[2mms[22m[39m
- [32m✓[39m components/__tests__/badge.test.tsx [2m([22m[2m11 tests[22m[2m)[22m[32m 91[2mms[22m[39m
- [32m✓[39m components/shared/__tests__/storage-usage.test.tsx [2m([22m[2m4 tests[22m[2m)[22m[32m 82[2mms[22m[39m
- [32m✓[39m test/locale-switching.test.tsx [2m([22m[2m1 test[22m[2m)[22m[32m 153[2mms[22m[39m
+ [32m✓[39m components/review/__tests__/version-switcher.test.tsx [2m([22m[2m3 tests[22m[2m)[22m[32m 130[2mms[22m[39m
+ [32m✓[39m components/__tests__/empty-state.test.tsx [2m([22m[2m8 tests[22m[2m)[22m[32m 261[2mms[22m[39m
+ [32m✓[39m components/__tests__/avatar.test.tsx [2m([22m[2m8 tests[22m[2m)[22m[32m 83[2mms[22m[39m
+ [32m✓[39m components/__tests__/skeleton.test.tsx [2m([22m[2m7 tests[22m[2m)[22m[32m 80[2mms[22m[39m
+ [32m✓[39m lib/__tests__/auth.test.ts [2m([22m[2m7 tests[22m[2m)[22m[32m 19[2mms[22m[39m
+ [32m✓[39m components/__tests__/button.test.tsx [2m([22m[2m7 tests[22m[2m)[22m[32m 284[2mms[22m[39m
+ [32m✓[39m components/settings/__tests__/instance-settings-tab.test.tsx [2m([22m[2m3 tests[22m[2m)[22m[33m 306[2mms[22m[39m
+ [32m✓[39m components/__tests__/input.test.tsx [2m([22m[2m7 tests[22m[2m)[22m[32m 250[2mms[22m[39m
+ [32m✓[39m test/locale-store.test.ts [2m([22m[2m3 tests[22m[2m)[22m[32m 16[2mms[22m[39m
+ [32m✓[39m components/shared/__tests__/storage-usage.test.tsx [2m([22m[2m4 tests[22m[2m)[22m[32m 89[2mms[22m[39m
+ [32m✓[39m components/__tests__/badge.test.tsx [2m([22m[2m11 tests[22m[2m)[22m[32m 64[2mms[22m[39m
+ [32m✓[39m test/locale-switching.test.tsx [2m([22m[2m1 test[22m[2m)[22m[32m 165[2mms[22m[39m
 
-[31m⎯⎯⎯⎯⎯⎯⎯[39m[1m[41m Failed Tests 1 [49m[22m[31m⎯⎯⎯⎯⎯⎯⎯[39m
+[2m Test Files [22m [1m[32m19 passed[39m[22m[90m (19)[39m
+[2m      Tests [22m [1m[32m141 passed[39m[22m[90m (141)[39m
+[2m   Start at [22m 20:18:57
+[2m   Duration [22m 12.12s[2m (transform 655ms, setup 4.28s, import 2.55s, tests 2.13s, environment 21.28s)[22m
 
-[41m[1m FAIL [22m[49m test/i18n.test.ts[2m > [22mi18n formatting[2m > [22mlocalizes review, sharing, guest and admin legacy strings
-[31m[1mAssertionError[22m: expected 'Копировать ссылку' to be 'Копировать ссылку-приглашение' // Object.is equality[39m
-
-Expected: [32m"Копировать ссылку[7m-приглашение[27m"[39m
-Received: [31m"Копировать ссылку"[39m
-
-[36m [2m❯[22m test/i18n.test.ts:[2m59:61[22m[39m
-    [90m 57|[39m     expect(translateLegacyUiText('ru', 'Leave your comment...')).toBe(…
-    [90m 58|[39m     [34mexpect[39m([34mtranslateLegacyUiText[39m([32m'ru'[39m[33m,[39m [32m'22 replies'[39m))[33m.[39m[34mtoBe[39m([32m'22 ответа'[39m)
-    [90m 59|[39m     expect(translateLegacyUiText('ru', 'Copy Invite Link')).toBe('Копи…
-    [90m   |[39m                                                             [31m^[39m
-    [90m 60|[39m     [34mexpect[39m([34mtranslateLegacyUiText[39m([32m'ru'[39m[33m,[39m [32m'6/1/2026'[39m))[33m.[39m[34mtoMatch[39m([36m/2026/[39m)
-    [90m 61|[39m     expect(translateLegacyUiText('en', 'Leave your comment...')).toBe(…
-
-[31m[2m⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/1]⎯[22m[39m
-
-
-[2m Test Files [22m [1m[31m1 failed[39m[22m[2m | [22m[1m[32m18 passed[39m[22m[90m (19)[39m
-[2m      Tests [22m [1m[31m1 failed[39m[22m[2m | [22m[1m[32m140 passed[39m[22m[90m (141)[39m
-[2m   Start at [22m 20:16:28
-[2m   Duration [22m 11.42s[2m (transform 612ms, setup 3.96s, import 2.46s, tests 1.84s, environment 19.73s)[22m
-
-
-::error file=/home/runner/work/freeframe-media-plane-review/freeframe-media-plane-review/apps/web/test/i18n.test.ts,title=test/i18n.test.ts > i18n formatting > localizes review%2C sharing%2C guest and admin legacy strings,line=59,column=61::AssertionError: expected 'Копировать ссылку' to be 'Копировать ссылку-приглашение' // Object.is equality%0A%0AExpected: "Копировать ссылку-приглашение"%0AReceived: "Копировать ссылку"%0A%0A ❯ test/i18n.test.ts:59:61%0A%0A
-/home/runner/work/freeframe-media-plane-review/freeframe-media-plane-review/apps/web:
- ERR_PNPM_RECURSIVE_RUN_FIRST_FAIL  web@0.1.0 test: `vitest run`
-Exit status 1
 
 --- build output ---
 
@@ -86,19 +56,62 @@ https://nextjs.org/telemetry
  ✓ Compiled successfully
    Skipping linting
    Checking validity of types ...
-Failed to compile.
+   Collecting page data ...
+   Generating static pages (0/18) ...
+   Generating static pages (4/18) 
+   Generating static pages (8/18) 
+   Generating static pages (13/18) 
+ ✓ Generating static pages (18/18)
+   Finalizing page optimization ...
+   Collecting build traces ...
+ ⚠ Failed to copy traced files for /home/runner/work/freeframe-media-plane-review/freeframe-media-plane-review/apps/web/.next/server/app/(dashboard)/page.js Error: ENOENT: no such file or directory, copyfile '/home/runner/work/freeframe-media-plane-review/freeframe-media-plane-review/apps/web/.next/server/app/(dashboard)/page_client-reference-manifest.js' -> '/home/runner/work/freeframe-media-plane-review/freeframe-media-plane-review/apps/web/.next/standalone/.next/server/app/(dashboard)/page_client-reference-manifest.js'
+    at async Object.copyFile (node:internal/fs/promises:621:10)
+    at async /home/runner/work/freeframe-media-plane-review/freeframe-media-plane-review/node_modules/.pnpm/next@14.2.35_react-dom@18.3.1_react@18.3.1__react@18.3.1/node_modules/next/dist/build/utils.js:1409:21
+    at async Promise.all (index 8)
+    at async handleTraceFiles (/home/runner/work/freeframe-media-plane-review/freeframe-media-plane-review/node_modules/.pnpm/next@14.2.35_react-dom@18.3.1_react@18.3.1__react@18.3.1/node_modules/next/dist/build/utils.js:1390:9)
+    at async copyTracedFiles (/home/runner/work/freeframe-media-plane-review/freeframe-media-plane-review/node_modules/.pnpm/next@14.2.35_react-dom@18.3.1_react@18.3.1__react@18.3.1/node_modules/next/dist/build/utils.js:1464:13)
+    at async /home/runner/work/freeframe-media-plane-review/freeframe-media-plane-review/node_modules/.pnpm/next@14.2.35_react-dom@18.3.1_react@18.3.1__react@18.3.1/node_modules/next/dist/build/index.js:224:9
+    at async Span.traceAsyncFn (/home/runner/work/freeframe-media-plane-review/freeframe-media-plane-review/node_modules/.pnpm/next@14.2.35_react-dom@18.3.1_react@18.3.1__react@18.3.1/node_modules/next/dist/trace/trace.js:154:20)
+    at async writeStandaloneDirectory (/home/runner/work/freeframe-media-plane-review/freeframe-media-plane-review/node_modules/.pnpm/next@14.2.35_react-dom@18.3.1_react@18.3.1__react@18.3.1/node_modules/next/dist/build/index.js:223:5)
+    at async /home/runner/work/freeframe-media-plane-review/freeframe-media-plane-review/node_modules/.pnpm/next@14.2.35_react-dom@18.3.1_react@18.3.1__react@18.3.1/node_modules/next/dist/build/index.js:2143:17
+    at async Span.traceAsyncFn (/home/runner/work/freeframe-media-plane-review/freeframe-media-plane-review/node_modules/.pnpm/next@14.2.35_react-dom@18.3.1_react@18.3.1__react@18.3.1/node_modules/next/dist/trace/trace.js:154:20) {
+  errno: -2,
+  code: 'ENOENT',
+  syscall: 'copyfile',
+  path: '/home/runner/work/freeframe-media-plane-review/freeframe-media-plane-review/apps/web/.next/server/app/(dashboard)/page_client-reference-manifest.js',
+  dest: '/home/runner/work/freeframe-media-plane-review/freeframe-media-plane-review/apps/web/.next/standalone/.next/server/app/(dashboard)/page_client-reference-manifest.js'
+}
 
-./components/shared/legacy-locale-bridge.tsx:101:33
-Type error: Type 'NodeList' can only be iterated through when using the '--downlevelIteration' flag or with a '--target' of 'es2015' or higher.
+Route (app)                              Size     First Load JS
+┌ ○ /                                    152 B          87.9 kB
+├ ○ /_not-found                          875 B          88.6 kB
+├ ○ /apple-icon.png                      0 B                0 B
+├ ○ /assets                              3.5 kB          158 kB
+├ ○ /icon.png                            0 B                0 B
+├ ƒ /invite/[token]                      6.88 kB         105 kB
+├ ○ /login                               8.77 kB         116 kB
+├ ○ /notifications                       6.4 kB          104 kB
+├ ○ /projects                            10.1 kB         157 kB
+├ ƒ /projects/[id]                       19.7 kB         200 kB
+├ ƒ /projects/[id]/assets/[assetId]      206 kB          370 kB
+├ ƒ /projects/[id]/collections           9.94 kB         134 kB
+├ ƒ /projects/[id]/settings              15.1 kB         149 kB
+├ ○ /settings                            152 B          87.9 kB
+├ ○ /settings/admin                      11.4 kB         127 kB
+├ ○ /settings/appearance                 3.37 kB         112 kB
+├ ○ /settings/branding                   7.72 kB         117 kB
+├ ○ /settings/notifications              5.82 kB         103 kB
+├ ○ /settings/profile                    9.99 kB         117 kB
+├ ○ /setup                               6.42 kB         104 kB
+└ ƒ /share/[token]                       21.1 kB         126 kB
++ First Load JS shared by all            87.8 kB
+  ├ chunks/2749-8b46e15ab35eb6d3.js      31.7 kB
+  ├ chunks/5b8f0dd8-03525fb6bbcfe073.js  53.6 kB
+  └ other shared chunks (total)          2.39 kB
 
-[0m [90m  99 |[39m         [36mif[39m (record[33m.[39mtype [33m===[39m [32m'characterData'[39m) localizeTextNode(record[33m.[39mtarget [36mas[39m [33mText[39m[33m,[39m locale)[0m
-[0m [90m 100 |[39m         [36melse[39m [36mif[39m (record[33m.[39mtype [33m===[39m [32m'attributes'[39m) localizeElementAttributes(record[33m.[39mtarget [36mas[39m [33mElement[39m[33m,[39m locale)[0m
-[0m[31m[1m>[22m[39m[90m 101 |[39m         [36melse[39m [36mfor[39m ([36mconst[39m node [36mof[39m record[33m.[39maddedNodes) localizeTree(node[33m,[39m locale)[0m
-[0m [90m     |[39m                                 [31m[1m^[22m[39m[0m
-[0m [90m 102 |[39m       }[0m
-[0m [90m 103 |[39m       observer[33m.[39mobserve(root[33m,[39m {[0m
-[0m [90m 104 |[39m         subtree[33m:[39m [36mtrue[39m[33m,[39m[0m
-Next.js build worker exited with code: 1 and signal: null
-/home/runner/work/freeframe-media-plane-review/freeframe-media-plane-review/apps/web:
- ERR_PNPM_RECURSIVE_RUN_FIRST_FAIL  web@0.1.0 build: `next build`
-Exit status 1
+
+ƒ Middleware                             26.8 kB
+
+○  (Static)   prerendered as static content
+ƒ  (Dynamic)  server-rendered on demand
+
