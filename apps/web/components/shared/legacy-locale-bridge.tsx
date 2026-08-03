@@ -1,7 +1,7 @@
 'use client'
 
 import * as React from 'react'
-import { translateLegacyText } from '@/lib/i18n'
+import { translateLegacyUiText } from '@/lib/legacy-ui-messages'
 import { useLocaleStore, type Locale } from '@/stores/locale-store'
 
 const LOCALIZED_ATTRIBUTES = ['placeholder', 'title', 'aria-label', 'alt'] as const
@@ -18,6 +18,7 @@ const IGNORE_SELECTOR = [
   '[data-comment-id]',
   '[data-thread-id]',
   '.prose',
+  'p.leading-relaxed.break-words',
 ].join(', ')
 
 const originalText = new WeakMap<Text, string>()
@@ -34,14 +35,14 @@ function localizeTextNode(node: Text, locale: Locale) {
   const remembered = originalText.get(node)
 
   if (remembered) {
-    const expectedRussian = translateLegacyText('ru', remembered)
+    const expectedRussian = translateLegacyUiText('ru', remembered)
     if (current !== remembered && current !== expectedRussian) originalText.set(node, current)
-  } else if (translateLegacyText('ru', current) !== current) {
+  } else if (translateLegacyUiText('ru', current) !== current) {
     originalText.set(node, current)
   }
 
   const source = originalText.get(node) ?? current
-  const next = translateLegacyText(locale, source)
+  const next = translateLegacyUiText(locale, source)
   if (next !== current) node.nodeValue = next
 }
 
@@ -55,16 +56,16 @@ function localizeElementAttributes(element: Element, locale: Locale) {
     const stored = remembered?.get(attribute)
 
     if (stored) {
-      const expectedRussian = translateLegacyText('ru', stored)
+      const expectedRussian = translateLegacyUiText('ru', stored)
       if (current !== stored && current !== expectedRussian) remembered?.set(attribute, current)
-    } else if (translateLegacyText('ru', current) !== current) {
+    } else if (translateLegacyUiText('ru', current) !== current) {
       remembered ??= new Map<string, string>()
       remembered.set(attribute, current)
       originalAttributes.set(element, remembered)
     }
 
     const source = remembered?.get(attribute) ?? current
-    const next = translateLegacyText(locale, source)
+    const next = translateLegacyUiText(locale, source)
     if (next !== current) element.setAttribute(attribute, next)
   }
 }
