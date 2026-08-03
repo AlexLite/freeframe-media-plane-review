@@ -366,24 +366,22 @@ function ConfigurePhase({ defaultTitle, onBack, onCreate, creating }: ConfigureP
             </Switch.Root>
           </div>
 
-          {allowComments && (
-            <div className="flex items-center justify-between py-2.5 pl-6">
-              <div>
-                <p className="text-sm text-text-primary">Comment mode</p>
-                <p className="text-xs text-text-tertiary mt-0.5">
-                  Detailed mode includes timecodes and drawing
-                </p>
-              </div>
-              <select
-                value={commentMode}
-                onChange={(e) => setCommentMode(e.target.value as 'detailed' | 'simple')}
-                className="rounded-md border border-border bg-bg-secondary px-2.5 py-1.5 text-xs text-text-primary outline-none cursor-pointer"
-              >
-                <option value="detailed">Detailed</option>
-                <option value="simple">Simple</option>
-              </select>
+          <div className={cn('flex items-center justify-between py-2.5 pl-6', !allowComments && 'opacity-50')}>
+            <div>
+              <p className="text-sm text-text-primary">Detailed comments</p>
+              <p className="text-xs text-text-tertiary mt-0.5">
+                Attach timecodes and draw annotations
+              </p>
             </div>
-          )}
+            <Switch.Root
+              checked={commentMode === 'detailed'}
+              disabled={!allowComments}
+              onCheckedChange={(checked) => setCommentMode(checked ? 'detailed' : 'simple')}
+              className="w-9 h-5 rounded-full relative bg-bg-tertiary border border-border data-[state=checked]:bg-accent transition-colors disabled:cursor-not-allowed"
+            >
+              <Switch.Thumb className="block w-4 h-4 rounded-full bg-white shadow transition-transform translate-x-0.5 data-[state=checked]:translate-x-[18px]" />
+            </Switch.Root>
+          </div>
 
           {/* Allow downloads */}
           <div className="flex items-center justify-between py-2.5">
@@ -867,26 +865,24 @@ function LinkCreatedPhase({ result, allResults, onSelectResult, onDone, onAdvanc
                 </Switch.Root>
               </div>
 
-              {allowComments && (
-                <div className="flex items-center justify-between py-2.5 pl-6">
-                  <div>
-                    <p className="text-sm text-text-primary">Comment mode</p>
-                    <p className="text-xs text-text-tertiary mt-0.5">Detailed mode includes timecodes and drawing</p>
-                  </div>
-                  <select
-                    value={commentMode}
-                    onChange={(e) => {
-                      const mode = e.target.value as 'detailed' | 'simple'
-                      setCommentMode(mode)
-                      patchLink({ appearance: { layout, theme: 'dark', accent_color: null, open_in_viewer: true, sort_by: 'created_at', comment_mode: mode } })
-                    }}
-                    className="rounded-md border border-border bg-bg-secondary px-2.5 py-1.5 text-xs text-text-primary outline-none cursor-pointer"
-                  >
-                    <option value="detailed">Detailed</option>
-                    <option value="simple">Simple</option>
-                  </select>
+              <div className={cn('flex items-center justify-between py-2.5 pl-6', !allowComments && 'opacity-50')}>
+                <div>
+                  <p className="text-sm text-text-primary">Detailed comments</p>
+                  <p className="text-xs text-text-tertiary mt-0.5">Attach timecodes and draw annotations</p>
                 </div>
-              )}
+                <Switch.Root
+                  checked={commentMode === 'detailed'}
+                  disabled={!allowComments}
+                  onCheckedChange={(checked) => {
+                    const mode = checked ? 'detailed' : 'simple'
+                    setCommentMode(mode)
+                    patchLink({ appearance: { layout, theme: 'dark', accent_color: null, open_in_viewer: true, sort_by: 'created_at', comment_mode: mode } })
+                  }}
+                  className="w-9 h-5 rounded-full relative bg-bg-tertiary border border-border data-[state=checked]:bg-accent transition-colors disabled:cursor-not-allowed"
+                >
+                  <Switch.Thumb className="block w-4 h-4 rounded-full bg-white shadow transition-transform translate-x-0.5 data-[state=checked]:translate-x-[18px]" />
+                </Switch.Root>
+              </div>
 
               {/* Allow downloads */}
               <div className="flex items-center justify-between py-2.5">

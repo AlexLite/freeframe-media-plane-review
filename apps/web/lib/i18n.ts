@@ -238,6 +238,7 @@ const countPatterns: Array<[RegExp, PluralForms, PluralForms]> = [
   [/^(\d+) comments?$/i, ['comment', 'comments', 'comments'], ['комментарий', 'комментария', 'комментариев']],
   [/^(\d+) versions?$/i, ['version', 'versions', 'versions'], ['версия', 'версии', 'версий']],
   [/^(\d+) files?$/i, ['file', 'files', 'files'], ['файл', 'файла', 'файлов']],
+  [/^(\d+) shares?$/i, ['share', 'shares', 'shares'], ['ссылка', 'ссылки', 'ссылок']],
 ]
 
 function preserveWhitespace(source: string, translated: string): string {
