@@ -1,0 +1,25 @@
+name: Agent source bundle
+
+on:
+  push:
+    branches:
+      - agent/freeframe-ru-localization
+
+permissions:
+  contents: read
+
+jobs:
+  bundle:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout branch
+        uses: actions/checkout@v4
+      - name: Create source archive
+        run: |
+          tar --exclude=.git -czf /tmp/freeframe-source.tar.gz .
+      - name: Upload source archive
+        uses: actions/upload-artifact@v4
+        with:
+          name: freeframe-source
+          path: /tmp/freeframe-source.tar.gz
+          retention-days: 1
