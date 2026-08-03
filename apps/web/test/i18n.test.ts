@@ -98,6 +98,11 @@ describe('i18n formatting', () => {
     expect(translateLegacyUiText('ru', 'New Version')).toBe('Новая версия')
     expect(translateLegacyUiText('ru', 'Draw annotation')).toBe('Нарисовать аннотацию')
     expect(translateLegacyUiText('ru', 'Send (Enter)')).toBe('Отправить (Enter)')
+    expect(translateLegacyUiText('ru', 'All Share Links')).toBe('Все ссылки общего доступа')
+    expect(translateLegacyUiText('ru', 'Add a description...')).toBe('Добавьте описание...')
+    expect(translateLegacyUiText('ru', 'Asset')).toBe('Материал')
+    expect(translateLegacyUiText('ru', 'Reply')).toBe('Ответить')
+    expect(translateLegacyUiText('ru', 'Password required')).toBe('Требуется пароль')
   })
 
   it('maps technical errors to localized user-facing messages', () => {
