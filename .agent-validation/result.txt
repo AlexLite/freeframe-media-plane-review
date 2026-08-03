@@ -1,0 +1,27 @@
+commit=905818ab65715532a64a1db0bd9cd1e5f90caf51
+tests=1
+build=1
+
+--- test output ---
+ WARN  The "workspaces" field in package.json is not supported by pnpm. Create a "pnpm-workspace.yaml" file instead.
+
+> web@0.1.0 test /home/runner/work/freeframe-media-plane-review/freeframe-media-plane-review/apps/web
+> vitest run
+
+sh: 1: vitest: not found
+/home/runner/work/freeframe-media-plane-review/freeframe-media-plane-review/apps/web:
+ ERR_PNPM_RECURSIVE_RUN_FIRST_FAIL  web@0.1.0 test: `vitest run`
+spawn ENOENT
+ WARN   Local package.json exists, but node_modules missing, did you mean to install?
+
+--- build output ---
+ WARN  The "workspaces" field in package.json is not supported by pnpm. Create a "pnpm-workspace.yaml" file instead.
+
+> web@0.1.0 build /home/runner/work/freeframe-media-plane-review/freeframe-media-plane-review/apps/web
+> next build
+
+sh: 1: next: not found
+/home/runner/work/freeframe-media-plane-review/freeframe-media-plane-review/apps/web:
+ ERR_PNPM_RECURSIVE_RUN_FIRST_FAIL  web@0.1.0 build: `next build`
+spawn ENOENT
+ WARN   Local package.json exists, but node_modules missing, did you mean to install?
