@@ -73,7 +73,7 @@ const russianUi: Record<string, string> = {
   'Be the first to leave feedback.': 'Оставьте первый комментарий.',
   'View-only access. Comments are disabled.': 'Доступ только для просмотра. Комментарии отключены.',
   'All activity loaded': 'Вся активность загружена',
-  'Detailed comments': 'Подробные комментарии',
+  'Detailed comments': 'Расширенные комментарии',
   'Attach timecodes and draw annotations': 'Привязывать таймкоды и добавлять рисунки',
   'Search for Shares': 'Поиск ссылок общего доступа',
   'No share links yet. Create one by sharing an asset or folder.': 'Ссылок пока нет. Создайте ссылку для материала или папки.',

@@ -83,7 +83,7 @@ describe('i18n formatting', () => {
     expect(translateLegacyUiText('ru', 'Allow viewers to leave comments')).toBe('Разрешить зрителям оставлять комментарии')
     expect(translateLegacyUiText('ru', 'Who are you?')).toBe('Как вас зовут?')
     expect(translateLegacyUiText('ru', 'Open Share Link')).toBe('Открыть публичную ссылку')
-    expect(translateLegacyUiText('ru', 'Detailed comments')).toBe('Подробные комментарии')
+    expect(translateLegacyUiText('ru', 'Detailed comments')).toBe('Расширенные комментарии')
     expect(translateLegacyUiText('ru', 'Simple')).toBe('Упрощённые')
     expect(translateLegacyUiText('ru', 'Search for Shares')).toBe('Поиск ссылок общего доступа')
     expect(translateLegacyUiText('ru', 'No share links yet. Create one by sharing an asset or folder.')).toBe('Ссылок пока нет. Создайте ссылку для материала или папки.')
