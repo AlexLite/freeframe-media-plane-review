@@ -250,6 +250,7 @@ export function translateLegacyText(locale: Locale, source: string): string {
   const trimmed = source.trim()
   const exact = legacyRussian[trimmed]
   if (exact) return preserveWhitespace(source, exact)
+  if (/^just now$/i.test(trimmed)) return preserveWhitespace(source, 'только что')
 
   for (const [pattern, english, russian] of countPatterns) {
     const match = trimmed.match(pattern)

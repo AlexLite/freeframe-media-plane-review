@@ -57,6 +57,7 @@ describe('i18n formatting', () => {
     expect(translateLegacyText('ru', '  Approve  ')).toBe('  Согласовать  ')
     expect(translateLegacyText('ru', '2 projects')).toBe('2 проекта')
     expect(translateLegacyText('ru', '56 minutes ago')).toBe('56 минут назад')
+    expect(translateLegacyText('ru', 'just now')).toBe('только что')
     expect(translateLegacyText('ru', 'Jun 1, 2026')).toMatch(/2026/)
     expect(translateLegacyText('en', 'Approve')).toBe('Approve')
   })
