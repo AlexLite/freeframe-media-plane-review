@@ -1,27 +1,104 @@
-commit=adaf32d7de4e760d98e7e5f08bbfc6baf0eb5507
+commit=14bdadc044001889c77dd9298aa8210b25d0b5c7
 tests=1
 build=1
 
 --- test output ---
- WARN  The "workspaces" field in package.json is not supported by pnpm. Create a "pnpm-workspace.yaml" file instead.
 
 > web@0.1.0 test /home/runner/work/freeframe-media-plane-review/freeframe-media-plane-review/apps/web
 > vitest run
 
-sh: 1: vitest: not found
+[33m(!) Your Vite config uses features that are unsupported by `configLoader: 'native'`, which is planned to become the default in a future major version of Vite:
+  - ESM syntax in a file loaded as CommonJS (vitest.config.ts:1:1). Use a `.mjs` extension or set `"type": "module"` in the closest package.json
+Set `VITE_CONFIG_NATIVE_IGNORE_WARNING=true` to suppress this warning.[39m
+
+[1m[30m[46m RUN [49m[39m[22m [36mv4.1.10 [39m[90m/home/runner/work/freeframe-media-plane-review/freeframe-media-plane-review/apps/web[39m
+
+ [32m✓[39m lib/__tests__/utils.test.ts [2m([22m[2m32 tests[22m[2m)[22m[32m 24[2mms[22m[39m
+ [32m✓[39m lib/__tests__/api.test.ts [2m([22m[2m5 tests[22m[2m)[22m[32m 13[2mms[22m[39m
+ [32m✓[39m hooks/__tests__/use-sse.test.ts [2m([22m[2m10 tests[22m[2m)[22m[32m 57[2mms[22m[39m
+ [32m✓[39m stores/__tests__/notification-store.test.ts [2m([22m[2m6 tests[22m[2m)[22m[32m 10[2mms[22m[39m
+ [32m✓[39m stores/__tests__/auth-store.test.ts [2m([22m[2m6 tests[22m[2m)[22m[32m 10[2mms[22m[39m
+ [31m❯[39m test/i18n.test.ts [2m([22m[2m6 tests[22m[2m | [22m[31m1 failed[39m[2m)[22m[32m 42[2mms[22m[39m
+     [32m✓[39m translates semantic keys in both directions[32m 4[2mms[22m[39m
+     [32m✓[39m selects Russian plural forms[32m 1[2mms[22m[39m
+     [32m✓[39m formats counts, numbers, bytes and dates with the selected locale[32m 26[2mms[22m[39m
+     [32m✓[39m localizes legacy static strings, counts and English dates[32m 1[2mms[22m[39m
+[31m     [31m×[31m localizes review, sharing, guest and admin legacy strings[39m[32m 8[2mms[22m[39m
+     [32m✓[39m maps technical errors to localized user-facing messages[32m 1[2mms[22m[39m
+ [32m✓[39m stores/__tests__/review-store.test.ts [2m([22m[2m7 tests[22m[2m)[22m[32m 9[2mms[22m[39m
+ [32m✓[39m components/review/__tests__/version-switcher.test.tsx [2m([22m[2m3 tests[22m[2m)[22m[32m 99[2mms[22m[39m
+ [32m✓[39m components/__tests__/empty-state.test.tsx [2m([22m[2m8 tests[22m[2m)[22m[32m 210[2mms[22m[39m
+ [32m✓[39m components/__tests__/avatar.test.tsx [2m([22m[2m8 tests[22m[2m)[22m[32m 61[2mms[22m[39m
+ [32m✓[39m components/__tests__/skeleton.test.tsx [2m([22m[2m7 tests[22m[2m)[22m[32m 65[2mms[22m[39m
+ [32m✓[39m lib/__tests__/auth.test.ts [2m([22m[2m7 tests[22m[2m)[22m[32m 15[2mms[22m[39m
+ [32m✓[39m components/__tests__/button.test.tsx [2m([22m[2m7 tests[22m[2m)[22m[32m 294[2mms[22m[39m
+ [32m✓[39m components/settings/__tests__/instance-settings-tab.test.tsx [2m([22m[2m3 tests[22m[2m)[22m[33m 302[2mms[22m[39m
+ [32m✓[39m components/__tests__/input.test.tsx [2m([22m[2m7 tests[22m[2m)[22m[32m 274[2mms[22m[39m
+ [32m✓[39m test/locale-store.test.ts [2m([22m[2m3 tests[22m[2m)[22m[32m 25[2mms[22m[39m
+ [32m✓[39m components/__tests__/badge.test.tsx [2m([22m[2m11 tests[22m[2m)[22m[32m 91[2mms[22m[39m
+ [32m✓[39m components/shared/__tests__/storage-usage.test.tsx [2m([22m[2m4 tests[22m[2m)[22m[32m 82[2mms[22m[39m
+ [32m✓[39m test/locale-switching.test.tsx [2m([22m[2m1 test[22m[2m)[22m[32m 153[2mms[22m[39m
+
+[31m⎯⎯⎯⎯⎯⎯⎯[39m[1m[41m Failed Tests 1 [49m[22m[31m⎯⎯⎯⎯⎯⎯⎯[39m
+
+[41m[1m FAIL [22m[49m test/i18n.test.ts[2m > [22mi18n formatting[2m > [22mlocalizes review, sharing, guest and admin legacy strings
+[31m[1mAssertionError[22m: expected 'Копировать ссылку' to be 'Копировать ссылку-приглашение' // Object.is equality[39m
+
+Expected: [32m"Копировать ссылку[7m-приглашение[27m"[39m
+Received: [31m"Копировать ссылку"[39m
+
+[36m [2m❯[22m test/i18n.test.ts:[2m59:61[22m[39m
+    [90m 57|[39m     expect(translateLegacyUiText('ru', 'Leave your comment...')).toBe(…
+    [90m 58|[39m     [34mexpect[39m([34mtranslateLegacyUiText[39m([32m'ru'[39m[33m,[39m [32m'22 replies'[39m))[33m.[39m[34mtoBe[39m([32m'22 ответа'[39m)
+    [90m 59|[39m     expect(translateLegacyUiText('ru', 'Copy Invite Link')).toBe('Копи…
+    [90m   |[39m                                                             [31m^[39m
+    [90m 60|[39m     [34mexpect[39m([34mtranslateLegacyUiText[39m([32m'ru'[39m[33m,[39m [32m'6/1/2026'[39m))[33m.[39m[34mtoMatch[39m([36m/2026/[39m)
+    [90m 61|[39m     expect(translateLegacyUiText('en', 'Leave your comment...')).toBe(…
+
+[31m[2m⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/1]⎯[22m[39m
+
+
+[2m Test Files [22m [1m[31m1 failed[39m[22m[2m | [22m[1m[32m18 passed[39m[22m[90m (19)[39m
+[2m      Tests [22m [1m[31m1 failed[39m[22m[2m | [22m[1m[32m140 passed[39m[22m[90m (141)[39m
+[2m   Start at [22m 20:16:28
+[2m   Duration [22m 11.42s[2m (transform 612ms, setup 3.96s, import 2.46s, tests 1.84s, environment 19.73s)[22m
+
+
+::error file=/home/runner/work/freeframe-media-plane-review/freeframe-media-plane-review/apps/web/test/i18n.test.ts,title=test/i18n.test.ts > i18n formatting > localizes review%2C sharing%2C guest and admin legacy strings,line=59,column=61::AssertionError: expected 'Копировать ссылку' to be 'Копировать ссылку-приглашение' // Object.is equality%0A%0AExpected: "Копировать ссылку-приглашение"%0AReceived: "Копировать ссылку"%0A%0A ❯ test/i18n.test.ts:59:61%0A%0A
 /home/runner/work/freeframe-media-plane-review/freeframe-media-plane-review/apps/web:
  ERR_PNPM_RECURSIVE_RUN_FIRST_FAIL  web@0.1.0 test: `vitest run`
-spawn ENOENT
- WARN   Local package.json exists, but node_modules missing, did you mean to install?
+Exit status 1
 
 --- build output ---
- WARN  The "workspaces" field in package.json is not supported by pnpm. Create a "pnpm-workspace.yaml" file instead.
 
 > web@0.1.0 build /home/runner/work/freeframe-media-plane-review/freeframe-media-plane-review/apps/web
 > next build
 
-sh: 1: next: not found
+⚠ No build cache found. Please configure build caching for faster rebuilds. Read more: https://nextjs.org/docs/messages/no-cache
+Attention: Next.js now collects completely anonymous telemetry regarding usage.
+This information is used to shape Next.js' roadmap and prioritize features.
+You can learn more, including how to opt-out if you'd not like to participate in this anonymous program, by visiting the following URL:
+https://nextjs.org/telemetry
+
+  ▲ Next.js 14.2.35
+
+   Creating an optimized production build ...
+ ✓ Compiled successfully
+   Skipping linting
+   Checking validity of types ...
+Failed to compile.
+
+./components/shared/legacy-locale-bridge.tsx:101:33
+Type error: Type 'NodeList' can only be iterated through when using the '--downlevelIteration' flag or with a '--target' of 'es2015' or higher.
+
+[0m [90m  99 |[39m         [36mif[39m (record[33m.[39mtype [33m===[39m [32m'characterData'[39m) localizeTextNode(record[33m.[39mtarget [36mas[39m [33mText[39m[33m,[39m locale)[0m
+[0m [90m 100 |[39m         [36melse[39m [36mif[39m (record[33m.[39mtype [33m===[39m [32m'attributes'[39m) localizeElementAttributes(record[33m.[39mtarget [36mas[39m [33mElement[39m[33m,[39m locale)[0m
+[0m[31m[1m>[22m[39m[90m 101 |[39m         [36melse[39m [36mfor[39m ([36mconst[39m node [36mof[39m record[33m.[39maddedNodes) localizeTree(node[33m,[39m locale)[0m
+[0m [90m     |[39m                                 [31m[1m^[22m[39m[0m
+[0m [90m 102 |[39m       }[0m
+[0m [90m 103 |[39m       observer[33m.[39mobserve(root[33m,[39m {[0m
+[0m [90m 104 |[39m         subtree[33m:[39m [36mtrue[39m[33m,[39m[0m
+Next.js build worker exited with code: 1 and signal: null
 /home/runner/work/freeframe-media-plane-review/freeframe-media-plane-review/apps/web:
  ERR_PNPM_RECURSIVE_RUN_FIRST_FAIL  web@0.1.0 build: `next build`
-spawn ENOENT
- WARN   Local package.json exists, but node_modules missing, did you mean to install?
+Exit status 1
