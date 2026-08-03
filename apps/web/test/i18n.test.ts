@@ -1,0 +1,49 @@
+import { describe, expect, it } from 'vitest'
+import {
+  formatBytes,
+  formatCount,
+  formatDate,
+  formatNumber,
+  localizeError,
+  plural,
+  translate,
+  translateLegacyText,
+} from '@/lib/i18n'
+
+describe('i18n formatting', () => {
+  it('translates semantic keys in both directions', () => {
+    expect(translate('ru', 'projects.new')).toBe('Новый проект')
+    expect(translate('en', 'projects.new')).toBe('New Project')
+    expect(translate('ru', 'missing.key')).toBe('missing.key')
+  })
+
+  it('selects Russian plural forms', () => {
+    const forms = ['проект', 'проекта', 'проектов'] as const
+    expect(plural('ru', 1, forms)).toBe('проект')
+    expect(plural('ru', 2, forms)).toBe('проекта')
+    expect(plural('ru', 5, forms)).toBe('проектов')
+    expect(plural('ru', 11, forms)).toBe('проектов')
+    expect(plural('ru', 21, forms)).toBe('проект')
+  })
+
+  it('formats counts, numbers, bytes and dates with the selected locale', () => {
+    expect(formatCount('ru', 22, ['project', 'projects', 'projects'], ['проект', 'проекта', 'проектов']))
+      .toBe('22 проекта')
+    expect(formatNumber('ru', 12345.6)).toMatch(/12[\s\u00a0]345,6/)
+    expect(formatBytes('ru', 1024)).toBe('1 КБ')
+    expect(formatDate('ru', new Date('2026-06-01T00:00:00Z'), { timeZone: 'UTC', year: 'numeric' }))
+      .toContain('2026')
+  })
+
+  it('localizes legacy static strings, counts and English dates', () => {
+    expect(translateLegacyText('ru', '  Approve  ')).toBe('  Согласовать  ')
+    expect(translateLegacyText('ru', '2 projects')).toBe('2 проекта')
+    expect(translateLegacyText('ru', 'Jun 1, 2026')).toMatch(/2026/)
+    expect(translateLegacyText('en', 'Approve')).toBe('Approve')
+  })
+
+  it('maps technical errors to localized user-facing messages', () => {
+    expect(localizeError('ru', new Error('Network request failed'))).toContain('подключ')
+    expect(localizeError('ru', new Error('403 forbidden'))).toContain('прав')
+  })
+})
