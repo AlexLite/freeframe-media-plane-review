@@ -256,6 +256,20 @@ export function translateLegacyText(locale: Locale, source: string): string {
     if (match) return preserveWhitespace(source, formatCount(locale, Number(match[1]), english, russian))
   }
 
+  const relativeTime = trimmed.match(/^(\d+) (second|minute|hour|day|month|year)s? ago$/i)
+  if (relativeTime) {
+    const units: Record<string, [PluralForms, PluralForms]> = {
+      second: [['second', 'seconds', 'seconds'], ['секунду', 'секунды', 'секунд']],
+      minute: [['minute', 'minutes', 'minutes'], ['минуту', 'минуты', 'минут']],
+      hour: [['hour', 'hours', 'hours'], ['час', 'часа', 'часов']],
+      day: [['day', 'days', 'days'], ['день', 'дня', 'дней']],
+      month: [['month', 'months', 'months'], ['месяц', 'месяца', 'месяцев']],
+      year: [['year', 'years', 'years'], ['год', 'года', 'лет']],
+    }
+    const [english, russian] = units[relativeTime[2].toLowerCase()]
+    return preserveWhitespace(source, `${formatCount(locale, Number(relativeTime[1]), english, russian)} назад`)
+  }
+
   const metadata = trimmed.match(/^(\d+) items? · (.+)$/i)
   if (metadata) {
     return preserveWhitespace(

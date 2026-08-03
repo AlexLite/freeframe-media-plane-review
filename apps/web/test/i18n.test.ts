@@ -56,6 +56,7 @@ describe('i18n formatting', () => {
   it('localizes legacy static strings, counts and English dates', () => {
     expect(translateLegacyText('ru', '  Approve  ')).toBe('  Согласовать  ')
     expect(translateLegacyText('ru', '2 projects')).toBe('2 проекта')
+    expect(translateLegacyText('ru', '56 minutes ago')).toBe('56 минут назад')
     expect(translateLegacyText('ru', 'Jun 1, 2026')).toMatch(/2026/)
     expect(translateLegacyText('en', 'Approve')).toBe('Approve')
   })
@@ -90,6 +91,13 @@ describe('i18n formatting', () => {
     expect(translateLegacyUiText('ru', '0 Shares')).toBe('0 ссылок')
     expect(translateLegacyUiText('ru', 'Project Settings')).toBe('Настройки проекта')
     expect(translateLegacyUiText('ru', 'Private Project')).toBe('Закрытый проект')
+    expect(translateLegacyUiText('ru', 'Filter by...')).toBe('Фильтровать по...')
+    expect(translateLegacyUiText('ru', 'Oldest (Default)')).toBe('Сначала старые (по умолчанию)')
+    expect(translateLegacyUiText('ru', 'Full Access')).toBe('Полный доступ')
+    expect(translateLegacyUiText('ru', 'Members of Песочница Тузика')).toBe('Участники проекта «Песочница Тузика»')
+    expect(translateLegacyUiText('ru', 'New Version')).toBe('Новая версия')
+    expect(translateLegacyUiText('ru', 'Draw annotation')).toBe('Нарисовать аннотацию')
+    expect(translateLegacyUiText('ru', 'Send (Enter)')).toBe('Отправить (Enter)')
   })
 
   it('maps technical errors to localized user-facing messages', () => {

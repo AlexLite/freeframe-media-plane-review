@@ -84,6 +84,37 @@ const russianUi: Record<string, string> = {
   'Public Project': 'Открытый проект',
   'Only invited members can access this project.': 'Доступ к проекту есть только у приглашённых участников.',
   'All users in the system can view this project.': 'Проект доступен всем пользователям системы.',
+  'Filter by...': 'Фильтровать по...',
+  'Mentions and reactions': 'Упоминания и реакции',
+  'Hashtag': 'Хэштег',
+  'Person': 'Автор',
+  'Clear Filters': 'Сбросить фильтры',
+  'Sort thread by...': 'Сортировать обсуждение по...',
+  'Oldest (Default)': 'Сначала старые (по умолчанию)',
+  'Search...': 'Поиск...',
+  'Full Access': 'Полный доступ',
+  'Can manage all resources within the project': 'Можно управлять всеми материалами проекта',
+  'Edit & Share': 'Редактирование и публикация',
+  'Can manage resources, download, and share': 'Можно управлять материалами, скачивать и публиковать',
+  'Comment Only': 'Только комментарии',
+  'Can view and comment on the relevant resources': 'Можно просматривать и комментировать доступные материалы',
+  'View Only': 'Только просмотр',
+  'Can view the relevant resources': 'Можно просматривать доступные материалы',
+  '(you)': '(вы)',
+  'No members yet': 'Участников пока нет',
+  'Version:': 'Версия:',
+  'New Version': 'Новая версия',
+  'Upload new version': 'Загрузить новую версию',
+  'Ready': 'Готово',
+  'Uploading': 'Загрузка',
+  'Processing': 'Обработка',
+  'Failed': 'Ошибка',
+  'New Share Link': 'Новая ссылка общего доступа',
+  'Add to Existing Share Links': 'Добавить в существующие ссылки',
+  'No share links yet': 'Ссылок пока нет',
+  'No matching share links': 'Подходящие ссылки не найдены',
+  'Draw annotation': 'Нарисовать аннотацию',
+  'Send (Enter)': 'Отправить (Enter)',
   'Comment mode': 'Режим комментариев',
   'Detailed mode includes timecodes and drawing': 'Подробный режим включает таймкоды и рисование',
   'Detailed': 'Подробные',
@@ -219,6 +250,9 @@ export function translateLegacyUiText(locale: Locale, source: string): string {
   const trimmed = source.trim()
   const exact = russianUi[trimmed]
   if (exact) return preserveWhitespace(source, exact)
+
+  const membersOf = trimmed.match(/^Members of (.+)$/)
+  if (membersOf) return preserveWhitespace(source, `Участники проекта «${membersOf[1]}»`)
 
   const replies = trimmed.match(/^(\d+) (reply|replies)$/i)
   if (replies) {
