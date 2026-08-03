@@ -120,12 +120,15 @@ export function LoginForm() {
         code: codeStr,
       })
 
+      // Verification already creates the authenticated session. Persist it
+      // before asking first-time users to set a password because that endpoint
+      // is protected and requires the access token.
+      setTokens(res.access_token, res.refresh_token)
+
       if (res.needs_password) {
         setStep('password')
       } else {
-        setTokens(res.access_token, res.refresh_token)
         await useAuthStore.getState().fetchUser()
-        const user = useAuthStore.getState().user
         router.replace('/projects')
       }
     } catch (err) {
@@ -173,14 +176,8 @@ export function LoginForm() {
 
     setLoading(true)
     try {
-      const res = await api.post<AuthTokens>('/auth/set-password', {
-        email,
-        code: code.join(''),
-        password,
-      })
-      setTokens(res.access_token, res.refresh_token)
+      await api.post('/auth/set-password', { password })
       await useAuthStore.getState().fetchUser()
-      const u = useAuthStore.getState().user
       router.replace('/projects')
     } catch (err) {
       if (err instanceof ApiError) {
@@ -212,7 +209,6 @@ export function LoginForm() {
       })
       setTokens(res.access_token, res.refresh_token)
       await useAuthStore.getState().fetchUser()
-      const u = useAuthStore.getState().user
       router.replace('/projects')
     } catch (err) {
       if (err instanceof ApiError) {
