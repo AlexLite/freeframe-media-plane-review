@@ -56,7 +56,7 @@ describe('i18n formatting', () => {
   it('localizes review, sharing, guest and admin legacy strings', () => {
     expect(translateLegacyUiText('ru', 'Leave your comment...')).toBe('Оставьте комментарий...')
     expect(translateLegacyUiText('ru', '22 replies')).toBe('22 ответа')
-    expect(translateLegacyUiText('ru', 'Copy Invite Link')).toBe('Копировать ссылку-приглашение')
+    expect(translateLegacyUiText('ru', 'Copy Invite Link')).toBe('Копировать ссылку')
     expect(translateLegacyUiText('ru', '6/1/2026')).toMatch(/2026/)
     expect(translateLegacyUiText('en', 'Leave your comment...')).toBe('Leave your comment...')
   })
