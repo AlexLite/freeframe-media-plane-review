@@ -106,6 +106,7 @@ describe('i18n formatting', () => {
     expect(translateLegacyUiText('ru', 'Password required')).toBe('Требуется пароль')
     expect(translateLegacyUiText('ru', 'Enter your name and email to comment on this shared asset.')).toBe('Введите имя и email, чтобы комментировать этот материал.')
     expect(translateLegacyUiText('ru', 'Name and email required')).toBe('Укажите имя и email')
+    expect(translateLegacyUiText('ru', 'Copied!')).toBe('Скопировано!')
   })
 
   it('maps technical errors to localized user-facing messages', () => {

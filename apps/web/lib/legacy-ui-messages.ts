@@ -140,6 +140,7 @@ const russianUi: Record<string, string> = {
   'Email address': 'Адрес email',
   'Continue': 'Продолжить',
   'Name and email required': 'Укажите имя и email',
+  'Copied!': 'Скопировано!',
   'Comment mode': 'Режим комментариев',
   'Detailed mode includes timecodes and drawing': 'Подробный режим включает таймкоды и рисование',
   'Detailed': 'Подробные',
