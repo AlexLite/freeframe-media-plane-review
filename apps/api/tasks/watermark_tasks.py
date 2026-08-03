@@ -81,9 +81,32 @@ def apply_watermark(
             output_ext = ".mp4"
             output_path = os.path.join(tmp, f"watermarked_{asset_id}{output_ext}")
 
-            # Build ffmpeg drawtext filter if we have watermark text
+            # Build either an image overlay or a text watermark.
             vf_filters = []
-            if watermark_text:
+            if image_key:
+                image_path = os.path.join(tmp, "watermark.png")
+                s3.download_file(settings.s3_bucket, image_key, image_path)
+                if position == "center" or position == "tiled":
+                    overlay_x, overlay_y = "(main_w-overlay_w)/2", "(main_h-overlay_h)/2"
+                else:
+                    overlay_x, overlay_y = "main_w-overlay_w-20", "main_h-overlay_h-20"
+                filter_complex = (
+                    f"[1:v]scale=w='min(300,iw)':h=-1,format=rgba,"
+                    f"colorchannelmixer=aa={opacity}[wm];"
+                    f"[0:v][wm]overlay=x={overlay_x}:y={overlay_y}[outv]"
+                )
+                cmd = [
+                    "ffmpeg", "-y",
+                    "-i", local_path,
+                    "-i", image_path,
+                    "-filter_complex", filter_complex,
+                    "-map", "[outv]",
+                    "-map", "0:a?",
+                    "-c:a", "copy",
+                    output_path,
+                ]
+                subprocess.run(cmd, check=True, timeout=600)
+            elif watermark_text:
                 escaped = watermark_text.replace("'", r"'\''").replace(":", r"\:")
                 fontsize = 24
                 if position == "center":
@@ -97,7 +120,9 @@ def apply_watermark(
                     f":fontcolor=white@{opacity}:x={x}:y={y}"
                 )
 
-            if vf_filters:
+            if image_key:
+                pass
+            elif vf_filters:
                 cmd = [
                     "ffmpeg", "-y",
                     "-i", local_path,

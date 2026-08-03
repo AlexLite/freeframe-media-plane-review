@@ -22,11 +22,14 @@ import {
   Clock,
   Droplets,
   LayoutGrid,
+  Eye,
+  EyeOff,
 } from 'lucide-react'
 import * as Switch from '@radix-ui/react-switch'
 import { cn, copyToClipboard, endOfDayISO } from '@/lib/utils'
 import { Button } from '@/components/ui/button'
 import { api } from '@/lib/api'
+import { useI18n } from '@/hooks/use-i18n'
 import type { AssetResponse, Folder, ShareLink, ShareLinkAppearance } from '@/types'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -429,9 +432,11 @@ function ConfigurePhase({ defaultTitle, onBack, onCreate, creating }: ConfigureP
                 <button
                   type="button"
                   onClick={() => setShowPassphraseInput(!showPassphraseInput)}
-                  className="absolute right-2 top-1/2 -translate-y-1/2 text-2xs text-text-tertiary hover:text-text-primary transition-colors px-1 py-0.5"
+                  title={showPassphraseInput ? 'Hide password' : 'Show password'}
+                  aria-label={showPassphraseInput ? 'Hide password' : 'Show password'}
+                  className="absolute right-2 top-1/2 -translate-y-1/2 text-text-tertiary hover:text-text-primary transition-colors p-1"
                 >
-                  {showPassphraseInput ? 'Hide' : 'Show'}
+                  {showPassphraseInput ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                 </button>
               </div>
             )}
@@ -509,6 +514,7 @@ function SelectionPhase({
   onCancel,
   onCreate,
 }: SelectionPhaseProps) {
+  const { formatCount } = useI18n()
   const hasItems = folders.length > 0 || assets.length > 0
   const totalItems = folders.length + assets.length
   const folderCount = folders.length
@@ -548,13 +554,13 @@ function SelectionPhase({
             {folderCount > 0 && (
               <span className="flex items-center gap-1">
                 <FolderIcon className="h-3.5 w-3.5 text-text-tertiary" />
-                {folderCount} folder{folderCount !== 1 ? 's' : ''}
+                {formatCount(folderCount, ['folder', 'folders', 'folders'], ['папка', 'папки', 'папок'])}
               </span>
             )}
             {assetCount > 0 && (
               <span className="flex items-center gap-1">
                 <Image className="h-3.5 w-3.5 text-text-tertiary" />
-                {assetCount} asset{assetCount !== 1 ? 's' : ''}
+                {formatCount(assetCount, ['asset', 'assets', 'assets'], ['материал', 'материала', 'материалов'])}
               </span>
             )}
             {totalItems === 0 && <span>Empty — no items to share</span>}
@@ -930,9 +936,11 @@ function LinkCreatedPhase({ result, allResults, onSelectResult, onDone, onAdvanc
                     <button
                       type="button"
                       onClick={() => setShowPassphraseInput(!showPassphraseInput)}
-                      className="absolute right-2 top-1/2 -translate-y-1/2 text-2xs text-text-tertiary hover:text-text-primary transition-colors px-1 py-0.5"
+                      title={showPassphraseInput ? 'Hide password' : 'Show password'}
+                      aria-label={showPassphraseInput ? 'Hide password' : 'Show password'}
+                      className="absolute right-2 top-1/2 -translate-y-1/2 text-text-tertiary hover:text-text-primary transition-colors p-1"
                     >
-                      {showPassphraseInput ? 'Hide' : 'Show'}
+                      {showPassphraseInput ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                     </button>
                   </div>
                 )}

@@ -103,7 +103,7 @@ function BrandingTab({ projectId }: { projectId: string }) {
     setSaving(true)
     setMsg('')
     try {
-      await api.patch(key, {
+      await api.put(key, {
         primary_color: form.primary_color,
         secondary_color: form.secondary_color,
         custom_title: form.custom_title,
@@ -278,7 +278,9 @@ function WatermarkTab({ projectId }: { projectId: string }) {
     opacity: 0.3,
   })
   const [saving, setSaving] = React.useState(false)
+  const [uploadingImage, setUploadingImage] = React.useState(false)
   const [msg, setMsg] = React.useState('')
+  const imageInputRef = React.useRef<HTMLInputElement>(null)
 
   React.useEffect(() => {
     if (wm) setForm(wm)
@@ -292,11 +294,12 @@ function WatermarkTab({ projectId }: { projectId: string }) {
     setSaving(true)
     setMsg('')
     try {
-      await api.patch(key, {
+      await api.put(key, {
         enabled: form.enabled,
         position: form.position,
         content: form.content,
         custom_text: form.custom_text,
+        image_s3_key: form.image_s3_key,
         opacity: form.opacity,
       })
       setMsg('Watermark settings saved.')
@@ -305,6 +308,40 @@ function WatermarkTab({ projectId }: { projectId: string }) {
       setMsg(err instanceof Error ? err.message : 'Failed to save')
     } finally {
       setSaving(false)
+    }
+  }
+
+  const handleImageUpload = async (file: File | null) => {
+    if (!file) return
+    if (file.type !== 'image/png') {
+      setMsg('Use a PNG image.')
+      return
+    }
+    if (file.size > 10 * 1024 * 1024) {
+      setMsg('The image must be smaller than 10 MB.')
+      return
+    }
+    setUploadingImage(true)
+    setMsg('')
+    try {
+      const upload = await api.post<{ upload_url: string; key: string }>(
+        `/projects/${projectId}/watermark/image-upload`,
+      )
+      const response = await fetch(upload.upload_url, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'image/png' },
+        body: file,
+      })
+      if (!response.ok) throw new Error('Image upload failed.')
+      await api.put(key, { content: 'image', image_s3_key: upload.key })
+      setForm((current) => ({ ...current, content: 'image', image_s3_key: upload.key }))
+      await globalMutate(key)
+      setMsg('Watermark image uploaded.')
+    } catch (err: unknown) {
+      setMsg(err instanceof Error ? err.message : 'Image upload failed.')
+    } finally {
+      setUploadingImage(false)
+      if (imageInputRef.current) imageInputRef.current.value = ''
     }
   }
 
@@ -345,6 +382,7 @@ function WatermarkTab({ projectId }: { projectId: string }) {
           { value: 'email', label: 'User email' },
           { value: 'name', label: 'User name' },
           { value: 'custom_text', label: 'Custom text' },
+          { value: 'image', label: 'PNG image' },
         ]}
         onChange={(v) => set('content', v)}
       />
@@ -356,6 +394,36 @@ function WatermarkTab({ projectId }: { projectId: string }) {
           onChange={(e) => set('custom_text', e.target.value)}
           placeholder="Confidential"
         />
+      )}
+
+      {form.content === 'image' && (
+        <div className="rounded-lg border border-border bg-bg-secondary p-4 space-y-3">
+          <div>
+            <p className="text-sm font-medium text-text-primary">Watermark image</p>
+            <p className="text-xs text-text-tertiary">PNG with a transparent background, up to 10 MB.</p>
+          </div>
+          {wm?.image_url && (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img src={wm.image_url} alt="Watermark preview" className="max-h-28 max-w-64 object-contain rounded border border-border bg-black/20 p-2" />
+          )}
+          <input
+            ref={imageInputRef}
+            type="file"
+            accept="image/png"
+            className="hidden"
+            onChange={(event) => handleImageUpload(event.target.files?.[0] ?? null)}
+          />
+          <Button
+            type="button"
+            variant="secondary"
+            size="sm"
+            loading={uploadingImage}
+            onClick={() => imageInputRef.current?.click()}
+          >
+            <Upload className="h-4 w-4" />
+            {wm?.image_s3_key ? 'Replace PNG' : 'Upload PNG'}
+          </Button>
+        </div>
       )}
 
       <div className="flex flex-col gap-1.5">

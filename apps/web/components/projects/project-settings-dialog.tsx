@@ -4,7 +4,7 @@ import * as React from 'react'
 import Link from 'next/link'
 import * as Dialog from '@radix-ui/react-dialog'
 import * as Switch from '@radix-ui/react-switch'
-import { X, ImagePlus, Globe, Lock, Droplets } from 'lucide-react'
+import { X, ImagePlus, Globe, Lock, SlidersHorizontal } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { getGradientForProject } from '@/lib/gradient-utils'
 import { api } from '@/lib/api'
@@ -196,9 +196,9 @@ export function ProjectSettingsDialog({
           <div className="flex items-center justify-between gap-2 px-6 py-4 border-t border-border">
             <Dialog.Close asChild>
               <Button asChild variant="secondary" size="sm">
-                <Link href={`/projects/${project.id}/settings?tab=watermark`}>
-                  <Droplets className="h-4 w-4" />
-                  {locale === 'ru' ? 'Настроить водяной знак' : 'Configure watermark'}
+                <Link href={`/projects/${project.id}/settings`}>
+                  <SlidersHorizontal className="h-4 w-4" />
+                  {locale === 'ru' ? 'Расширенные настройки' : 'Advanced settings'}
                 </Link>
               </Button>
             </Dialog.Close>

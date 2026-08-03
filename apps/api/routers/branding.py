@@ -60,6 +60,16 @@ def _branding_to_response(branding: ProjectBranding) -> BrandingResponse:
     return resp
 
 
+def _watermark_to_response(watermark: WatermarkSettings) -> WatermarkResponse:
+    response = WatermarkResponse.model_validate(watermark)
+    if watermark.image_s3_key:
+        try:
+            response.image_url = s3_service.generate_presigned_get_url(watermark.image_s3_key)
+        except Exception:
+            response.image_url = None
+    return response
+
+
 # ── Project Branding ──────────────────────────────────────────────────────────
 
 @router.get("/projects/{project_id}/branding", response_model=BrandingResponse)
@@ -124,7 +134,7 @@ def get_watermark(
 ):
     require_project_role(db, project_id, current_user, ProjectRole.viewer)
     wm = _get_or_create_watermark(db, project_id)
-    return WatermarkResponse.model_validate(wm)
+    return _watermark_to_response(wm)
 
 
 @router.put("/projects/{project_id}/watermark", response_model=WatermarkResponse)
@@ -137,11 +147,20 @@ def upsert_watermark(
     require_project_role(db, project_id, current_user, ProjectRole.editor)
     wm = _get_or_create_watermark(db, project_id)
     update_data = body.model_dump(exclude_none=True)
+    new_image_key = update_data.get("image_s3_key")
+    if new_image_key and not new_image_key.startswith(f"branding/{project_id}/watermark/"):
+        raise HTTPException(status_code=400, detail="Invalid watermark image key")
+    previous_image_key = wm.image_s3_key
     for field, value in update_data.items():
         setattr(wm, field, value)
     db.commit()
     db.refresh(wm)
-    return WatermarkResponse.model_validate(wm)
+    if new_image_key and previous_image_key and previous_image_key != new_image_key:
+        try:
+            s3_service.delete_object(previous_image_key)
+        except Exception:
+            pass
+    return _watermark_to_response(wm)
 
 
 @router.post(
@@ -194,8 +213,12 @@ def apply_watermark_to_asset(
         watermark_text = current_user.email
     elif wm.content == "name":
         watermark_text = current_user.name or current_user.email
-    else:  # custom_text
+    elif wm.content == "custom_text":
         watermark_text = wm.custom_text or ""
+    else:  # image
+        watermark_text = ""
+        if not wm.image_s3_key:
+            raise HTTPException(status_code=400, detail="Watermark image not uploaded")
 
     from ..tasks.watermark_tasks import apply_watermark
     from ..tasks.celery_app import send_task_safe
@@ -205,6 +228,6 @@ def apply_watermark_to_asset(
         watermark_text,
         wm.position,
         wm.opacity,
-        None,  # image_key not stored in model
+        wm.image_s3_key if wm.content == "image" else None,
     )
     return {"status": "watermark_queued"}

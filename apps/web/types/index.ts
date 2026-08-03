@@ -35,7 +35,7 @@ export type MetadataFieldType = "text" | "number" | "date" | "select" | "multi_s
 
 export type WatermarkPosition = "center" | "corner" | "tiled";
 
-export type WatermarkContent = "email" | "name" | "custom_text";
+export type WatermarkContent = "email" | "name" | "custom_text" | "image";
 
 export type ViewerLayout = "grid" | "reel";
 
@@ -449,6 +449,8 @@ export interface WatermarkSettings {
   position: WatermarkPosition;
   content: WatermarkContent;
   custom_text: string | null;
+  image_s3_key: string | null;
+  image_url: string | null;
   opacity: number;
   created_at: string;
 }

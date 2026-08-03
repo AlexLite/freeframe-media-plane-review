@@ -60,8 +60,9 @@ class BrandingLogoUploadResponse(BaseModel):
 class WatermarkUpdate(BaseModel):
     enabled: Optional[bool] = None
     position: Optional[Literal["center", "corner", "tiled"]] = None
-    content: Optional[Literal["email", "name", "custom_text"]] = None
+    content: Optional[Literal["email", "name", "custom_text", "image"]] = None
     custom_text: Optional[str] = None
+    image_s3_key: Optional[str] = None
     opacity: Optional[float] = None
 
     @field_validator("opacity", mode="before")
@@ -79,6 +80,8 @@ class WatermarkResponse(BaseModel):
     position: str
     content: str
     custom_text: Optional[str] = None
+    image_s3_key: Optional[str] = None
+    image_url: Optional[str] = None
     opacity: float
 
     model_config = {"from_attributes": True}

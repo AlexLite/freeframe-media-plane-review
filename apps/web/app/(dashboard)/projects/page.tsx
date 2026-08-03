@@ -206,7 +206,7 @@ function ProjectSection({
 }
 
 export default function ProjectsPage() {
-  const { t, localizeError } = useI18n();
+  const { t, formatCount, localizeError } = useI18n();
   usePageTitle(t("projects.title"));
   const router = useRouter();
   const { user } = useAuthStore();
@@ -283,7 +283,11 @@ export default function ProjectsPage() {
           <h1 className="text-lg font-semibold text-text-primary">Projects</h1>
           {projects && projects.length > 0 && (
             <p className="mt-0.5 text-sm text-text-tertiary">
-              {projects.length} project{projects.length !== 1 ? "s" : ""}
+              {formatCount(
+                projects.length,
+                ["project", "projects", "projects"],
+                ["проект", "проекта", "проектов"],
+              )}
             </p>
           )}
         </div>
