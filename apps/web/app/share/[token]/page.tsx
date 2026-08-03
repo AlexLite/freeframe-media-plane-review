@@ -22,6 +22,7 @@ import { cn } from '@/lib/utils'
 import { Button } from '@/components/ui/button'
 import { GuestCommentInput } from '@/components/review/guest-comment-input'
 import { FolderShareViewer, ShareReviewScreen } from '@/components/share/folder-share-viewer'
+import { PublicLocaleSwitcher } from '@/components/shared/locale-initializer'
 import type { Asset, SharePermission, ProjectBranding, ShareLinkAppearance } from '@/types'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -464,6 +465,7 @@ function ShareTopBar({
 
       {/* Right: download + panel toggle */}
       <div className="flex items-center gap-2 shrink-0">
+        <PublicLocaleSwitcher />
         {allowDownload && (
           <button
             onClick={handleDownload}

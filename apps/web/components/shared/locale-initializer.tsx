@@ -1,16 +1,14 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect } from 'react'
 import { useAuthStore } from '@/stores/auth-store'
 import { isLocale, LOCALE_STORAGE_KEY, useLocaleStore } from '@/stores/locale-store'
 
 export function LocaleInitializer() {
   const locale = useLocaleStore((state) => state.locale)
   const applyLocale = useLocaleStore((state) => state.applyLocale)
-  const setLocale = useLocaleStore((state) => state.setLocale)
   const syncFromServer = useLocaleStore((state) => state.syncFromServer)
   const user = useAuthStore((state) => state.user)
-  const [isSharePage, setIsSharePage] = useState(false)
 
   useEffect(() => {
     applyLocale(locale)
@@ -22,7 +20,6 @@ export function LocaleInitializer() {
 
   useEffect(() => {
     const publicShare = window.location.pathname.startsWith('/share/')
-    setIsSharePage(publicShare)
     if (!publicShare) return
 
     const requestedLocale = new URLSearchParams(window.location.search).get('lang')
@@ -36,16 +33,21 @@ export function LocaleInitializer() {
     }
   }, [applyLocale])
 
-  if (!isSharePage) return null
+  return null
+}
+
+export function PublicLocaleSwitcher() {
+  const locale = useLocaleStore((state) => state.locale)
+  const setLocale = useLocaleStore((state) => state.setLocale)
 
   return (
-    <label className="fixed bottom-3 left-3 z-[300] flex items-center gap-1.5 rounded-lg border border-border bg-bg-secondary/95 px-2 py-1.5 text-xs text-text-tertiary shadow-xl backdrop-blur">
+    <label className="flex h-8 shrink-0 items-center gap-1.5 rounded-md border border-border bg-bg-tertiary px-2 text-xs text-text-tertiary">
       <span>{locale === 'ru' ? 'Язык' : 'Language'}</span>
       <select
         value={locale}
         onChange={(event) => setLocale(event.target.value === 'ru' ? 'ru' : 'en')}
         aria-label={locale === 'ru' ? 'Язык страницы' : 'Page language'}
-        className="rounded border border-border bg-bg-tertiary px-1.5 py-0.5 text-xs text-text-primary outline-none"
+        className="bg-transparent text-xs font-medium text-text-primary outline-none"
       >
         <option value="ru">RU</option>
         <option value="en">EN</option>

@@ -19,6 +19,7 @@ import {
   ArrowLeft,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
+import { PublicLocaleSwitcher } from '@/components/shared/locale-initializer'
 import type {
   SharePermission,
   ShareLinkAppearance,
@@ -876,6 +877,7 @@ function ShareReviewInner({
           <span className="text-[13px] font-medium text-text-primary truncate">{assetName}</span>
         </div>
         <div className="flex items-center gap-2">
+          <PublicLocaleSwitcher />
           {showVersions && VersionSwitcher && versions.length > 0 && (
             <VersionSwitcher versions={versions} />
           )}
@@ -1362,6 +1364,7 @@ export function FolderShareViewer({
 
         {/* Right: Download All + panel toggle */}
         <div className="flex items-center gap-2 shrink-0">
+          <PublicLocaleSwitcher />
           {allowDownload && (
             <button
               className="flex items-center gap-1.5 h-7 px-3 rounded-md text-xs font-medium text-white bg-accent hover:bg-accent-hover transition-colors"
