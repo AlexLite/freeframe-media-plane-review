@@ -25,7 +25,7 @@ import {
   ExternalLink,
   Users,
 } from "lucide-react";
-import { cn, formatRelativeTime, formatBytes } from "@/lib/utils";
+import { cn } from "@/lib/utils";
 import { api } from "@/lib/api";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -51,6 +51,7 @@ import { ShareCreateDialog } from "@/components/projects/share-create-dialog";
 import { ProjectMembersDialog } from "@/components/projects/project-members-dialog";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { usePageTitle } from "@/hooks/use-page-title";
+import { useI18n } from "@/hooks/use-i18n";
 import type {
   Project,
   AssetResponse,
@@ -61,6 +62,7 @@ import type {
 } from "@/types";
 
 export default function ProjectDetailPage() {
+  const { t, formatRelativeTime, formatBytes } = useI18n();
   const params = useParams();
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -441,7 +443,7 @@ export default function ProjectDetailPage() {
               className="text-2xs font-semibold text-text-tertiary uppercase tracking-wider cursor-pointer"
               onClick={() => setShareLinksExpanded(!shareLinksExpanded)}
             >
-              Share Links
+              {t("projects.shareLinks")}
             </span>
             <div className="flex items-center gap-1">
               <button
@@ -452,7 +454,7 @@ export default function ProjectDetailPage() {
                   openShareDialog([], []);
                 }}
                 className="text-text-tertiary hover:text-text-primary transition-colors"
-                title="Create share link"
+                title={t("share.createLink")}
               >
                 <Plus className="h-3.5 w-3.5" />
               </button>
@@ -487,7 +489,7 @@ export default function ProjectDetailPage() {
                 )}
               >
                 <LinkIcon className="h-4 w-4" />
-                <span>All Share Links ({shareLinks.length})</span>
+                <span>{t("projects.allShareLinks", { count: shareLinks.length })}</span>
               </button>
               {shareLinks.map((link) => (
                 <div
@@ -622,7 +624,7 @@ export default function ProjectDetailPage() {
           ) : showTrash ? (
             <div className="flex-1 overflow-y-auto">
               <h2 className="text-sm font-medium text-text-primary mb-3">
-                Recently Deleted
+                {t("projects.recentlyDeleted")}
               </h2>
               {trash.folders.length === 0 && trash.assets.length === 0 ? (
                 <p className="text-xs text-text-tertiary">No deleted items</p>
@@ -824,7 +826,7 @@ export default function ProjectDetailPage() {
                       onClick={() => openShareDialog([], [])}
                     >
                       <Share2 className="h-4 w-4" />
-                      Share
+                      {t("share.title")}
                     </Button>
                   )}
                   {canCreateFolder && (
@@ -836,13 +838,13 @@ export default function ProjectDetailPage() {
                       }}
                     >
                       <FolderPlus className="h-4 w-4" />
-                      New Folder
+                      {t("projects.newFolder")}
                     </button>
                   )}
                   {canUpload && (
                     <Button size="sm" onClick={() => setUploadOpen(true)}>
                       <Upload className="h-4 w-4" />
-                      Upload
+                      {t("common.upload")}
                     </Button>
                   )}
                 </>
@@ -946,7 +948,7 @@ export default function ProjectDetailPage() {
                       : "border-transparent text-text-tertiary hover:text-text-secondary",
                   )}
                 >
-                  Fields
+                  {t("projects.fields")}
                 </button>
                 {selectedAsset && (
                   <button
@@ -980,11 +982,10 @@ export default function ProjectDetailPage() {
                             <MessageSquare className="h-6 w-6 text-text-tertiary/50" />
                           </div>
                           <p className="text-sm text-text-secondary">
-                            No comments yet
+                            {t("comments.noneYet")}
                           </p>
                           <p className="text-xs text-text-tertiary mt-1">
-                            Double-click the asset to open the viewer and leave
-                            comments.
+                            {t("comments.viewerHint")}
                           </p>
                         </div>
                       </div>
@@ -995,7 +996,7 @@ export default function ProjectDetailPage() {
                         href={`/projects/${projectId}/assets/${selectedAsset.id}`}
                       >
                         <div className="rounded-lg border border-border bg-bg-tertiary px-3 py-2 text-sm text-text-tertiary cursor-pointer hover:border-border-focus transition-colors text-center">
-                          Open in viewer to comment
+                          {t("comments.openViewer")}
                         </div>
                       </Link>
                     </div>
@@ -1025,14 +1026,21 @@ export default function ProjectDetailPage() {
 
                     <div className="space-y-3">
                       <div className="flex items-center justify-between">
-                        <span className="text-xs text-text-tertiary">Type</span>
+                        <span className="text-xs text-text-tertiary">{t("assets.type")}</span>
                         <span className="text-xs text-text-primary capitalize">
-                          {selectedAsset.asset_type.replace("_", " ")}
+                          {selectedAsset.asset_type === "video"
+                            ? t("assets.video")
+                            : selectedAsset.asset_type === "audio"
+                              ? t("assets.audio")
+                              : selectedAsset.asset_type === "image" ||
+                                  selectedAsset.asset_type === "image_carousel"
+                                ? t("assets.image")
+                                : t("assets.otherType")}
                         </span>
                       </div>
                       <div className="flex items-center justify-between">
                         <span className="text-xs text-text-tertiary">
-                          Uploaded
+                          {t("assets.uploaded")}
                         </span>
                         <span className="text-xs text-text-primary">
                           {formatRelativeTime(selectedAsset.created_at)}
@@ -1041,7 +1049,7 @@ export default function ProjectDetailPage() {
                       {authorNames[selectedAsset.created_by] && (
                         <div className="flex items-center justify-between">
                           <span className="text-xs text-text-tertiary">
-                            Uploaded by
+                            {t("assets.uploadedBy")}
                           </span>
                           <span className="text-xs text-text-primary">
                             {authorNames[selectedAsset.created_by]}
@@ -1051,7 +1059,7 @@ export default function ProjectDetailPage() {
                       {fileSizes[selectedAsset.id] != null && (
                         <div className="flex items-center justify-between">
                           <span className="text-xs text-text-tertiary">
-                            File size
+                            {t("assets.fileSize")}
                           </span>
                           <span className="text-xs text-text-primary">
                             {formatBytes(fileSizes[selectedAsset.id])}
@@ -1061,7 +1069,7 @@ export default function ProjectDetailPage() {
                       {selectedAsset.latest_version && (
                         <div className="flex items-center justify-between">
                           <span className="text-xs text-text-tertiary">
-                            Version
+                            {t("assets.version")}
                           </span>
                           <span className="text-xs text-text-primary">
                             v{selectedAsset.latest_version.version_number}
@@ -1089,7 +1097,7 @@ export default function ProjectDetailPage() {
                         <Link
                           href={`/projects/${projectId}/assets/${selectedAsset.id}`}
                         >
-                          Open in Player
+                          {t("assets.openPlayer")}
                         </Link>
                       </Button>
                       <Button
@@ -1141,7 +1149,7 @@ export default function ProjectDetailPage() {
                       <MessageSquare className="h-8 w-8 text-text-tertiary/50" />
                     </div>
                     <p className="text-sm text-text-secondary">
-                      Select an asset to view comments
+                      {t("comments.selectAsset")}
                     </p>
                   </div>
                 </div>
@@ -1155,9 +1163,9 @@ export default function ProjectDetailPage() {
       <NameDialog
         open={folderDialogOpen}
         onOpenChange={setFolderDialogOpen}
-        title="New Folder"
-        placeholder="Folder name"
-        submitLabel="Create"
+        title={t("projects.newFolder")}
+        placeholder={t("projects.folderName")}
+        submitLabel={t("common.create")}
         onSubmit={async (name) => {
           await createFolder(name, folderDialogParentId);
           mutateAssets();

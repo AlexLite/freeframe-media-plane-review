@@ -21,6 +21,20 @@ const IGNORE_SELECTOR = [
   'p.leading-relaxed.break-words',
 ].join(', ')
 
+const ATTRIBUTE_IGNORE_SELECTOR = [
+  'script',
+  'style',
+  'code',
+  'pre',
+  '[contenteditable="true"]',
+  '[data-i18n-ignore="true"]',
+  '[data-user-content="true"]',
+  '[data-comment-id]',
+  '[data-thread-id]',
+  '.prose',
+  'p.leading-relaxed.break-words',
+].join(', ')
+
 const originalText = new WeakMap<Text, string>()
 const originalAttributes = new WeakMap<Element, Map<string, string>>()
 
@@ -47,7 +61,7 @@ function localizeTextNode(node: Text, locale: Locale) {
 }
 
 function localizeElementAttributes(element: Element, locale: Locale) {
-  if (isIgnored(element)) return
+  if (element.closest(ATTRIBUTE_IGNORE_SELECTOR)) return
   let remembered = originalAttributes.get(element)
 
   for (const attribute of LOCALIZED_ATTRIBUTES) {

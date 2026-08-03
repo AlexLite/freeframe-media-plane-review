@@ -23,6 +23,7 @@ import { EmptyState } from "@/components/shared/empty-state";
 import { useAuthStore } from "@/stores/auth-store";
 import { usePageTitle } from "@/hooks/use-page-title";
 import type { Project, ProjectType } from "@/types";
+import { useI18n } from "@/hooks/use-i18n";
 
 type ViewMode = "grid" | "list";
 
@@ -205,7 +206,8 @@ function ProjectSection({
 }
 
 export default function ProjectsPage() {
-  usePageTitle("Projects");
+  const { t, localizeError } = useI18n();
+  usePageTitle(t("projects.title"));
   const router = useRouter();
   const { user } = useAuthStore();
   const [viewMode, setViewMode] = React.useState<ViewMode>("grid");
@@ -251,7 +253,7 @@ export default function ProjectsPage() {
   const handleCreate = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!form.name.trim()) {
-      setFormError("Project name is required.");
+      setFormError(t("projects.nameRequired"));
       return;
     }
     setIsCreating(true);
@@ -267,9 +269,7 @@ export default function ProjectsPage() {
       resetForm();
       router.push(`/projects/${created.id}`);
     } catch (err) {
-      const message =
-        err instanceof Error ? err.message : "Failed to create project";
-      setFormError(message);
+      setFormError(localizeError(err, "projects.createFailed"));
     } finally {
       setIsCreating(false);
     }
@@ -338,16 +338,16 @@ export default function ProjectsPage() {
                 </Dialog.Close>
 
                 <Dialog.Title className="text-base font-semibold text-text-primary">
-                  New Project
+                  {t("projects.new")}
                 </Dialog.Title>
                 <Dialog.Description className="mt-1 text-sm text-text-secondary">
-                  Create a new project to organize your assets.
+                  {t("projects.createDescription")}
                 </Dialog.Description>
 
                 <form onSubmit={handleCreate} className="mt-5 space-y-4">
                   <Input
-                    label="Project name"
-                    placeholder="e.g. Brand Campaign 2025"
+                    label={t("projects.name")}
+                    placeholder={t("projects.namePlaceholder")}
                     value={form.name}
                     onChange={(e) =>
                       setForm((f) => ({ ...f, name: e.target.value }))
@@ -357,11 +357,11 @@ export default function ProjectsPage() {
 
                   <div className="flex flex-col gap-1.5">
                     <label className="text-sm font-medium text-text-secondary">
-                      Description
+                      {t("projects.description")}
                     </label>
                     <textarea
                       rows={2}
-                      placeholder="Optional description..."
+                      placeholder={t("projects.optionalDescription")}
                       value={form.description}
                       onChange={(e) =>
                         setForm((f) => ({ ...f, description: e.target.value }))
@@ -377,11 +377,11 @@ export default function ProjectsPage() {
                   <div className="flex justify-end gap-2 pt-2">
                     <Dialog.Close asChild>
                       <Button type="button" variant="secondary" size="sm">
-                        Cancel
+                        {t("common.cancel")}
                       </Button>
                     </Dialog.Close>
                     <Button type="submit" size="sm" loading={isCreating}>
-                      Create project
+                      {t("projects.create")}
                     </Button>
                   </div>
                 </form>

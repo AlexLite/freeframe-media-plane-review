@@ -68,6 +68,14 @@ describe('i18n formatting', () => {
     expect(translateLegacyUiText('en', 'Leave your comment...')).toBe('Leave your comment...')
   })
 
+  it('localizes project dialogs, sorting and appearance controls', () => {
+    expect(translateLegacyUiText('ru', 'Create Share Link')).toBe('Создать ссылку общего доступа')
+    expect(translateLegacyUiText('ru', 'Sorted by')).toBe('Сортировка:')
+    expect(translateLegacyUiText('ru', 'Layout')).toBe('Макет')
+    expect(translateLegacyUiText('ru', 'Upload asset')).toBe('Загрузить материал')
+    expect(translateLegacyUiText('ru', 'Passphrase')).toBe('Кодовая фраза')
+  })
+
   it('maps technical errors to localized user-facing messages', () => {
     expect(localizeError('ru', new Error('Network request failed'))).toContain('подключ')
     expect(localizeError('ru', new Error('403 forbidden'))).toContain('прав')

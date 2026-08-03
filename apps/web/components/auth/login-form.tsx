@@ -252,7 +252,7 @@ export function LoginForm() {
           <Input
             label={t('auth.password')}
             type="password"
-            placeholder="Your password"
+            placeholder={t('auth.passwordPlaceholder')}
             autoComplete="current-password"
             value={classicPassword}
             onChange={(e) => setClassicPassword(e.target.value)}
@@ -296,7 +296,7 @@ export function LoginForm() {
           <Input
             label={t('auth.password')}
             type="password"
-            placeholder="Min. 8 characters"
+            placeholder={t('auth.minPasswordPlaceholder')}
             autoComplete="new-password"
             value={password}
             onChange={(e) => { setPassword(e.target.value); setPasswordError('') }}
@@ -306,7 +306,7 @@ export function LoginForm() {
           <Input
             label={t('auth.confirmPassword')}
             type="password"
-            placeholder="Repeat password"
+            placeholder={t('auth.repeatPasswordPlaceholder')}
             autoComplete="new-password"
             value={confirmPassword}
             onChange={(e) => setConfirmPassword(e.target.value)}
