@@ -76,6 +76,15 @@ describe('i18n formatting', () => {
     expect(translateLegacyUiText('ru', 'Passphrase')).toBe('Кодовая фраза')
   })
 
+  it('localizes share-link settings, public review and activity', () => {
+    expect(translate('ru', 'shareActivity.commented')).toBe('Оставил(а) комментарий')
+    expect(translate('ru', 'shareActivity.opened')).toBe('Открыл(а) публичную ссылку')
+    expect(translateLegacyUiText('ru', 'Copy Asset URL')).toBe('Копировать URL материала')
+    expect(translateLegacyUiText('ru', 'Allow viewers to leave comments')).toBe('Разрешить зрителям оставлять комментарии')
+    expect(translateLegacyUiText('ru', 'Who are you?')).toBe('Как вас зовут?')
+    expect(translateLegacyUiText('ru', 'Open Share Link')).toBe('Открыть публичную ссылку')
+  })
+
   it('maps technical errors to localized user-facing messages', () => {
     expect(localizeError('ru', new Error('Network request failed'))).toContain('подключ')
     expect(localizeError('ru', new Error('403 forbidden'))).toContain('прав')

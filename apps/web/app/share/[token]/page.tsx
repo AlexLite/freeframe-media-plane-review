@@ -235,7 +235,7 @@ function GuestCommentItem({ comment }: GuestCommentItemProps) {
           {new Date(comment.created_at).toLocaleDateString()}
         </span>
       </div>
-      <p className="text-sm text-zinc-300 leading-relaxed">{comment.body}</p>
+      <p data-user-content="true" className="text-sm text-zinc-300 leading-relaxed">{comment.body}</p>
     </div>
   )
 }
@@ -631,7 +631,7 @@ function ShareMediaViewer({ asset, token, streamUrl, streamLoading }: ShareMedia
                 <div className="h-24 w-24 rounded-2xl bg-white/5 border border-white/10 flex items-center justify-center">
                   <Music className="h-10 w-10 text-zinc-500" />
                 </div>
-                <p className="text-sm font-medium text-zinc-300">{asset.name}</p>
+                <p data-user-content="true" className="text-sm font-medium text-zinc-300">{asset.name}</p>
               </div>
               <audio ref={audioRef} controls className="w-full">
                 Your browser does not support audio playback.
@@ -649,6 +649,7 @@ function ShareMediaViewer({ asset, token, streamUrl, streamLoading }: ShareMedia
       {(asset.asset_type === 'image' || asset.asset_type === 'image_carousel') && (
         <div className="w-full h-full flex items-center justify-center p-4">
           <img
+            data-user-content="true"
             src={asset.thumbnail_url || asset.stream_url || `${API_URL}/share/${token}/thumbnail/${asset.id}`}
             alt={asset.name}
             className="max-h-full max-w-full object-contain"

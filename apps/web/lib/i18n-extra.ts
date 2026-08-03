@@ -1,6 +1,17 @@
 export type MessagePair = readonly [english: string, russian: string]
 
 export const extraMessages = {
+  'shareActivity.opened': ['Opened Share Link', 'Открыл(а) публичную ссылку'],
+  'shareActivity.viewedAsset': ['Viewed Asset', 'Просмотрел(а) материал'],
+  'shareActivity.commented': ['Commented', 'Оставил(а) комментарий'],
+  'shareActivity.approved': ['Approved', 'Согласовал(а)'],
+  'shareActivity.rejected': ['Rejected', 'Отклонил(а)'],
+  'shareActivity.downloaded': ['Downloaded', 'Скачал(а)'],
+  'shareActivity.on': ['on', 'к материалу'],
+  'shareActivity.anonymous': ['anonymous', 'Анонимный пользователь'],
+  'shareActivity.empty': ['No activity yet', 'Активности пока нет'],
+  'shareActivity.emptyDescription': ['Activity will appear here once someone views this share link.', 'Здесь появятся действия посетителей публичной ссылки.'],
+  'shareActivity.allLoaded': ['All activity loaded', 'Вся активность загружена'],
   'share.configure': ['Configure Share Link', 'Настроить ссылку общего доступа'],
   'share.linkName': ['Link name', 'Название ссылки'],
   'share.visibility': ['Visibility', 'Видимость'],

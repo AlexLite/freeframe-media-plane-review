@@ -249,7 +249,7 @@ function ListRowThumb({ asset, TypeIcon }: { asset: FolderShareAssetItem; TypeIc
     <div className="h-14 w-14 shrink-0 rounded-md overflow-hidden bg-bg-tertiary flex items-center justify-center">
       {asset.thumbnail_url && !imgError ? (
         // eslint-disable-next-line @next/next/no-img-element
-        <img src={asset.thumbnail_url} alt={asset.name} className="h-full w-full object-cover" onError={() => setImgError(true)} />
+        <img data-user-content="true" src={asset.thumbnail_url} alt={asset.name} className="h-full w-full object-cover" onError={() => setImgError(true)} />
       ) : (
         <TypeIcon className="h-6 w-6 text-text-tertiary/60" />
       )}
@@ -293,6 +293,7 @@ function AssetGridCard({ asset, allowDownload, token, shareSession, isSelected, 
         {asset.thumbnail_url && !imgError ? (
           // eslint-disable-next-line @next/next/no-img-element
           <img
+            data-user-content="true"
             src={asset.thumbnail_url}
             alt={asset.name}
             className={cn('h-full w-full transition-transform duration-200 group-hover:scale-[1.02]', thumbnailScale === 'fill' ? 'object-cover' : 'object-contain')}
@@ -349,7 +350,7 @@ function AssetGridCard({ asset, allowDownload, token, shareSession, isSelected, 
       {/* Info — name, author, date */}
       {showCardInfo && (
         <div className="px-3 py-2.5">
-          <p className="text-sm font-medium text-text-primary line-clamp-1">{asset.name}</p>
+          <p data-user-content="true" className="text-sm font-medium text-text-primary line-clamp-1">{asset.name}</p>
           <p className="text-xs text-text-tertiary mt-0.5 truncate">
             {asset.created_by_name && <>{asset.created_by_name} &middot; </>}
             {formatShortDate(asset.created_at)}
@@ -521,7 +522,7 @@ function ShareCommentList({ comments, loading, canComment, onReply }: ShareComme
                   <span className="text-2xs text-text-tertiary">{formatShortDate(comment.created_at)}</span>
                   <span className="ml-auto text-2xs text-text-tertiary">#{i + 1}</span>
                 </div>
-                <p className="text-sm text-text-secondary mt-1 leading-relaxed">{comment.body}</p>
+                <p data-user-content="true" className="text-sm text-text-secondary mt-1 leading-relaxed">{comment.body}</p>
                 {comment.timecode_start != null && (
                   <span className="inline-flex items-center gap-1 mt-1 text-[10px] text-accent font-mono bg-accent/10 px-1.5 py-0.5 rounded">
                     {Math.floor(comment.timecode_start / 60)}:{String(Math.floor(comment.timecode_start % 60)).padStart(2, '0')}
@@ -1508,7 +1509,7 @@ export function FolderShareViewer({
                                   <ListRowThumb asset={asset} TypeIcon={TypeIcon} />
                                   {/* Name + meta */}
                                   <div className="flex-1 min-w-0">
-                                    <p className="text-sm font-medium text-text-primary truncate leading-snug">{asset.name}</p>
+                                    <p data-user-content="true" className="text-sm font-medium text-text-primary truncate leading-snug">{asset.name}</p>
                                     <p className="text-xs text-text-tertiary mt-0.5 truncate">
                                       {asset.created_by_name && <>{asset.created_by_name} &middot; </>}
                                       {formatShortDate(asset.created_at)}
