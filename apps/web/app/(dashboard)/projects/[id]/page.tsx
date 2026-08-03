@@ -62,7 +62,7 @@ import type {
 } from "@/types";
 
 export default function ProjectDetailPage() {
-  const { t, formatRelativeTime, formatBytes } = useI18n();
+  const { locale, t, formatRelativeTime, formatBytes } = useI18n();
   const params = useParams();
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -627,7 +627,9 @@ export default function ProjectDetailPage() {
                 {t("projects.recentlyDeleted")}
               </h2>
               {trash.folders.length === 0 && trash.assets.length === 0 ? (
-                <p className="text-xs text-text-tertiary">No deleted items</p>
+                <p className="text-xs text-text-tertiary">
+                  {locale === "ru" ? "Удалённых материалов нет" : "No deleted items"}
+                </p>
               ) : (
                 <div className="space-y-1">
                   {trash.folders.map((item) => (

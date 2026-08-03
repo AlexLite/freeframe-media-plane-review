@@ -2,7 +2,7 @@
 
 import { useEffect } from 'react'
 import { useAuthStore } from '@/stores/auth-store'
-import { isLocale, LOCALE_STORAGE_KEY, useLocaleStore } from '@/stores/locale-store'
+import { isLocale, useLocaleStore } from '@/stores/locale-store'
 
 export function LocaleInitializer() {
   const locale = useLocaleStore((state) => state.locale)
@@ -28,9 +28,7 @@ export function LocaleInitializer() {
       return
     }
 
-    if (!localStorage.getItem(LOCALE_STORAGE_KEY)) {
-      applyLocale('ru')
-    }
+    applyLocale('ru')
   }, [applyLocale])
 
   return null
@@ -45,7 +43,13 @@ export function PublicLocaleSwitcher() {
       <span>{locale === 'ru' ? 'Язык' : 'Language'}</span>
       <select
         value={locale}
-        onChange={(event) => setLocale(event.target.value === 'ru' ? 'ru' : 'en')}
+        onChange={(event) => {
+          const nextLocale = event.target.value === 'ru' ? 'ru' : 'en'
+          setLocale(nextLocale)
+          const url = new URL(window.location.href)
+          url.searchParams.set('lang', nextLocale)
+          window.history.replaceState({}, '', url)
+        }}
         aria-label={locale === 'ru' ? 'Язык страницы' : 'Page language'}
         className="bg-transparent text-xs font-medium text-text-primary outline-none"
       >
