@@ -21,7 +21,7 @@ import {
 import { cn } from '@/lib/utils'
 import { Button } from '@/components/ui/button'
 import { GuestCommentInput } from '@/components/review/guest-comment-input'
-import { FolderShareViewer } from '@/components/share/folder-share-viewer'
+import { FolderShareViewer, ShareReviewScreen } from '@/components/share/folder-share-viewer'
 import type { Asset, SharePermission, ProjectBranding, ShareLinkAppearance } from '@/types'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -819,6 +819,9 @@ interface ShareViewerProps {
   asset: Asset & { thumbnail_url?: string; stream_url?: string }
   permission: SharePermission
   allowDownload: boolean
+  showVersions: boolean
+  commentMode: 'detailed' | 'simple'
+  shareSession?: string | null
   branding: ProjectBranding | null
   shareName?: string
   onBack?: () => void
@@ -829,6 +832,9 @@ function ShareViewer({
   asset,
   permission,
   allowDownload,
+  showVersions,
+  commentMode,
+  shareSession,
   branding,
   shareName,
   onBack,
@@ -855,6 +861,21 @@ function ShareViewer({
       .catch(() => null)
       .finally(() => setStreamLoading(false))
   }, [token, asset.asset_type, asset.stream_url, asset.id])
+
+  if (commentMode === 'detailed') {
+    return (
+      <ShareReviewScreen
+        token={token}
+        shareSession={shareSession}
+        assetId={asset.id}
+        assetName={asset.name}
+        permission={permission}
+        allowDownload={allowDownload}
+        showVersions={showVersions}
+        onBack={onBack}
+      />
+    )
+  }
 
   const displayName = shareName || branding?.custom_title || 'FreeFrame'
 
@@ -1006,6 +1027,8 @@ function FolderAssetViewer({
       asset={pseudoAsset}
       permission={permission}
       allowDownload={allowDownload}
+      showVersions={true}
+      commentMode="detailed"
       branding={branding}
       shareName={folderName}
       onBack={onBack}
@@ -1034,6 +1057,7 @@ export default function SharePage({
         permission: SharePermission
         allowDownload: boolean
         showVersions: boolean
+        appearance: ShareLinkAppearance
         branding: ProjectBranding | null
       }
     | {
@@ -1096,6 +1120,7 @@ export default function SharePage({
           aspect_ratio: 'landscape',
           thumbnail_scale: 'fill',
           show_card_info: true,
+          comment_mode: 'detailed',
         }
         const folderName = data.folder_name ?? data.project_name ?? 'Shared'
         setState({
@@ -1125,6 +1150,19 @@ export default function SharePage({
         permission: data.permission,
         allowDownload: data.allow_download ?? false,
         showVersions: data.show_versions ?? true,
+        appearance: {
+          layout: 'grid',
+          theme: 'dark',
+          accent_color: null,
+          open_in_viewer: true,
+          sort_by: 'created_at',
+          card_size: 'm',
+          aspect_ratio: 'landscape',
+          thumbnail_scale: 'fill',
+          show_card_info: true,
+          comment_mode: 'detailed',
+          ...(data.appearance ?? {}),
+        },
         branding: data.branding ?? null,
       })
     } catch {
@@ -1212,6 +1250,9 @@ export default function SharePage({
       asset={state.asset}
       permission={state.permission}
       allowDownload={state.allowDownload}
+      showVersions={state.showVersions}
+      commentMode={state.appearance.comment_mode || 'detailed'}
+      shareSession={shareSession}
       branding={state.branding}
     />
   )

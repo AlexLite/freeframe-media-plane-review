@@ -259,6 +259,7 @@ export interface ShareLinkAppearance {
   aspect_ratio: "landscape" | "square" | "portrait"
   thumbnail_scale: "fit" | "fill"
   show_card_info: boolean
+  comment_mode: "detailed" | "simple"
 }
 
 export interface ShareLink {

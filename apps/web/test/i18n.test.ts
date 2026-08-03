@@ -83,6 +83,8 @@ describe('i18n formatting', () => {
     expect(translateLegacyUiText('ru', 'Allow viewers to leave comments')).toBe('Разрешить зрителям оставлять комментарии')
     expect(translateLegacyUiText('ru', 'Who are you?')).toBe('Как вас зовут?')
     expect(translateLegacyUiText('ru', 'Open Share Link')).toBe('Открыть публичную ссылку')
+    expect(translateLegacyUiText('ru', 'Detailed comments')).toBe('Подробные комментарии')
+    expect(translateLegacyUiText('ru', 'Simple')).toBe('Упрощённые')
   })
 
   it('maps technical errors to localized user-facing messages', () => {

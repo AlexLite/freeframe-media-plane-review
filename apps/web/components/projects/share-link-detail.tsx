@@ -78,6 +78,7 @@ function useShareLinkData(token: string) {
     aspect_ratio: "landscape",
     thumbnail_scale: "fit",
     show_card_info: true,
+    comment_mode: "detailed",
   };
 
   const updateAppearance = React.useCallback(
@@ -927,6 +928,19 @@ export function ShareLinkSettingsPanel({ token }: ShareLinkSettingsPanelProps) {
                   immediateUpdate({ permission: checked ? "comment" : "view" })
                 }
               />
+              {(shareLink.permission === "comment" ||
+                shareLink.permission === "approve") && (
+                <ToggleRow
+                  label="Detailed comments"
+                  description="Attach timecodes and draw annotations"
+                  checked={(appearance.comment_mode || "detailed") === "detailed"}
+                  onCheckedChange={(checked) =>
+                    updateAppearance({
+                      comment_mode: checked ? "detailed" : "simple",
+                    })
+                  }
+                />
+              )}
               <ToggleRow
                 label="Downloads"
                 description="Allow viewers to download files"

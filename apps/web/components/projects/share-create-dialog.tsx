@@ -267,6 +267,7 @@ interface ShareConfig {
   expiresAt: string | null
   watermark: boolean
   visibility: 'public' | 'secure'
+  commentMode: 'detailed' | 'simple'
 }
 
 // ─── Configure Phase ──────────────────────────────────────────────────────────
@@ -288,6 +289,7 @@ function ConfigurePhase({ defaultTitle, onBack, onCreate, creating }: ConfigureP
   const [watermark, setWatermark] = React.useState(false)
   const [expiresAt, setExpiresAt] = React.useState('')
   const [visibility, setVisibility] = React.useState<'public' | 'secure'>('public')
+  const [commentMode, setCommentMode] = React.useState<'detailed' | 'simple'>('detailed')
 
   function handleCreate() {
     onCreate({
@@ -298,6 +300,7 @@ function ConfigurePhase({ defaultTitle, onBack, onCreate, creating }: ConfigureP
       expiresAt: expiresAt || null,
       watermark,
       visibility,
+      commentMode,
     })
   }
 
@@ -362,6 +365,25 @@ function ConfigurePhase({ defaultTitle, onBack, onCreate, creating }: ConfigureP
               <Switch.Thumb className="block w-4 h-4 rounded-full bg-white shadow transition-transform translate-x-0.5 data-[state=checked]:translate-x-[18px]" />
             </Switch.Root>
           </div>
+
+          {allowComments && (
+            <div className="flex items-center justify-between py-2.5 pl-6">
+              <div>
+                <p className="text-sm text-text-primary">Comment mode</p>
+                <p className="text-xs text-text-tertiary mt-0.5">
+                  Detailed mode includes timecodes and drawing
+                </p>
+              </div>
+              <select
+                value={commentMode}
+                onChange={(e) => setCommentMode(e.target.value as 'detailed' | 'simple')}
+                className="rounded-md border border-border bg-bg-secondary px-2.5 py-1.5 text-xs text-text-primary outline-none cursor-pointer"
+              >
+                <option value="detailed">Detailed</option>
+                <option value="simple">Simple</option>
+              </select>
+            </div>
+          )}
 
           {/* Allow downloads */}
           <div className="flex items-center justify-between py-2.5">
@@ -581,6 +603,7 @@ function LinkCreatedPhase({ result, allResults, onSelectResult, onDone, onAdvanc
   const [passphraseValue, setPassphraseValue] = React.useState('')
   const [showPassphraseInput, setShowPassphraseInput] = React.useState(false)
   const [watermark, setWatermark] = React.useState(false)
+  const [commentMode, setCommentMode] = React.useState<'detailed' | 'simple'>('detailed')
   const [expiresAt, setExpiresAt] = React.useState<string>('')
 
   // Sync title when switching between results
@@ -604,6 +627,7 @@ function LinkCreatedPhase({ result, allResults, onSelectResult, onDone, onAdvanc
       setWatermark(data.show_watermark)
       setExpiresAt(data.expires_at ? new Date(data.expires_at).toISOString().split('T')[0] : '')
       setLayout((data.appearance as ShareLinkAppearance | null)?.layout || 'grid')
+      setCommentMode((data.appearance as ShareLinkAppearance | null)?.comment_mode || 'detailed')
       setVisibility(data.visibility === 'secure' ? 'secure' : 'public')
     }).catch(() => {})
   }, [result.token])
@@ -821,7 +845,7 @@ function LinkCreatedPhase({ result, allResults, onSelectResult, onDone, onAdvanc
                   {(['grid', 'list'] as const).map((l) => (
                     <button
                       key={l}
-                      onClick={() => { setLayout(l); patchLink({ appearance: { layout: l, theme: 'dark', accent_color: null, open_in_viewer: true, sort_by: 'created_at' } }) }}
+                      onClick={() => { setLayout(l); patchLink({ appearance: { layout: l, theme: 'dark', accent_color: null, open_in_viewer: true, sort_by: 'created_at', comment_mode: commentMode } }) }}
                       className={cn('rounded-md px-3 py-1 text-2xs font-medium capitalize', layout === l ? 'bg-accent text-white' : 'text-text-tertiary hover:text-text-primary')}
                     >{l}</button>
                   ))}
@@ -842,6 +866,27 @@ function LinkCreatedPhase({ result, allResults, onSelectResult, onDone, onAdvanc
                   <Switch.Thumb className="block w-4 h-4 rounded-full bg-white shadow transition-transform translate-x-0.5 data-[state=checked]:translate-x-[18px]" />
                 </Switch.Root>
               </div>
+
+              {allowComments && (
+                <div className="flex items-center justify-between py-2.5 pl-6">
+                  <div>
+                    <p className="text-sm text-text-primary">Comment mode</p>
+                    <p className="text-xs text-text-tertiary mt-0.5">Detailed mode includes timecodes and drawing</p>
+                  </div>
+                  <select
+                    value={commentMode}
+                    onChange={(e) => {
+                      const mode = e.target.value as 'detailed' | 'simple'
+                      setCommentMode(mode)
+                      patchLink({ appearance: { layout, theme: 'dark', accent_color: null, open_in_viewer: true, sort_by: 'created_at', comment_mode: mode } })
+                    }}
+                    className="rounded-md border border-border bg-bg-secondary px-2.5 py-1.5 text-xs text-text-primary outline-none cursor-pointer"
+                  >
+                    <option value="detailed">Detailed</option>
+                    <option value="simple">Simple</option>
+                  </select>
+                </div>
+              )}
 
               {/* Allow downloads */}
               <div className="flex items-center justify-between py-2.5">
@@ -1085,6 +1130,7 @@ export function ShareCreateDialog({
           visibility: config.visibility,
           allow_download: config.allowDownloads,
           show_watermark: config.watermark,
+          appearance: { comment_mode: config.commentMode },
         }
         if (config.passphrase) body.password = config.passphrase
         if (config.expiresAt) body.expires_at = endOfDayISO(config.expiresAt)
@@ -1120,6 +1166,7 @@ export function ShareCreateDialog({
           permission: config.allowComments ? 'comment' : 'view',
           allow_download: config.allowDownloads,
           show_watermark: config.watermark,
+          appearance: { comment_mode: config.commentMode },
         }
         if (config.passphrase) patches.password = config.passphrase
         if (config.expiresAt) patches.expires_at = new Date(config.expiresAt).toISOString()

@@ -727,10 +727,10 @@ function AssetViewer({ token, shareSession, asset, permission, allowDownload, sh
 }
 
 /** Lazy-imported review components to avoid circular deps */
-function ShareReviewScreen({
+export function ShareReviewScreen({
   token, shareSession, assetId, assetName, permission, allowDownload, showVersions, onBack,
 }: {
-  token: string; shareSession?: string | null; assetId: string; assetName: string; permission: SharePermission; allowDownload: boolean; showVersions: boolean; onBack: () => void
+  token: string; shareSession?: string | null; assetId: string; assetName: string; permission: SharePermission; allowDownload: boolean; showVersions: boolean; onBack?: () => void
 }) {
   const [ReviewProvider, setProvider] = React.useState<any>(null)
   const [VideoPlayer, setVideoPlayer] = React.useState<any>(null)
@@ -862,9 +862,11 @@ function ShareReviewInner({
       {/* Top bar — same style as project review */}
       <div className="flex items-center justify-between border-b border-border px-3 h-12 bg-bg-secondary shrink-0">
         <div className="flex items-center gap-1 min-w-0 flex-1">
-          <button onClick={onBack} className="flex items-center justify-center h-7 w-7 rounded-md text-text-secondary hover:text-text-primary hover:bg-bg-hover transition-colors shrink-0">
-            <ArrowLeft className="h-4 w-4" />
-          </button>
+          {onBack && (
+            <button onClick={onBack} className="flex items-center justify-center h-7 w-7 rounded-md text-text-secondary hover:text-text-primary hover:bg-bg-hover transition-colors shrink-0">
+              <ArrowLeft className="h-4 w-4" />
+            </button>
+          )}
           <span className="text-[13px] font-medium text-text-primary truncate">{assetName}</span>
         </div>
         <div className="flex items-center gap-2">
@@ -1125,7 +1127,7 @@ export function FolderShareViewer({
   }, [accentColor])
 
   // Whether clicking opens viewer
-  const openInViewer = appearance.open_in_viewer !== false
+  const openInViewer = appearance.comment_mode !== 'simple' || appearance.open_in_viewer !== false
 
   // Compute total size of assets
   const totalAssetSize = React.useMemo(() => {
