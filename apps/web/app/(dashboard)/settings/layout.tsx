@@ -6,20 +6,21 @@ import { usePathname } from 'next/navigation'
 import { User, Bell, Shield, Palette, Brush } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { useAuthStore } from '@/stores/auth-store'
+import { useI18n } from '@/hooks/use-i18n'
 
 interface SettingsNavItem {
   href: string
-  label: string
+  labelKey: string
   icon: React.ElementType
   adminOnly?: boolean
 }
 
 const settingsNavItems: SettingsNavItem[] = [
-  { href: '/settings/profile', label: 'Profile', icon: User },
-  { href: '/settings/appearance', label: 'Appearance', icon: Palette },
-  { href: '/settings/notifications', label: 'Notifications', icon: Bell },
-  { href: '/settings/branding', label: 'Branding', icon: Brush, adminOnly: true },
-  { href: '/settings/admin', label: 'Admin', icon: Shield, adminOnly: true },
+  { href: '/settings/profile', labelKey: 'settings.profile', icon: User },
+  { href: '/settings/appearance', labelKey: 'settings.appearance', icon: Palette },
+  { href: '/settings/notifications', labelKey: 'settings.notifications', icon: Bell },
+  { href: '/settings/branding', labelKey: 'settings.branding', icon: Brush, adminOnly: true },
+  { href: '/settings/admin', labelKey: 'settings.admin', icon: Shield, adminOnly: true },
 ]
 
 export default function SettingsLayout({
@@ -29,13 +30,14 @@ export default function SettingsLayout({
 }) {
   const pathname = usePathname()
   const { user, isSuperAdmin } = useAuthStore()
+  const { t } = useI18n()
 
   return (
     <div className="flex h-full">
       {/* Settings Sidebar */}
       <aside className="w-56 border-r border-border bg-bg-secondary shrink-0">
         <div className="p-4 border-b border-border">
-          <h2 className="text-sm font-semibold text-text-primary">Settings</h2>
+          <h2 className="text-sm font-semibold text-text-primary">{t('settings.title')}</h2>
           <p className="text-xs text-text-tertiary mt-0.5">
             {user?.name ?? 'User'}
           </p>
@@ -61,7 +63,7 @@ export default function SettingsLayout({
                 )}
               >
                 <Icon className="h-4 w-4 shrink-0" />
-                <span>{item.label}</span>
+                <span>{t(item.labelKey)}</span>
               </Link>
             )
           })}

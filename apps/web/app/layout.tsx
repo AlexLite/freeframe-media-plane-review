@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from "next";
 import { DM_Sans } from "next/font/google";
 import { ToastProvider } from "@/components/shared/toast";
 import { ThemeInitializer } from "@/components/shared/theme-initializer";
+import { LocaleInitializer } from "@/components/shared/locale-initializer";
 import "./globals.css";
 
 const dmSans = DM_Sans({
@@ -37,9 +38,15 @@ export default function RootLayout({
             __html: `(function(){try{var d=JSON.parse(localStorage.getItem('ff-theme')||'{}');var t=d.state&&d.state.theme||'dark';if(t==='system'){t=window.matchMedia('(prefers-color-scheme:dark)').matches?'dark':'light'}document.documentElement.setAttribute('data-theme',t)}catch(e){document.documentElement.setAttribute('data-theme','dark')}})()`,
           }}
         />
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `(function(){try{var d=JSON.parse(localStorage.getItem('ff-locale')||'{}');var l=d.state&&d.state.locale||'en';document.documentElement.lang=l}catch(e){document.documentElement.lang='en'}})()`,
+          }}
+        />
       </head>
       <body className={`${dmSans.variable} font-sans antialiased`}>
         <ThemeInitializer />
+        <LocaleInitializer />
         <ToastProvider>{children}</ToastProvider>
       </body>
     </html>
