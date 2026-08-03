@@ -12,7 +12,7 @@ on:
     types: [opened, synchronize, reopened]
 
 concurrency:
-  group: freeframe-localization-validation
+  group: freeframe-localization-validation-${{ github.event_name }}
   cancel-in-progress: true
 
 permissions:
@@ -51,10 +51,11 @@ jobs:
           TEST_STATUS=$?
           pnpm --filter web build > /tmp/freeframe-build.log 2>&1
           BUILD_STATUS=$?
+          HEAD_SHA=$(git rev-parse HEAD)
 
           mkdir -p .agent-validation
           {
-            echo "commit=${GITHUB_SHA}"
+            echo "commit=${HEAD_SHA}"
             echo "tests=${TEST_STATUS}"
             echo "build=${BUILD_STATUS}"
             echo
@@ -65,6 +66,7 @@ jobs:
             tail -n 240 /tmp/freeframe-build.log
           } > .agent-validation/result.txt
 
+          cat .agent-validation/result.txt
           echo "test_status=${TEST_STATUS}" >> "$GITHUB_OUTPUT"
           echo "build_status=${BUILD_STATUS}" >> "$GITHUB_OUTPUT"
 
