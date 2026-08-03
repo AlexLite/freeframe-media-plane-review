@@ -1,7 +1,9 @@
 import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
 
-export type Locale = 'en' | 'ru'
+export const SUPPORTED_LOCALES = ['en', 'ru'] as const
+export const LOCALE_STORAGE_KEY = 'ff-locale'
+export type Locale = (typeof SUPPORTED_LOCALES)[number]
 
 interface LocaleState {
   locale: Locale
@@ -10,9 +12,14 @@ interface LocaleState {
   syncFromServer: (preferences: Record<string, unknown>) => void
 }
 
+export function isLocale(value: unknown): value is Locale {
+  return typeof value === 'string' && SUPPORTED_LOCALES.includes(value as Locale)
+}
+
 function applyToDOM(locale: Locale) {
   if (typeof document === 'undefined') return
   document.documentElement.lang = locale
+  document.documentElement.dir = 'ltr'
 }
 
 async function saveToServer(locale: Locale) {
@@ -25,7 +32,9 @@ async function saveToServer(locale: Locale) {
       headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
       body: JSON.stringify({ locale }),
     })
-  } catch {}
+  } catch {
+    // Keep the local preference even when profile synchronization is unavailable.
+  }
 }
 
 export const useLocaleStore = create<LocaleState>()(
@@ -41,19 +50,20 @@ export const useLocaleStore = create<LocaleState>()(
       setLocale: (locale) => {
         applyToDOM(locale)
         set({ locale })
-        saveToServer(locale)
+        void saveToServer(locale)
       },
 
       syncFromServer: (preferences) => {
-        const serverLocale = preferences?.locale as Locale | undefined
-        if (serverLocale && ['en', 'ru'].includes(serverLocale)) {
-          applyToDOM(serverLocale)
-          set({ locale: serverLocale })
-        }
+        const serverLocale = preferences?.locale
+        if (!isLocale(serverLocale)) return
+        applyToDOM(serverLocale)
+        set({ locale: serverLocale })
       },
     }),
     {
-      name: 'ff-locale',
+      name: LOCALE_STORAGE_KEY,
+      version: 1,
+      partialize: (state) => ({ locale: state.locale }),
       onRehydrateStorage: () => (state) => {
         if (state) applyToDOM(state.locale)
       },
