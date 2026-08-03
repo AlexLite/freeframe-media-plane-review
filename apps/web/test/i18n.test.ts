@@ -9,6 +9,7 @@ import {
   translate,
   translateLegacyText,
 } from '@/lib/i18n'
+import { translateLegacyUiText } from '@/lib/legacy-ui-messages'
 
 describe('i18n formatting', () => {
   it('translates semantic keys in both directions', () => {
@@ -27,12 +28,22 @@ describe('i18n formatting', () => {
   })
 
   it('formats counts, numbers, bytes and dates with the selected locale', () => {
-    expect(formatCount('ru', 22, ['project', 'projects', 'projects'], ['проект', 'проекта', 'проектов']))
-      .toBe('22 проекта')
+    expect(
+      formatCount(
+        'ru',
+        22,
+        ['project', 'projects', 'projects'],
+        ['проект', 'проекта', 'проектов'],
+      ),
+    ).toBe('22 проекта')
     expect(formatNumber('ru', 12345.6)).toMatch(/12[\s\u00a0]345,6/)
     expect(formatBytes('ru', 1024)).toBe('1 КБ')
-    expect(formatDate('ru', new Date('2026-06-01T00:00:00Z'), { timeZone: 'UTC', year: 'numeric' }))
-      .toContain('2026')
+    expect(
+      formatDate('ru', new Date('2026-06-01T00:00:00Z'), {
+        timeZone: 'UTC',
+        year: 'numeric',
+      }),
+    ).toContain('2026')
   })
 
   it('localizes legacy static strings, counts and English dates', () => {
@@ -40,6 +51,14 @@ describe('i18n formatting', () => {
     expect(translateLegacyText('ru', '2 projects')).toBe('2 проекта')
     expect(translateLegacyText('ru', 'Jun 1, 2026')).toMatch(/2026/)
     expect(translateLegacyText('en', 'Approve')).toBe('Approve')
+  })
+
+  it('localizes review, sharing, guest and admin legacy strings', () => {
+    expect(translateLegacyUiText('ru', 'Leave your comment...')).toBe('Оставьте комментарий...')
+    expect(translateLegacyUiText('ru', '22 replies')).toBe('22 ответа')
+    expect(translateLegacyUiText('ru', 'Copy Invite Link')).toBe('Копировать ссылку-приглашение')
+    expect(translateLegacyUiText('ru', '6/1/2026')).toMatch(/2026/)
+    expect(translateLegacyUiText('en', 'Leave your comment...')).toBe('Leave your comment...')
   })
 
   it('maps technical errors to localized user-facing messages', () => {
