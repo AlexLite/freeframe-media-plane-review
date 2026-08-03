@@ -98,7 +98,7 @@ export function LegacyLocaleBridge() {
       for (const record of records) {
         if (record.type === 'characterData') localizeTextNode(record.target as Text, locale)
         else if (record.type === 'attributes') localizeElementAttributes(record.target as Element, locale)
-        else for (const node of record.addedNodes) localizeTree(node, locale)
+        else Array.from(record.addedNodes).forEach((node) => localizeTree(node, locale))
       }
       observer.observe(root, {
         subtree: true,
