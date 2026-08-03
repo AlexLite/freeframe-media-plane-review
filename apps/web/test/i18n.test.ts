@@ -103,6 +103,8 @@ describe('i18n formatting', () => {
     expect(translateLegacyUiText('ru', 'Asset')).toBe('Материал')
     expect(translateLegacyUiText('ru', 'Reply')).toBe('Ответить')
     expect(translateLegacyUiText('ru', 'Password required')).toBe('Требуется пароль')
+    expect(translateLegacyUiText('ru', 'Enter your name and email to comment on this shared asset.')).toBe('Введите имя и email, чтобы комментировать этот материал.')
+    expect(translateLegacyUiText('ru', 'Name and email required')).toBe('Укажите имя и email')
   })
 
   it('maps technical errors to localized user-facing messages', () => {

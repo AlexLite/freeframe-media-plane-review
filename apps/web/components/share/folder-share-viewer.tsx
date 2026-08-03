@@ -820,17 +820,23 @@ function ShareReviewInner({
   // Guest identity flow for non-authenticated users
   const [guestIdentity, setGuestIdentity] = React.useState<{ name: string; email: string } | null>(null)
   const [showGuestPrompt, setShowGuestPrompt] = React.useState(false)
+  const [isLoggedIn, setIsLoggedIn] = React.useState(false)
   const pendingCommentRef = React.useRef<{ body: string; timecodeStart?: number; timecodeEnd?: number; annotationData?: Record<string, unknown> } | null>(null)
   React.useEffect(() => {
     try {
+      const loggedIn = !!localStorage.getItem('ff_access_token')
+      setIsLoggedIn(loggedIn)
       const stored = localStorage.getItem('ff_guest_identity')
-      if (stored) setGuestIdentity(JSON.parse(stored))
+      if (stored) {
+        setGuestIdentity(JSON.parse(stored))
+      } else if (!loggedIn && canComment) {
+        setShowGuestPrompt(true)
+      }
     } catch {}
-  }, [])
-  const isLoggedIn = typeof window !== 'undefined' && !!localStorage.getItem('ff_access_token')
+  }, [canComment])
 
   const submitComment = React.useCallback(async (body: string, timecodeStart?: number, timecodeEnd?: number, annotationData?: Record<string, unknown>) => {
-    const payload: Record<string, unknown> = { body }
+    const payload: Record<string, unknown> = { body, visibility: 'public' }
     if (currentVersion?.id) payload.version_id = currentVersion.id
     if (timecodeStart != null) payload.timecode_start = timecodeStart
     if (timecodeEnd != null) payload.timecode_end = timecodeEnd
@@ -949,21 +955,45 @@ function ShareReviewInner({
                   onSubmitReply={async () => {}}
                 />
                 {canComment && CommentInput && (
-                  <CommentInput
-                    assetId={asset.id}
-                    projectId=""
-                    assetType={asset.asset_type}
-                    onSubmit={async (body: string, timecodeStart?: number, timecodeEnd?: number, annotationData?: Record<string, unknown>) => {
-                      const hasAuth = !!localStorage.getItem('ff_access_token')
-                      const hasGuest = !!localStorage.getItem('ff_guest_identity')
-                      if (!hasAuth && !hasGuest) {
-                        pendingCommentRef.current = { body, timecodeStart, timecodeEnd, annotationData }
-                        setShowGuestPrompt(true)
-                        return
-                      }
-                      await submitComment(body, timecodeStart, timecodeEnd, annotationData)
-                    }}
-                  />
+                  <div>
+                    {!isLoggedIn && (
+                      <div className="mx-4 mb-2 flex items-center justify-between gap-3 rounded-lg border border-border bg-bg-tertiary px-3 py-2 text-xs">
+                        <div className="min-w-0">
+                          <span className="text-text-tertiary">Commenting as</span>{' '}
+                          {guestIdentity ? (
+                            <span data-user-content="true" className="text-text-primary">
+                              {guestIdentity.name} ({guestIdentity.email})
+                            </span>
+                          ) : (
+                            <span className="text-status-warning">Name and email required</span>
+                          )}
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => setShowGuestPrompt(true)}
+                          className="shrink-0 text-accent hover:text-accent-hover"
+                        >
+                          Change
+                        </button>
+                      </div>
+                    )}
+                    <CommentInput
+                      assetId={asset.id}
+                      projectId=""
+                      assetType={asset.asset_type}
+                      fixedVisibility="public"
+                      onSubmit={async (body: string, timecodeStart?: number, timecodeEnd?: number, annotationData?: Record<string, unknown>) => {
+                        const hasAuth = !!localStorage.getItem('ff_access_token')
+                        const hasGuest = !!localStorage.getItem('ff_guest_identity')
+                        if (!hasAuth && !hasGuest) {
+                          pendingCommentRef.current = { body, timecodeStart, timecodeEnd, annotationData }
+                          setShowGuestPrompt(true)
+                          return
+                        }
+                        await submitComment(body, timecodeStart, timecodeEnd, annotationData)
+                      }}
+                    />
+                  </div>
                 )}
               </>
             )}
