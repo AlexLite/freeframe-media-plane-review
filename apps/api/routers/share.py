@@ -1,10 +1,12 @@
 import secrets
 import uuid
+import hashlib
 from datetime import datetime, timedelta, timezone
 from typing import Optional
 import bcrypt
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
+from fastapi.responses import JSONResponse
 import sqlalchemy
 from sqlalchemy import func as sa_func, case
 from sqlalchemy.orm import Session
@@ -17,7 +19,7 @@ from ..models.asset import Asset
 from ..models.folder import Folder
 from ..models.share import AssetShare, ShareLink, ShareLinkItem, SharePermission, ShareLinkActivity, ShareActivityAction
 from ..models.activity import ActivityLog, ActivityAction
-from ..models.branding import ProjectBranding
+from ..models.branding import ProjectBranding, WatermarkSettings
 from ..models.asset import AssetVersion, AssetType, MediaFile, ProcessingStatus
 from ..models.comment import Comment
 from ..schemas.share import (
@@ -37,7 +39,7 @@ from ..schemas.share import (
 )
 from ..services.permissions import require_project_role, validate_share_link, validate_share_link_with_session
 from ..services.redis_service import create_share_session
-from ..services.s3_service import generate_presigned_get_url, build_download_filename
+from ..services.s3_service import generate_presigned_get_url, build_download_filename, object_exists
 from ..services.crypto_service import encrypt_password, decrypt_password
 from .hls_proxy import create_hls_token
 from ..models.project import Project, ProjectRole
@@ -165,6 +167,84 @@ def _get_latest_media_file(db: Session, asset_id: uuid.UUID) -> Optional[MediaFi
     if not version:
         return None
     return db.query(MediaFile).filter(MediaFile.version_id == version.id).first()
+
+
+def _public_watermark_spec(
+    db: Session,
+    link: ShareLink,
+    asset: Asset,
+    current_user: Optional[User],
+) -> tuple[WatermarkSettings, str, Optional[str], str]:
+    """Resolve the project/share watermark and its viewer-specific cache key."""
+    wm = db.query(WatermarkSettings).filter(
+        WatermarkSettings.project_id == asset.project_id,
+        WatermarkSettings.share_link_id == link.id,
+    ).first()
+    if not wm:
+        wm = db.query(WatermarkSettings).filter(
+            WatermarkSettings.project_id == asset.project_id,
+            WatermarkSettings.share_link_id.is_(None),
+        ).first()
+    if not wm or not wm.enabled:
+        raise HTTPException(status_code=409, detail="Watermark is enabled for this link but not configured for the project")
+
+    # Only authenticated identity is trusted for personalized derivatives. Anonymous
+    # query parameters must not create unbounded S3 variants for a public link.
+    identity_email = current_user.email if current_user else "public-viewer"
+    identity_name = current_user.name if current_user and current_user.name else identity_email
+    if wm.content == "email":
+        watermark_text, image_key = identity_email, None
+    elif wm.content == "name":
+        watermark_text, image_key = identity_name, None
+    elif wm.content == "custom_text":
+        watermark_text, image_key = wm.custom_text or "", None
+    else:
+        if not wm.image_s3_key:
+            raise HTTPException(status_code=409, detail="Watermark image is not configured")
+        watermark_text, image_key = "", wm.image_s3_key
+
+    fingerprint = hashlib.sha256(
+        "|".join([
+            str(link.id), str(wm.id), getattr(wm.position, "value", str(wm.position)), str(wm.opacity),
+            getattr(wm.content, "value", str(wm.content)), watermark_text, image_key or "",
+        ]).encode("utf-8")
+    ).hexdigest()[:24]
+    return wm, watermark_text, image_key, fingerprint
+
+
+def _queue_public_watermark(
+    asset: Asset,
+    media_file: MediaFile,
+    wm: WatermarkSettings,
+    watermark_text: str,
+    image_key: Optional[str],
+    target_key: str,
+) -> None:
+    """Queue a derivative once per target key while repeated clients poll."""
+    should_queue = True
+    redis_client = None
+    try:
+        import redis as sync_redis
+        redis_client = sync_redis.from_url(settings.redis_url, decode_responses=True)
+        should_queue = bool(redis_client.set(f"watermark:pending:{target_key}", "1", nx=True, ex=900))
+    except Exception:
+        should_queue = True
+    finally:
+        if redis_client:
+            redis_client.close()
+    if not should_queue:
+        return
+    from ..tasks.watermark_tasks import apply_watermark
+    send_task_safe(
+        apply_watermark,
+        str(asset.id),
+        watermark_text,
+        getattr(wm.position, "value", str(wm.position)),
+        wm.opacity,
+        image_key,
+        str(media_file.version_id),
+        target_key,
+    )
 
 
 def _latest_version_comment_count(db: Session, asset_id: uuid.UUID) -> int:
@@ -321,7 +401,7 @@ def validate_share_link_endpoint(
             thumbnail_url = generate_presigned_get_url(media_file.s3_key_thumbnail)
         # Get stream URL
         stream_url = None
-        if media_file:
+        if media_file and not (link.show_watermark is True and asset.asset_type == AssetType.video):
             if media_file.s3_key_processed:
                 if asset.asset_type == AssetType.video:
                     # Route through /stream/hls so S3 can stay private (#51)
@@ -1420,7 +1500,32 @@ def get_share_stream_url(
     if not media_file:
         raise HTTPException(status_code=404, detail="No ready media file found")
 
-    if asset.asset_type == AssetType.video and media_file.s3_key_processed:
+    if link.show_watermark is True and asset.asset_type == AssetType.video:
+        wm, watermark_text, image_key, fingerprint = _public_watermark_spec(
+            db, link, asset, current_user,
+        )
+        watermarked_key = f"watermarked/{asset.id}/{media_file.version_id}/{fingerprint}.mp4"
+        if not object_exists(watermarked_key):
+            _queue_public_watermark(
+                asset, media_file, wm, watermark_text, image_key, watermarked_key,
+            )
+            return JSONResponse(
+                status_code=status.HTTP_202_ACCEPTED,
+                content={
+                    "status": "watermark_processing",
+                    "retry_after": 2,
+                    "asset_type": asset.asset_type.value,
+                    "name": asset.name,
+                    "version_id": str(media_file.version_id),
+                    "duration_seconds": media_file.duration_seconds,
+                },
+            )
+        filename = build_download_filename(asset.name, media_file.original_filename or watermarked_key)
+        url = generate_presigned_get_url(
+            watermarked_key,
+            download_filename=filename if download else None,
+        )
+    elif asset.asset_type == AssetType.video and media_file.s3_key_processed:
         if download:
             s3_key = media_file.s3_key_raw or media_file.s3_key_processed
             filename = build_download_filename(asset.name, media_file.original_filename or s3_key)

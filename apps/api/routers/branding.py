@@ -5,7 +5,7 @@ from sqlalchemy.orm import Session
 from ..database import get_db
 from ..middleware.auth import get_current_user
 from ..models.user import User
-from ..models.asset import Asset
+from ..models.asset import Asset, AssetType
 from ..models.project import ProjectRole
 from ..models.branding import ProjectBranding, WatermarkSettings
 from ..schemas.branding import (
@@ -200,6 +200,8 @@ def apply_watermark_to_asset(
     asset = db.query(Asset).filter(Asset.id == asset_id, Asset.deleted_at.is_(None)).first()
     if not asset:
         raise HTTPException(status_code=404, detail="Asset not found")
+    if asset.asset_type != AssetType.video:
+        raise HTTPException(status_code=400, detail="Watermark rendering currently supports video assets only")
 
     require_project_role(db, asset.project_id, current_user, ProjectRole.editor)
 

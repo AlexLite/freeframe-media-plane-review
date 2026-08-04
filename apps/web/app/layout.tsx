@@ -1,4 +1,5 @@
 import type { Metadata, Viewport } from "next";
+import { Suspense } from "react";
 import { Inter } from "next/font/google";
 import { ToastProvider } from "@/components/shared/toast";
 import { ThemeInitializer } from "@/components/shared/theme-initializer";
@@ -47,7 +48,7 @@ export default function RootLayout({
       </head>
       <body className={`${appFont.variable} font-sans antialiased`}>
         <ThemeInitializer />
-        <LocaleInitializer />
+        <Suspense fallback={null}><LocaleInitializer /></Suspense>
         <LegacyLocaleBridge />
         <ToastProvider>{children}</ToastProvider>
       </body>

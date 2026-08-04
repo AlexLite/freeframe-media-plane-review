@@ -40,12 +40,13 @@ interface CommentPanelProps {
   comments: CommentWithReplies[];
   isLoading?: boolean;
   currentUserId?: string;
-  onResolve: (commentId: string) => Promise<void>;
-  onDelete: (commentId: string) => Promise<void>;
-  onAddReaction: (commentId: string, emoji: string) => Promise<void>;
-  onRemoveReaction: (commentId: string, emoji: string) => Promise<void>;
+  onResolve?: (commentId: string) => Promise<void>;
+  onDelete?: (commentId: string) => Promise<void>;
+  onAddReaction?: (commentId: string, emoji: string) => Promise<void>;
+  onRemoveReaction?: (commentId: string, emoji: string) => Promise<void>;
   onReply: (parentId: string) => void;
   onSubmitReply?: (parentId: string, body: string) => Promise<void>;
+  publicMode?: boolean;
   className?: string;
 }
 
@@ -353,13 +354,14 @@ interface CommentItemProps {
   currentUserId?: string;
   replyingTo?: string | null;
   isFocused?: boolean;
-  onResolve: (commentId: string) => Promise<void>;
-  onDelete: (commentId: string) => Promise<void>;
-  onAddReaction: (commentId: string, emoji: string) => Promise<void>;
-  onRemoveReaction: (commentId: string, emoji: string) => Promise<void>;
+  onResolve?: (commentId: string) => Promise<void>;
+  onDelete?: (commentId: string) => Promise<void>;
+  onAddReaction?: (commentId: string, emoji: string) => Promise<void>;
+  onRemoveReaction?: (commentId: string, emoji: string) => Promise<void>;
   onReply: (parentId: string) => void;
   onCancelReply: () => void;
   onSubmitReply?: (parentId: string, body: string) => Promise<void>;
+  publicMode?: boolean;
 }
 
 function CommentItem({
@@ -376,6 +378,7 @@ function CommentItem({
   onReply,
   onCancelReply,
   onSubmitReply,
+  publicMode = false,
 }: CommentItemProps) {
   const { locale, formatRelativeTime } = useI18n();
   const seekTo = useReviewStore((s) => s.seekTo);
@@ -419,6 +422,7 @@ function CommentItem({
   }, [comment.reactions, currentUserId]);
 
   async function handleResolve() {
+    if (!onResolve) return;
     setResolving(true);
     try {
       await onResolve(comment.id);
@@ -428,11 +432,13 @@ function CommentItem({
   }
 
   async function handleReactionClick(emoji: string, userReacted: boolean) {
+    if (!onAddReaction || !onRemoveReaction) return;
     if (userReacted) await onRemoveReaction(comment.id, emoji);
     else await onAddReaction(comment.id, emoji);
   }
 
   async function handleQuickEmoji(emoji: string) {
+    if (!onAddReaction || !onRemoveReaction) return;
     setShowEmojiPicker(false);
     const existing = reactionGroups.find((r) => r.emoji === emoji);
     if (existing?.userReacted) await onRemoveReaction(comment.id, emoji);
@@ -513,7 +519,7 @@ function CommentItem({
                       setActiveAnnotation(comment.annotation.drawing_data);
                     }
                   }}
-                  title="Jump to timecode"
+                  title={tr(locale, "Jump to timecode", "Перейти к таймкоду")}
                 >
                   <Clock className="h-2.5 w-2.5" />
                   {formatTime(comment.timecode_start)}
@@ -536,7 +542,7 @@ function CommentItem({
                     seekTo(comment.timecode_start, true);
                   }
                 }}
-                title="Show annotation"
+                title={tr(locale, "Show annotation", "Показать аннотацию")}
               >
                 <Pencil className="h-3 w-3" />
               </button>
@@ -568,7 +574,9 @@ function CommentItem({
                   }}
                   className="rounded-md bg-accent px-2.5 py-1 text-xs font-medium text-white hover:bg-accent/90 disabled:opacity-50 transition-colors"
                 >
-                  {saving ? 'Saving...' : 'Save'}
+                  {saving
+                    ? tr(locale, "Saving...", "Сохранение...")
+                    : tr(locale, "Save", "Сохранить")}
                 </button>
                 <button
                   onClick={() => { setEditing(false); setEditBody(comment.body); }}
@@ -585,7 +593,7 @@ function CommentItem({
           )}
 
           {/* Reactions row */}
-          {reactionGroups.length > 0 && (
+          {!publicMode && reactionGroups.length > 0 && (
             <div className="mt-2 flex flex-wrap gap-1">
               {reactionGroups.map((r) => (
                 <button
@@ -618,11 +626,11 @@ function CommentItem({
 
             <div className="ml-auto flex items-center gap-0.5">
               {/* Emoji — hover only */}
-              <div className="relative opacity-0 group-hover/comment:opacity-100 transition-opacity">
+              {!publicMode && <div className="relative opacity-0 group-hover/comment:opacity-100 transition-opacity">
                 <button
                   className="h-7 w-7 flex items-center justify-center rounded-full text-text-tertiary hover:text-text-secondary hover:bg-bg-tertiary transition-colors"
                   onClick={() => setShowEmojiPicker((p) => !p)}
-                  title="Add reaction"
+                  title={tr(locale, "Add reaction", "Добавить реакцию")}
                 >
                   <Smile className="h-4 w-4" />
                 </button>
@@ -639,10 +647,10 @@ function CommentItem({
                     ))}
                   </div>
                 )}
-              </div>
+              </div>}
 
               {/* Context menu — hover only */}
-              <div className="opacity-0 group-hover/comment:opacity-100 transition-opacity">
+              {!publicMode && onDelete && <div className="opacity-0 group-hover/comment:opacity-100 transition-opacity">
                 <CommentMenu
                   isOwn={isOwn}
                   commentId={comment.id}
@@ -650,10 +658,10 @@ function CommentItem({
                   onEdit={() => { setEditing(true); setEditBody(comment.body); }}
                   onDelete={onDelete}
                 />
-              </div>
+              </div>}
 
               {/* Resolve — green filled when resolved (clickable to unresolve), outline on hover when unresolved */}
-              {comment.resolved ? (
+              {!publicMode && onResolve && (comment.resolved ? (
                 <button
                   className="h-6 w-6 flex items-center justify-center rounded-full bg-emerald-500 text-text-inverse hover:bg-emerald-600 transition-colors disabled:opacity-50"
                   onClick={handleResolve}
@@ -671,7 +679,7 @@ function CommentItem({
                 >
                   <CheckCircle2 className="h-4 w-4" />
                 </button>
-              )}
+              ))}
             </div>
           </div>
 
@@ -698,8 +706,9 @@ function CommentItem({
             ) : (
               <ChevronRight className="h-3 w-3" />
             )}
-            {comment.replies.length}{" "}
-            {comment.replies.length === 1 ? "reply" : "replies"}
+            {locale === "ru"
+              ? `${comment.replies.length} ${comment.replies.length % 10 === 1 && comment.replies.length % 100 !== 11 ? "ответ" : comment.replies.length % 10 >= 2 && comment.replies.length % 10 <= 4 && (comment.replies.length % 100 < 10 || comment.replies.length % 100 >= 20) ? "ответа" : "ответов"}`
+              : `${comment.replies.length} ${comment.replies.length === 1 ? "reply" : "replies"}`}
           </button>
           {showReplies && (
             <div>
@@ -717,6 +726,7 @@ function CommentItem({
                   onReply={onReply}
                   onCancelReply={onCancelReply}
                   onSubmitReply={onSubmitReply}
+                  publicMode={publicMode}
                 />
               ))}
             </div>
@@ -762,6 +772,7 @@ export function CommentPanel({
   onRemoveReaction,
   onReply,
   onSubmitReply,
+  publicMode = false,
   className,
 }: CommentPanelProps) {
   const { locale } = useI18n();
@@ -770,7 +781,7 @@ export function CommentPanel({
   const setActiveAnnotation = useReviewStore((s) => s.setActiveAnnotation);
 
   // Toolbar state
-  const [visibility, setVisibility] = React.useState<CommentVisibility>("all");
+  const [visibility, setVisibility] = React.useState<CommentVisibility>(publicMode ? "public" : "all");
   const [visOpen, setVisOpen] = React.useState(false);
   const [filterOpen, setFilterOpen] = React.useState(false);
   const [sortOpen, setSortOpen] = React.useState(false);
@@ -921,7 +932,7 @@ export function CommentPanel({
                 label: tr(locale, "Internal comments", "Внутренние комментарии"),
                 count: internalCount,
               },
-            ].map((item) => (
+            ].filter((item) => !publicMode || item.id === "public").map((item) => (
               <button
                 key={item.id}
                 className={cn(
@@ -1000,7 +1011,7 @@ export function CommentPanel({
                   icon: AtSign,
                   label: tr(locale, "Mentions and reactions", "Упоминания и реакции"),
                 },
-              ].map(({ key, icon: Icon, label }) => (
+              ].filter(({ key }) => !publicMode || key !== "mentionsReactions").map(({ key, icon: Icon, label }) => (
                 <button
                   key={key}
                   className="flex w-full items-center justify-between px-3 py-2 text-[13px] text-text-secondary hover:bg-bg-tertiary transition-colors"
@@ -1024,7 +1035,7 @@ export function CommentPanel({
                   </div>
                 </button>
               ))}
-              <div className="border-t border-border mt-1 pt-1">
+              {!publicMode && <div className="border-t border-border mt-1 pt-1">
                 <button className="flex w-full items-center gap-2.5 px-3 py-2 text-[13px] text-text-secondary hover:bg-bg-tertiary transition-colors">
                   <Hash className="h-4 w-4" />
                   {tr(locale, "Hashtag", "Хэштег")}
@@ -1035,7 +1046,7 @@ export function CommentPanel({
                   {tr(locale, "Person", "Пользователь")}
                   <ChevronRight className="h-3.5 w-3.5 ml-auto" />
                 </button>
-              </div>
+              </div>}
               {hasActiveFilters && (
                 <div className="border-t border-border mt-1 pt-1 px-1.5 pb-1">
                   <button
@@ -1196,6 +1207,7 @@ export function CommentPanel({
                 onReply={handleReply}
                 onCancelReply={() => setReplyingTo(null)}
                 onSubmitReply={onSubmitReply}
+                publicMode={publicMode}
               />
             </div>
           ))}

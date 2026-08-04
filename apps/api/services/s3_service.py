@@ -293,6 +293,19 @@ def delete_object(s3_key: str) -> None:
     s3.delete_object(Bucket=settings.s3_bucket, Key=s3_key)
 
 
+def object_exists(s3_key: str) -> bool:
+    """Return whether an S3 object exists without downloading it."""
+    try:
+        get_s3_client().head_object(Bucket=settings.s3_bucket, Key=s3_key)
+        return True
+    except Exception as exc:
+        response = getattr(exc, "response", {})
+        code = str(response.get("Error", {}).get("Code", ""))
+        if code in {"404", "NoSuchKey", "NotFound"}:
+            return False
+        raise
+
+
 def list_stale_multipart_uploads(cutoff):
     """Return (key, upload_id) for in-progress multipart uploads initiated before `cutoff`."""
     s3 = get_s3_client()

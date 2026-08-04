@@ -618,6 +618,17 @@ def guest_comment(
         else:
             raise HTTPException(status_code=400, detail="No ready version found for this asset")
 
+    if body.parent_id:
+        parent = db.query(Comment).filter(
+            Comment.id == body.parent_id,
+            Comment.asset_id == asset.id,
+            Comment.version_id == version_id,
+            Comment.parent_id.is_(None),
+            Comment.deleted_at.is_(None),
+        ).first()
+        if not parent:
+            raise HTTPException(status_code=404, detail="Parent comment not found for this asset version")
+
     # Determine author: logged-in user or guest
     author_id = None
     guest_author_id = None

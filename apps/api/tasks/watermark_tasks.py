@@ -70,8 +70,10 @@ def apply_watermark(
     position: str,
     opacity: float,
     image_key: str | None,
+    version_id: str | None = None,
+    target_key: str | None = None,
 ):
-    """Burn a text watermark into a video/image asset and upload the result to S3."""
+    """Burn a watermark into a video asset and upload the MP4 derivative to S3."""
     from ..services.s3_service import get_s3_client, put_object
 
     db = SessionLocal()
@@ -82,18 +84,22 @@ def apply_watermark(
         ).first()
         if not asset:
             return
+        from ..models.asset import AssetType
+        if asset.asset_type != AssetType.video:
+            return
 
         # Find the first media file for this asset (via latest version)
         from ..models.asset import AssetVersion
-        latest_version = (
+        latest_version_query = (
             db.query(AssetVersion)
             .filter(
                 AssetVersion.asset_id == asset.id,
                 AssetVersion.deleted_at.is_(None),
             )
-            .order_by(AssetVersion.version_number.desc())
-            .first()
         )
+        if version_id:
+            latest_version_query = latest_version_query.filter(AssetVersion.id == uuid.UUID(version_id))
+        latest_version = latest_version_query.order_by(AssetVersion.version_number.desc()).first()
         if not latest_version:
             return
 
@@ -176,7 +182,7 @@ def apply_watermark(
                 output_path = local_path
 
             # Upload watermarked file back to S3
-            wm_key = f"watermarked/{asset_id}/output{output_ext}"
+            wm_key = target_key or f"watermarked/{asset_id}/{latest_version.id}/output{output_ext}"
             with open(output_path, "rb") as f:
                 put_object(wm_key, f.read(), "video/mp4")
 

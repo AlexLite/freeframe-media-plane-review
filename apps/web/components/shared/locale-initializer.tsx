@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect } from 'react'
+import { usePathname, useSearchParams } from 'next/navigation'
 import { useAuthStore } from '@/stores/auth-store'
 import {
   PUBLIC_LOCALE_STORAGE_KEY,
@@ -9,7 +10,10 @@ import {
 } from '@/stores/locale-store'
 
 export function LocaleInitializer() {
+  const pathname = usePathname()
+  const searchParams = useSearchParams()
   const locale = useLocaleStore((state) => state.locale)
+  const profileLocale = useLocaleStore((state) => state.profileLocale)
   const applyLocale = useLocaleStore((state) => state.applyLocale)
   const syncFromServer = useLocaleStore((state) => state.syncFromServer)
   const user = useAuthStore((state) => state.user)
@@ -19,27 +23,28 @@ export function LocaleInitializer() {
   }, [applyLocale, locale])
 
   useEffect(() => {
-    const publicShare = window.location.pathname.startsWith('/share/')
+    const publicShare = pathname.startsWith('/share/')
     if (!publicShare) {
       if (user?.preferences) syncFromServer(user.preferences)
+      else applyLocale(profileLocale)
       return
     }
 
-    const requestedLocale = new URLSearchParams(window.location.search).get('lang')
+    const requestedLocale = searchParams.get('lang')
     if (isLocale(requestedLocale)) {
       applyLocale(requestedLocale)
       return
     }
 
-    const profileLocale = user?.preferences?.locale
-    if (isLocale(profileLocale)) {
-      applyLocale(profileLocale)
+    const serverProfileLocale = user?.preferences?.locale
+    if (isLocale(serverProfileLocale)) {
+      applyLocale(serverProfileLocale)
       return
     }
 
     const localPublicLocale = localStorage.getItem(PUBLIC_LOCALE_STORAGE_KEY)
     applyLocale(isLocale(localPublicLocale) ? localPublicLocale : 'ru')
-  }, [applyLocale, syncFromServer, user?.preferences])
+  }, [applyLocale, pathname, profileLocale, searchParams, syncFromServer, user?.preferences])
 
   return null
 }

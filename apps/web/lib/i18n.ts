@@ -143,6 +143,17 @@ Object.assign(legacyRussian, {
   'Invalid link': 'Недействительная ссылка',
 })
 
+// Never rewrite ambiguous one-word values globally: these are valid user-created
+// project/asset/folder names as well as UI labels. Components render their own
+// localized labels and mark user content explicitly.
+for (const ambiguous of [
+  'Comments', 'Downloads', 'Layout', 'None', 'Fields', 'Video', 'Download',
+  'Change', 'Comment', 'Reply', 'Branding', 'Logo', 'Upload', 'Required',
+  'Position',
+]) {
+  delete legacyRussian[ambiguous]
+}
+
 export function getIntlLocale(locale: Locale): string {
   return locale === 'ru' ? 'ru-RU' : 'en-US'
 }
