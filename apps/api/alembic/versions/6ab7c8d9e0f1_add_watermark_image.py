@@ -1,7 +1,7 @@
 """add watermark image support
 
 Revision ID: 6ab7c8d9e0f1
-Revises: 7c9f1a2b3d4e
+Revises: 54b1ad156f8f
 """
 
 from typing import Sequence, Union
@@ -11,7 +11,7 @@ import sqlalchemy as sa
 
 
 revision: str = "6ab7c8d9e0f1"
-down_revision: Union[str, Sequence[str], None] = "7c9f1a2b3d4e"
+down_revision: Union[str, Sequence[str], None] = "54b1ad156f8f"
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
 

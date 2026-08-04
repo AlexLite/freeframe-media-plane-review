@@ -27,9 +27,12 @@ import {
   Send,
   Lock,
 } from "lucide-react";
-import { cn, formatTime, formatRelativeTime } from "@/lib/utils";
+import { cn, formatTime } from "@/lib/utils";
 import { useReviewStore } from "@/stores/review-store";
 import type { CommentWithReplies } from "@/hooks/use-comments";
+import { useI18n } from "@/hooks/use-i18n";
+
+const tr = (locale: string, en: string, ru: string) => locale === "ru" ? ru : en;
 
 // ─── Props ────────────────────────────────────────────────────────────────────
 
@@ -162,6 +165,7 @@ function CommentMenu({
   onEdit: () => void;
   onDelete: (commentId: string) => Promise<void>;
 }) {
+  const { locale } = useI18n();
   const [open, setOpen] = React.useState(false);
 
   // Only show menu for own comments — others only get emoji reactions
@@ -186,7 +190,7 @@ function CommentMenu({
           onClick={() => { onEdit(); setOpen(false) }}
         >
           <Pencil className="h-3.5 w-3.5" />
-          Edit
+          {tr(locale, "Edit", "Редактировать")}
         </button>
         <button
           className="flex w-full items-center gap-2.5 px-3 py-2 text-[13px] text-text-secondary hover:bg-bg-tertiary transition-colors"
@@ -203,7 +207,7 @@ function CommentMenu({
           }}
         >
           <Link2 className="h-3.5 w-3.5" />
-          Copy Link
+          {tr(locale, "Copy Link", "Копировать ссылку")}
         </button>
         <button
           className="flex w-full items-center gap-2.5 px-3 py-2 text-[13px] text-red-400 hover:bg-bg-tertiary transition-colors"
@@ -213,7 +217,7 @@ function CommentMenu({
           }}
         >
           <Trash2 className="h-3.5 w-3.5" />
-          Delete
+          {tr(locale, "Delete", "Удалить")}
         </button>
       </Dropdown>
     </div>
@@ -231,6 +235,7 @@ function InlineReplyInput({
   onSubmit: (parentId: string, body: string) => Promise<void>;
   onCancel: () => void;
 }) {
+  const { locale } = useI18n();
   const [body, setBody] = React.useState("");
   const [submitting, setSubmitting] = React.useState(false);
   const [emojiOpen, setEmojiOpen] = React.useState(false);
@@ -274,7 +279,7 @@ function InlineReplyInput({
         ref={inputRef}
         type="text"
         className="w-full rounded-lg border border-border bg-bg-tertiary px-3 py-2 text-[13px] text-text-primary placeholder:text-text-tertiary focus:outline-none focus:border-accent/50 focus:ring-1 focus:ring-accent/20"
-        placeholder="Leave your reply here..."
+        placeholder={tr(locale, "Leave your reply here...", "Напишите ответ...")}
         value={body}
         onChange={(e) => setBody(e.target.value)}
         onKeyDown={(e) => {
@@ -294,7 +299,7 @@ function InlineReplyInput({
             <button
               onClick={() => setEmojiOpen((p) => !p)}
               className="h-7 w-7 flex items-center justify-center rounded-md text-text-tertiary hover:bg-bg-tertiary hover:text-text-secondary transition-colors"
-              title="Add emoji"
+              title={tr(locale, "Add emoji", "Добавить эмодзи")}
             >
               <Smile className="h-4 w-4" />
             </button>
@@ -324,7 +329,7 @@ function InlineReplyInput({
             onClick={onCancel}
             className="px-3 py-1 text-[12px] font-medium text-text-secondary hover:text-text-primary rounded-md border border-border hover:bg-bg-tertiary transition-colors"
           >
-            Cancel
+            {tr(locale, "Cancel", "Отмена")}
           </button>
           <button
             onClick={handleSubmit}
@@ -372,6 +377,7 @@ function CommentItem({
   onCancelReply,
   onSubmitReply,
 }: CommentItemProps) {
+  const { locale, formatRelativeTime } = useI18n();
   const seekTo = useReviewStore((s) => s.seekTo);
   const setActiveAnnotation = useReviewStore((s) => s.setActiveAnnotation);
   const setFocusedCommentId = useReviewStore((s) => s.setFocusedCommentId);
@@ -474,7 +480,7 @@ function CommentItem({
         <div className="flex-1 min-w-0">
           {/* Header row */}
           <div className="flex items-center gap-2">
-            <span className="text-[13px] font-semibold text-text-primary leading-none">
+            <span data-user-content="true" className="text-[13px] font-semibold text-text-primary leading-none">
               {authorName}
             </span>
             <span className="text-[11px] text-text-tertiary leading-none">
@@ -568,12 +574,12 @@ function CommentItem({
                   onClick={() => { setEditing(false); setEditBody(comment.body); }}
                   className="rounded-md px-2.5 py-1 text-xs text-text-tertiary hover:text-text-primary transition-colors"
                 >
-                  Cancel
+                  {tr(locale, "Cancel", "Отмена")}
                 </button>
               </div>
             </div>
           ) : (
-            <p className="mt-1 text-[13px] text-text-secondary leading-relaxed break-words">
+            <p data-user-content="true" className="mt-1 text-[13px] text-text-secondary leading-relaxed break-words">
               {comment.body}
             </p>
           )}
@@ -606,7 +612,7 @@ function CommentItem({
                 className="text-[13px] font-medium text-text-tertiary hover:text-text-secondary transition-colors"
                 onClick={() => onReply(comment.id)}
               >
-                Reply
+                {tr(locale, "Reply", "Ответить")}
               </button>
             )}
 
@@ -652,7 +658,7 @@ function CommentItem({
                   className="h-6 w-6 flex items-center justify-center rounded-full bg-emerald-500 text-text-inverse hover:bg-emerald-600 transition-colors disabled:opacity-50"
                   onClick={handleResolve}
                   disabled={resolving}
-                  title="Unresolve"
+                  title={tr(locale, "Unresolve", "Вернуть в работу")}
                 >
                   <Check className="h-3 w-3" strokeWidth={3} />
                 </button>
@@ -661,7 +667,7 @@ function CommentItem({
                   className="h-6 w-6 flex items-center justify-center rounded-full text-text-tertiary hover:text-emerald-400 hover:bg-bg-tertiary transition-colors disabled:opacity-50 opacity-0 group-hover/comment:opacity-100"
                   onClick={handleResolve}
                   disabled={resolving}
-                  title="Resolve"
+                  title={tr(locale, "Resolve", "Завершить")}
                 >
                   <CheckCircle2 className="h-4 w-4" />
                 </button>
@@ -758,6 +764,7 @@ export function CommentPanel({
   onSubmitReply,
   className,
 }: CommentPanelProps) {
+  const { locale } = useI18n();
   const focusedCommentId = useReviewStore((s) => s.focusedCommentId);
   const setFocusedCommentId = useReviewStore((s) => s.setFocusedCommentId);
   const setActiveAnnotation = useReviewStore((s) => s.setActiveAnnotation);
@@ -857,10 +864,10 @@ export function CommentPanel({
 
   const visLabel =
     visibility === "all"
-      ? "All comments"
+      ? tr(locale, "All comments", "Все комментарии")
       : visibility === "public"
-        ? "Public comments"
-        : "Internal comments";
+        ? tr(locale, "Public comments", "Публичные комментарии")
+        : tr(locale, "Internal comments", "Внутренние комментарии");
 
   function toggleFilter(key: keyof FilterState) {
     setFilters((prev) => ({ ...prev, [key]: !prev[key] }));
@@ -901,17 +908,17 @@ export function CommentPanel({
             {[
               {
                 id: "all" as const,
-                label: "All comments",
+                label: tr(locale, "All comments", "Все комментарии"),
                 count: topLevel.length,
               },
               {
                 id: "public" as const,
-                label: "Public comments",
+                label: tr(locale, "Public comments", "Публичные комментарии"),
                 count: publicCount,
               },
               {
                 id: "internal" as const,
-                label: "Internal comments",
+                label: tr(locale, "Internal comments", "Внутренние комментарии"),
                 count: internalCount,
               },
             ].map((item) => (
@@ -948,7 +955,7 @@ export function CommentPanel({
                   ? "text-accent bg-accent/10"
                   : "text-text-tertiary hover:text-text-secondary hover:bg-bg-tertiary",
               )}
-              title="Filter"
+              title={tr(locale, "Filter", "Фильтр")}
               onClick={() => {
                 setFilterOpen((p) => !p);
                 setVisOpen(false);
@@ -964,34 +971,34 @@ export function CommentPanel({
               className="w-56"
             >
               <div className="px-3 py-2 text-[11px] text-text-tertiary uppercase tracking-wider font-medium">
-                Filter by...
+                {tr(locale, "Filter by...", "Фильтровать по...")}
               </div>
               {[
                 {
                   key: "annotations" as const,
                   icon: Pencil,
-                  label: "Annotations",
+                  label: tr(locale, "Annotations", "Аннотации"),
                 },
                 {
                   key: "attachments" as const,
                   icon: Paperclip,
-                  label: "Attachments",
+                  label: tr(locale, "Attachments", "Вложения"),
                 },
                 {
                   key: "completed" as const,
                   icon: CheckCircle2,
-                  label: "Completed",
+                  label: tr(locale, "Completed", "Завершённые"),
                 },
                 {
                   key: "incomplete" as const,
                   icon: Circle,
-                  label: "Incomplete",
+                  label: tr(locale, "Incomplete", "Незавершённые"),
                 },
-                { key: "unread" as const, icon: Mail, label: "Unread" },
+                { key: "unread" as const, icon: Mail, label: tr(locale, "Unread", "Непрочитанные") },
                 {
                   key: "mentionsReactions" as const,
                   icon: AtSign,
-                  label: "Mentions and reactions",
+                  label: tr(locale, "Mentions and reactions", "Упоминания и реакции"),
                 },
               ].map(({ key, icon: Icon, label }) => (
                 <button
@@ -1020,12 +1027,12 @@ export function CommentPanel({
               <div className="border-t border-border mt-1 pt-1">
                 <button className="flex w-full items-center gap-2.5 px-3 py-2 text-[13px] text-text-secondary hover:bg-bg-tertiary transition-colors">
                   <Hash className="h-4 w-4" />
-                  Hashtag
+                  {tr(locale, "Hashtag", "Хэштег")}
                   <ChevronRight className="h-3.5 w-3.5 ml-auto" />
                 </button>
                 <button className="flex w-full items-center gap-2.5 px-3 py-2 text-[13px] text-text-secondary hover:bg-bg-tertiary transition-colors">
                   <User className="h-4 w-4" />
-                  Person
+                  {tr(locale, "Person", "Пользователь")}
                   <ChevronRight className="h-3.5 w-3.5 ml-auto" />
                 </button>
               </div>
@@ -1035,7 +1042,7 @@ export function CommentPanel({
                     className="w-full py-1.5 text-[13px] text-text-secondary bg-bg-tertiary hover:bg-bg-hover rounded-lg transition-colors font-medium"
                     onClick={() => setFilters(EMPTY_FILTERS)}
                   >
-                    Clear Filters
+                    {tr(locale, "Clear Filters", "Сбросить фильтры")}
                   </button>
                 </div>
               )}
@@ -1051,7 +1058,7 @@ export function CommentPanel({
                   ? "text-accent bg-accent/10"
                   : "text-text-tertiary hover:text-text-secondary hover:bg-bg-tertiary",
               )}
-              title="Sort"
+              title={tr(locale, "Sort", "Сортировка")}
               onClick={() => {
                 setSortOpen((p) => !p);
                 setVisOpen(false);
@@ -1067,13 +1074,13 @@ export function CommentPanel({
               className="w-52"
             >
               <div className="px-3 py-2 text-[11px] text-text-tertiary uppercase tracking-wider font-medium">
-                Sort thread by...
+                {tr(locale, "Sort thread by...", "Сортировать обсуждение...")}
               </div>
               {[
-                { id: "oldest" as const, label: "Oldest (Default)" },
-                { id: "newest" as const, label: "Newest" },
-                { id: "commenter" as const, label: "Commenter" },
-                { id: "completed" as const, label: "Completed" },
+                { id: "oldest" as const, label: tr(locale, "Oldest (Default)", "Сначала старые (по умолчанию)") },
+                { id: "newest" as const, label: tr(locale, "Newest", "Сначала новые") },
+                { id: "commenter" as const, label: tr(locale, "Commenter", "По автору") },
+                { id: "completed" as const, label: tr(locale, "Completed", "Завершённые") },
               ].map((item) => (
                 <button
                   key={item.id}
@@ -1105,7 +1112,7 @@ export function CommentPanel({
                 ? "text-accent bg-accent/10"
                 : "text-text-tertiary hover:text-text-secondary hover:bg-bg-tertiary",
             )}
-            title="Search"
+            title={tr(locale, "Search", "Поиск")}
             onClick={() => {
               setSearchOpen((p) => !p);
               if (searchOpen) setSearchQuery("");
@@ -1126,7 +1133,7 @@ export function CommentPanel({
               ref={searchRef}
               type="text"
               className="flex-1 bg-transparent text-[13px] text-text-primary placeholder:text-text-tertiary focus:outline-none"
-              placeholder="Search..."
+              placeholder={tr(locale, "Search...", "Поиск...")}
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
             />
@@ -1145,7 +1152,7 @@ export function CommentPanel({
               }}
               className="text-[12px] text-text-tertiary hover:text-text-secondary font-medium"
             >
-              Cancel
+              {tr(locale, "Cancel", "Отмена")}
             </button>
           </div>
         </div>
@@ -1165,10 +1172,10 @@ export function CommentPanel({
               <MessageSquare className="h-6 w-6" />
             </div>
             <p className="text-sm text-text-secondary font-medium">
-              No comments yet
+              {tr(locale, "No comments yet", "Комментариев пока нет")}
             </p>
             <p className="text-xs text-text-tertiary mt-1">
-              Leave a comment below to start the review
+              {tr(locale, "Leave a comment below to start the review", "Оставьте комментарий, чтобы начать ревью")}
             </p>
           </div>
         )}

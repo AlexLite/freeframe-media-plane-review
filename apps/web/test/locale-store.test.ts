@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import {
   LOCALE_STORAGE_KEY,
+  PUBLIC_LOCALE_STORAGE_KEY,
   isLocale,
   useLocaleStore,
 } from '@/stores/locale-store'
@@ -9,7 +10,7 @@ describe('locale store', () => {
   beforeEach(() => {
     localStorage.clear()
     document.documentElement.lang = 'en'
-    useLocaleStore.setState({ locale: 'en' })
+    useLocaleStore.setState({ locale: 'en', profileLocale: 'en', isSaving: false, saveError: null })
     vi.restoreAllMocks()
   })
 
@@ -18,7 +19,16 @@ describe('locale store', () => {
 
     expect(useLocaleStore.getState().locale).toBe('ru')
     expect(document.documentElement.lang).toBe('ru')
-    expect(JSON.parse(localStorage.getItem(LOCALE_STORAGE_KEY) ?? '{}').state.locale).toBe('ru')
+    expect(JSON.parse(localStorage.getItem(LOCALE_STORAGE_KEY) ?? '{}').state.profileLocale).toBe('ru')
+  })
+
+  it('keeps a public-share language separate from the profile preference', () => {
+    useLocaleStore.getState().setPublicLocale('ru')
+
+    expect(useLocaleStore.getState().locale).toBe('ru')
+    expect(useLocaleStore.getState().profileLocale).toBe('en')
+    expect(localStorage.getItem(PUBLIC_LOCALE_STORAGE_KEY)).toBe('ru')
+    expect(JSON.parse(localStorage.getItem(LOCALE_STORAGE_KEY) ?? '{}').state.profileLocale).toBe('en')
   })
 
   it('synchronizes a valid profile locale and ignores invalid values', () => {

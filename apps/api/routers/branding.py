@@ -146,7 +146,9 @@ def upsert_watermark(
 ):
     require_project_role(db, project_id, current_user, ProjectRole.editor)
     wm = _get_or_create_watermark(db, project_id)
-    update_data = body.model_dump(exclude_none=True)
+    # ``exclude_unset`` keeps PATCH-like semantics while still allowing an
+    # explicit JSON null to remove a previously uploaded watermark image.
+    update_data = body.model_dump(exclude_unset=True)
     new_image_key = update_data.get("image_s3_key")
     if new_image_key and not new_image_key.startswith(f"branding/{project_id}/watermark/"):
         raise HTTPException(status_code=400, detail="Invalid watermark image key")
@@ -155,7 +157,7 @@ def upsert_watermark(
         setattr(wm, field, value)
     db.commit()
     db.refresh(wm)
-    if new_image_key and previous_image_key and previous_image_key != new_image_key:
+    if "image_s3_key" in update_data and previous_image_key and previous_image_key != new_image_key:
         try:
             s3_service.delete_object(previous_image_key)
         except Exception:

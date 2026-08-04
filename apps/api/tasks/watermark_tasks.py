@@ -14,6 +14,42 @@ from ..models.asset import Asset, MediaFile
 from ..config import settings
 
 
+def build_image_watermark_filter(position: str, opacity: float) -> str:
+    """Build an FFmpeg graph for one centered/corner image or a real 3x3 tile."""
+    if position != "tiled":
+        x, y = (
+            ("(main_w-overlay_w)/2", "(main_h-overlay_h)/2")
+            if position == "center"
+            else ("main_w-overlay_w-20", "main_h-overlay_h-20")
+        )
+        return (
+            f"[1:v]scale=w='min(300,iw)':h=-1,format=rgba,"
+            f"colorchannelmixer=aa={opacity}[wm];"
+            f"[0:v][wm]overlay=x={x}:y={y}[outv]"
+        )
+
+    labels = "".join(f"[wm{i}]" for i in range(9))
+    graph = (
+        f"[1:v]scale=w='min(180,iw)':h=-1,format=rgba,"
+        f"colorchannelmixer=aa={opacity},split=9{labels};"
+    )
+    previous = "0:v"
+    index = 0
+    for row in (0.1, 0.5, 0.9):
+        for column in (0.1, 0.5, 0.9):
+            output = "outv" if index == 8 else f"tile{index}"
+            graph += (
+                f"[{previous}][wm{index}]overlay="
+                f"x='(main_w-overlay_w)*{column}':"
+                f"y='(main_h-overlay_h)*{row}'[{output}]"
+            )
+            if index != 8:
+                graph += ";"
+            previous = output
+            index += 1
+    return graph
+
+
 def _publish_event(project_id: str, event_type: str, payload: dict):
     """Publish SSE event via Redis from Celery worker context (best-effort)."""
     try:
@@ -86,15 +122,7 @@ def apply_watermark(
             if image_key:
                 image_path = os.path.join(tmp, "watermark.png")
                 s3.download_file(settings.s3_bucket, image_key, image_path)
-                if position == "center" or position == "tiled":
-                    overlay_x, overlay_y = "(main_w-overlay_w)/2", "(main_h-overlay_h)/2"
-                else:
-                    overlay_x, overlay_y = "main_w-overlay_w-20", "main_h-overlay_h-20"
-                filter_complex = (
-                    f"[1:v]scale=w='min(300,iw)':h=-1,format=rgba,"
-                    f"colorchannelmixer=aa={opacity}[wm];"
-                    f"[0:v][wm]overlay=x={overlay_x}:y={overlay_y}[outv]"
-                )
+                filter_complex = build_image_watermark_filter(position, opacity)
                 cmd = [
                     "ffmpeg", "-y",
                     "-i", local_path,
@@ -119,6 +147,18 @@ def apply_watermark(
                     f"drawtext=text='{escaped}':fontsize={fontsize}"
                     f":fontcolor=white@{opacity}:x={x}:y={y}"
                 )
+                if position == "tiled":
+                    for x_factor in ("w/2", "3*w/4"):
+                        for y_factor in ("h/4", "h/2", "3*h/4"):
+                            vf_filters.append(
+                                f"drawtext=text='{escaped}':fontsize={fontsize}"
+                                f":fontcolor=white@{opacity}:x={x_factor}:y={y_factor}"
+                            )
+                    for y_factor in ("h/2", "3*h/4"):
+                        vf_filters.append(
+                            f"drawtext=text='{escaped}':fontsize={fontsize}"
+                            f":fontcolor=white@{opacity}:x=w/4:y={y_factor}"
+                        )
 
             if image_key:
                 pass

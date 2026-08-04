@@ -101,7 +101,9 @@ describe('i18n formatting', () => {
     expect(translateLegacyUiText('ru', 'Send (Enter)')).toBe('Отправить (Enter)')
     expect(translateLegacyUiText('ru', 'All Share Links')).toBe('Все ссылки общего доступа')
     expect(translateLegacyUiText('ru', 'Add a description...')).toBe('Добавьте описание...')
-    expect(translateLegacyUiText('ru', 'Asset')).toBe('Материал')
+    // Ambiguous one-word values are intentionally excluded from the legacy
+    // DOM bridge so user-created names cannot be rewritten.
+    expect(translateLegacyUiText('ru', 'Asset')).toBe('Asset')
     expect(translateLegacyUiText('ru', 'Reply')).toBe('Ответить')
     expect(translateLegacyUiText('ru', 'Password required')).toBe('Требуется пароль')
     expect(translateLegacyUiText('ru', 'Enter your name and email to comment on this shared asset.')).toBe('Введите имя и email, чтобы комментировать этот материал.')
@@ -114,7 +116,7 @@ describe('i18n formatting', () => {
     expect(translateLegacyUiText('ru', 'Define custom fields for assets in this project.')).toBe('Добавьте собственные поля для материалов этого проекта.')
     expect(translateLegacyUiText('ru', 'No custom fields yet.')).toBe('Собственных полей пока нет.')
     expect(translateLegacyUiText('ru', 'Scene number')).toBe('Номер сцены')
-    expect(translateLegacyUiText('ru', 'Text')).toBe('Текст')
+    expect(translateLegacyUiText('ru', 'Text')).toBe('Text')
     expect(translateLegacyUiText('ru', 'Multi Select')).toBe('Несколько вариантов')
     expect(translateLegacyUiText('ru', 'PNG image')).toBe('Изображение PNG')
     expect(translateLegacyUiText('ru', 'Enable watermark')).toBe('Включить водяной знак')

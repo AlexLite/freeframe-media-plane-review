@@ -20,6 +20,7 @@ import {
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { PublicLocaleSwitcher } from '@/components/shared/locale-initializer'
+import { useI18n } from '@/hooks/use-i18n'
 import type {
   SharePermission,
   ShareLinkAppearance,
@@ -793,6 +794,8 @@ function ShareReviewInner({
   token, shareSession, assetName, permission, allowDownload, showVersions, onBack,
   VideoPlayer, ImageViewer, AudioPlayer, CommentPanel, CommentInput, VersionSwitcher,
 }: any) {
+  const { locale } = useI18n()
+  const tr = (en: string, ru: string) => locale === 'ru' ? ru : en
   // Import hooks from the review system
   const { useReview } = require('@/components/review/review-provider')
   const { useReviewStore } = require('@/stores/review-store')
@@ -883,7 +886,7 @@ function ShareReviewInner({
           )}
           {allowDownload && (
             <button className="flex items-center gap-1.5 h-7 px-3 rounded-md text-xs font-medium text-text-inverse bg-accent hover:bg-accent-hover transition-colors" onClick={() => handleDownload(token, asset.id, shareSession)}>
-              <Download className="h-3 w-3" /> Download
+              <Download className="h-3 w-3" /> {tr('Download', 'Скачать')}
             </button>
           )}
           <button onClick={() => setSidebarOpen(v => !v)} className="flex items-center justify-center h-8 w-8 rounded-md text-text-secondary hover:text-text-primary hover:bg-bg-hover transition-colors">
@@ -937,10 +940,10 @@ function ShareReviewInner({
             <div className="px-4 pt-3 pb-2 shrink-0">
               <div className="flex items-center bg-bg-tertiary rounded-lg p-0.5">
                 <button onClick={() => setActiveTab('comments')} className={`flex-1 py-1.5 text-[13px] font-medium rounded-md transition-all ${activeTab === 'comments' ? 'bg-bg-hover text-text-primary shadow-sm' : 'text-text-tertiary'}`}>
-                  Comments
+                  {tr('Comments', 'Комментарии')}
                 </button>
                 <button onClick={() => setActiveTab('fields')} className={`flex-1 py-1.5 text-[13px] font-medium rounded-md transition-all ${activeTab === 'fields' ? 'bg-bg-hover text-text-primary shadow-sm' : 'text-text-tertiary'}`}>
-                  Fields
+                  {tr('Fields', 'Поля')}
                 </button>
               </div>
             </div>
@@ -961,13 +964,13 @@ function ShareReviewInner({
                     {!isLoggedIn && (
                       <div className="mx-4 mb-2 flex items-center justify-between gap-3 rounded-lg border border-border bg-bg-tertiary px-3 py-2 text-xs">
                         <div className="min-w-0">
-                          <span className="text-text-tertiary">Commenting as</span>{' '}
+                          <span className="text-text-tertiary">{tr('Commenting as', 'Комментарий от')}</span>{' '}
                           {guestIdentity ? (
                             <span data-user-content="true" className="text-text-primary">
                               {guestIdentity.name} ({guestIdentity.email})
                             </span>
                           ) : (
-                            <span className="text-status-warning">Name and email required</span>
+                            <span className="text-status-warning">{tr('Name and email required', 'Укажите имя и email')}</span>
                           )}
                         </div>
                         <button
@@ -975,7 +978,7 @@ function ShareReviewInner({
                           onClick={() => setShowGuestPrompt(true)}
                           className="shrink-0 text-accent hover:text-accent-hover"
                         >
-                          Change
+                          {tr('Change', 'Изменить')}
                         </button>
                       </div>
                     )}
@@ -1017,18 +1020,20 @@ function ShareReviewInner({
 // ─── Guest Identity Prompt ───────────────────────────────────────────────────
 
 function GuestIdentityPrompt({ onSave, onCancel }: { onSave: (name: string, email: string) => void; onCancel: () => void }) {
+  const { locale } = useI18n()
+  const tr = (en: string, ru: string) => locale === 'ru' ? ru : en
   const [name, setName] = React.useState('')
   const [email, setEmail] = React.useState('')
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm">
       <div className="w-full max-w-sm rounded-xl border border-border bg-bg-secondary p-5 shadow-xl">
-        <h3 className="text-sm font-semibold text-text-primary mb-1">Leave a comment</h3>
-        <p className="text-xs text-text-tertiary mb-4">Enter your name and email to comment on this shared asset.</p>
+        <h3 className="text-sm font-semibold text-text-primary mb-1">{tr('Leave a comment', 'Оставить комментарий')}</h3>
+        <p className="text-xs text-text-tertiary mb-4">{tr('Enter your name and email to comment on this shared asset.', 'Укажите имя и email, чтобы комментировать этот материал.')}</p>
         <div className="space-y-3">
           <input
             type="text"
-            placeholder="Your name"
+            placeholder={tr('Your name', 'Ваше имя')}
             value={name}
             onChange={(e) => setName(e.target.value)}
             className="w-full rounded-md border border-border bg-bg-tertiary px-3 py-2 text-sm text-text-primary placeholder:text-text-tertiary focus:outline-none focus:border-accent"
@@ -1036,7 +1041,7 @@ function GuestIdentityPrompt({ onSave, onCancel }: { onSave: (name: string, emai
           />
           <input
             type="email"
-            placeholder="Email address"
+            placeholder={tr('Email address', 'Электронная почта')}
             value={email}
             onChange={(e) => setEmail(e.target.value)}
             className="w-full rounded-md border border-border bg-bg-tertiary px-3 py-2 text-sm text-text-primary placeholder:text-text-tertiary focus:outline-none focus:border-accent"
@@ -1044,14 +1049,14 @@ function GuestIdentityPrompt({ onSave, onCancel }: { onSave: (name: string, emai
         </div>
         <div className="flex items-center justify-end gap-2 mt-4">
           <button onClick={onCancel} className="px-3 py-1.5 text-xs text-text-tertiary hover:text-text-primary transition-colors">
-            Cancel
+            {tr('Cancel', 'Отмена')}
           </button>
           <button
             disabled={!name.trim() || !email.trim()}
             onClick={() => onSave(name.trim(), email.trim())}
             className="px-4 py-1.5 rounded-md bg-accent text-xs font-medium text-white hover:bg-accent/90 disabled:opacity-50 transition-colors"
           >
-            Continue
+            {tr('Continue', 'Продолжить')}
           </button>
         </div>
       </div>

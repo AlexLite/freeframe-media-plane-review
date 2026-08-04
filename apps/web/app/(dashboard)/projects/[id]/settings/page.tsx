@@ -22,6 +22,7 @@ import { cn } from '@/lib/utils'
 import { api } from '@/lib/api'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
+import { useI18n } from '@/hooks/use-i18n'
 import type {
   ProjectBranding,
   WatermarkSettings,
@@ -31,6 +32,8 @@ import type {
   WatermarkContent,
   ViewerLayout,
 } from '@/types'
+
+const tr = (locale: string, en: string, ru: string) => locale === 'ru' ? ru : en
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
@@ -79,6 +82,7 @@ function SimpleSelect<T extends string>({
 // ─── Branding Tab ─────────────────────────────────────────────────────────────
 
 function BrandingTab({ projectId }: { projectId: string }) {
+  const { locale } = useI18n()
   const key = `/projects/${projectId}/branding`
   const { data: branding } = useSWR<ProjectBranding>(key, () =>
     api.get<ProjectBranding>(key),
@@ -111,10 +115,10 @@ function BrandingTab({ projectId }: { projectId: string }) {
         viewer_layout: form.viewer_layout,
         featured_field: form.featured_field,
       })
-      setMsg('Branding saved.')
+      setMsg(tr(locale, 'Branding saved.', 'Брендинг сохранён.'))
       globalMutate(key)
     } catch (err: unknown) {
-      setMsg(err instanceof Error ? err.message : 'Failed to save')
+      setMsg(err instanceof Error ? err.message : tr(locale, 'Failed to save', 'Не удалось сохранить'))
     } finally {
       setSaving(false)
     }
@@ -139,7 +143,7 @@ function BrandingTab({ projectId }: { projectId: string }) {
       setLogoFile(null)
       globalMutate(key)
     } catch {
-      setMsg('Logo upload failed.')
+      setMsg(tr(locale, 'Logo upload failed.', 'Не удалось загрузить логотип.'))
     } finally {
       setUploadingLogo(false)
     }
@@ -149,11 +153,11 @@ function BrandingTab({ projectId }: { projectId: string }) {
     <form onSubmit={handleSave} className="space-y-5">
       {/* Logo */}
       <div className="flex flex-col gap-1.5">
-        <label className="text-sm font-medium text-text-secondary">Logo</label>
+        <label className="text-sm font-medium text-text-secondary">{tr(locale, 'Logo', 'Логотип')}</label>
         <div className="flex items-center gap-3">
           {branding?.logo_s3_key && (
             <div className="h-12 w-12 rounded-lg border border-border bg-bg-tertiary overflow-hidden flex items-center justify-center text-text-tertiary text-xs">
-              Logo
+              {tr(locale, 'Logo', 'Логотип')}
             </div>
           )}
           <input
@@ -170,7 +174,7 @@ function BrandingTab({ projectId }: { projectId: string }) {
             onClick={() => logoInputRef.current?.click()}
           >
             <Upload className="h-4 w-4" />
-            {logoFile ? logoFile.name : 'Choose file'}
+            {logoFile ? logoFile.name : tr(locale, 'Choose file', 'Выбрать файл')}
           </Button>
           {logoFile && (
             <Button
@@ -179,7 +183,7 @@ function BrandingTab({ projectId }: { projectId: string }) {
               onClick={handleLogoUpload}
               loading={uploadingLogo}
             >
-              Upload
+              {tr(locale, 'Upload', 'Загрузить')}
             </Button>
           )}
         </div>
@@ -188,7 +192,7 @@ function BrandingTab({ projectId }: { projectId: string }) {
       {/* Colors */}
       <div className="grid grid-cols-2 gap-4">
         <div className="flex flex-col gap-1.5">
-          <label className="text-sm font-medium text-text-secondary">Primary color</label>
+          <label className="text-sm font-medium text-text-secondary">{tr(locale, 'Primary color', 'Основной цвет')}</label>
           <div className="flex items-center gap-2">
             <input
               type="color"
@@ -205,7 +209,7 @@ function BrandingTab({ projectId }: { projectId: string }) {
           </div>
         </div>
         <div className="flex flex-col gap-1.5">
-          <label className="text-sm font-medium text-text-secondary">Secondary color</label>
+          <label className="text-sm font-medium text-text-secondary">{tr(locale, 'Secondary color', 'Дополнительный цвет')}</label>
           <div className="flex items-center gap-2">
             <input
               type="color"
@@ -224,30 +228,30 @@ function BrandingTab({ projectId }: { projectId: string }) {
       </div>
 
       <Input
-        label="Custom title"
+        label={tr(locale, 'Custom title', 'Свой заголовок')}
         value={form.custom_title ?? ''}
         onChange={(e) => set('custom_title', e.target.value)}
         placeholder="My Project Hub"
       />
       <Input
-        label="Custom footer"
+        label={tr(locale, 'Custom footer', 'Свой нижний колонтитул')}
         value={form.custom_footer ?? ''}
         onChange={(e) => set('custom_footer', e.target.value)}
         placeholder="Confidential — do not distribute"
       />
       <Input
-        label="Featured field"
+        label={tr(locale, 'Featured field', 'Выделенное поле')}
         value={form.featured_field ?? ''}
         onChange={(e) => set('featured_field', e.target.value)}
         placeholder="Custom metadata field name"
       />
 
       <SimpleSelect<ViewerLayout>
-        label="Viewer layout"
+        label={tr(locale, 'Viewer layout', 'Вид страницы просмотра')}
         value={form.viewer_layout ?? 'grid'}
         options={[
-          { value: 'grid', label: 'Grid' },
-          { value: 'reel', label: 'Reel' },
+          { value: 'grid', label: tr(locale, 'Grid', 'Сетка') },
+          { value: 'reel', label: tr(locale, 'Reel', 'Лента') },
         ]}
         onChange={(v) => set('viewer_layout', v)}
       />
@@ -256,7 +260,7 @@ function BrandingTab({ projectId }: { projectId: string }) {
 
       <div className="flex justify-end">
         <Button type="submit" size="sm" loading={saving}>
-          Save branding
+          {tr(locale, 'Save branding', 'Сохранить брендинг')}
         </Button>
       </div>
     </form>
@@ -266,6 +270,7 @@ function BrandingTab({ projectId }: { projectId: string }) {
 // ─── Watermark Tab ────────────────────────────────────────────────────────────
 
 function WatermarkTab({ projectId }: { projectId: string }) {
+  const { locale } = useI18n()
   const key = `/projects/${projectId}/watermark`
   const { data: wm } = useSWR<WatermarkSettings>(key, () =>
     api.get<WatermarkSettings>(key),
@@ -345,14 +350,29 @@ function WatermarkTab({ projectId }: { projectId: string }) {
     }
   }
 
+  const handleImageRemove = async () => {
+    setUploadingImage(true)
+    setMsg('')
+    try {
+      await api.put(key, { image_s3_key: null })
+      setForm((current) => ({ ...current, image_s3_key: null }))
+      await globalMutate(key)
+      setMsg(tr(locale, 'Watermark image removed.', 'Изображение водяного знака удалено.'))
+    } catch (err: unknown) {
+      setMsg(err instanceof Error ? err.message : tr(locale, 'Could not remove the image.', 'Не удалось удалить изображение.'))
+    } finally {
+      setUploadingImage(false)
+    }
+  }
+
   return (
     <form onSubmit={handleSave} className="space-y-5">
       {/* Enable toggle */}
       <div className="flex items-center justify-between rounded-lg border border-border bg-bg-secondary px-4 py-3">
         <div>
-          <p className="text-sm font-medium text-text-primary">Enable watermark</p>
+          <p className="text-sm font-medium text-text-primary">{tr(locale, 'Enable watermark', 'Включить водяной знак')}</p>
           <p className="text-xs text-text-tertiary">
-            Burn user identity into shared media
+            {tr(locale, 'Burn user identity into shared media', 'Накладывать данные пользователя на опубликованные материалы')}
           </p>
         </div>
         <Switch.Root
@@ -365,24 +385,24 @@ function WatermarkTab({ projectId }: { projectId: string }) {
       </div>
 
       <SimpleSelect<WatermarkPosition>
-        label="Position"
+        label={tr(locale, 'Position', 'Положение')}
         value={form.position ?? 'center'}
         options={[
-          { value: 'center', label: 'Center' },
-          { value: 'corner', label: 'Corner' },
-          { value: 'tiled', label: 'Tiled' },
+          { value: 'center', label: tr(locale, 'Center', 'По центру') },
+          { value: 'corner', label: tr(locale, 'Corner', 'В углу') },
+          { value: 'tiled', label: tr(locale, 'Tiled', 'Мозаикой') },
         ]}
         onChange={(v) => set('position', v)}
       />
 
       <SimpleSelect<WatermarkContent>
-        label="Content"
+        label={tr(locale, 'Content', 'Содержимое')}
         value={form.content ?? 'email'}
         options={[
-          { value: 'email', label: 'User email' },
-          { value: 'name', label: 'User name' },
-          { value: 'custom_text', label: 'Custom text' },
-          { value: 'image', label: 'PNG image' },
+          { value: 'email', label: tr(locale, 'User email', 'Email пользователя') },
+          { value: 'name', label: tr(locale, 'User name', 'Имя пользователя') },
+          { value: 'custom_text', label: tr(locale, 'Custom text', 'Свой текст') },
+          { value: 'image', label: tr(locale, 'PNG image', 'Изображение PNG') },
         ]}
         onChange={(v) => set('content', v)}
       />
@@ -399,8 +419,8 @@ function WatermarkTab({ projectId }: { projectId: string }) {
       {form.content === 'image' && (
         <div className="rounded-lg border border-border bg-bg-secondary p-4 space-y-3">
           <div>
-            <p className="text-sm font-medium text-text-primary">Watermark image</p>
-            <p className="text-xs text-text-tertiary">PNG with a transparent background, up to 10 MB.</p>
+            <p className="text-sm font-medium text-text-primary">{tr(locale, 'Watermark image', 'Изображение водяного знака')}</p>
+            <p className="text-xs text-text-tertiary">{tr(locale, 'PNG with a transparent background, up to 10 MB.', 'PNG с прозрачным фоном, не более 10 МБ.')}</p>
           </div>
           {wm?.image_url && (
             // eslint-disable-next-line @next/next/no-img-element
@@ -413,22 +433,30 @@ function WatermarkTab({ projectId }: { projectId: string }) {
             className="hidden"
             onChange={(event) => handleImageUpload(event.target.files?.[0] ?? null)}
           />
-          <Button
-            type="button"
-            variant="secondary"
-            size="sm"
-            loading={uploadingImage}
-            onClick={() => imageInputRef.current?.click()}
-          >
-            <Upload className="h-4 w-4" />
-            {wm?.image_s3_key ? 'Replace PNG' : 'Upload PNG'}
-          </Button>
+          <div className="flex flex-wrap gap-2">
+            <Button
+              type="button"
+              variant="secondary"
+              size="sm"
+              loading={uploadingImage}
+              onClick={() => imageInputRef.current?.click()}
+            >
+              <Upload className="h-4 w-4" />
+              {wm?.image_s3_key ? tr(locale, 'Replace PNG', 'Заменить PNG') : tr(locale, 'Upload PNG', 'Загрузить PNG')}
+            </Button>
+            {wm?.image_s3_key && (
+              <Button type="button" variant="ghost" size="sm" disabled={uploadingImage} onClick={handleImageRemove} className="text-status-error">
+                <Trash2 className="h-4 w-4" />
+                {tr(locale, 'Remove image', 'Удалить изображение')}
+              </Button>
+            )}
+          </div>
         </div>
       )}
 
       <div className="flex flex-col gap-1.5">
         <label className="text-sm font-medium text-text-secondary">
-          Opacity: {Math.round((form.opacity ?? 0.3) * 100)}%
+          {tr(locale, 'Opacity', 'Прозрачность')}: {Math.round((form.opacity ?? 0.3) * 100)}%
         </label>
         <input
           type="range"
@@ -445,7 +473,7 @@ function WatermarkTab({ projectId }: { projectId: string }) {
 
       <div className="flex justify-end">
         <Button type="submit" size="sm" loading={saving}>
-          Save watermark
+          {tr(locale, 'Save watermark', 'Сохранить водяной знак')}
         </Button>
       </div>
     </form>
@@ -454,15 +482,16 @@ function WatermarkTab({ projectId }: { projectId: string }) {
 
 // ─── Metadata Tab ─────────────────────────────────────────────────────────────
 
-const FIELD_TYPES: { value: MetadataFieldType; label: string }[] = [
-  { value: 'text', label: 'Text' },
-  { value: 'number', label: 'Number' },
-  { value: 'date', label: 'Date' },
-  { value: 'select', label: 'Select' },
-  { value: 'multi_select', label: 'Multi Select' },
+const fieldTypes = (locale: string): { value: MetadataFieldType; label: string }[] => [
+  { value: 'text', label: tr(locale, 'Text', 'Текст') },
+  { value: 'number', label: tr(locale, 'Number', 'Число') },
+  { value: 'date', label: tr(locale, 'Date', 'Дата') },
+  { value: 'select', label: tr(locale, 'Select', 'Выбор') },
+  { value: 'multi_select', label: tr(locale, 'Multi Select', 'Множественный выбор') },
 ]
 
 function CreateFieldDialog({ projectId, onDone }: { projectId: string; onDone: () => void }) {
+  const { locale } = useI18n()
   const [open, setOpen] = React.useState(false)
   const [name, setName] = React.useState('')
   const [fieldType, setFieldType] = React.useState<MetadataFieldType>('text')
@@ -508,7 +537,7 @@ function CreateFieldDialog({ projectId, onDone }: { projectId: string; onDone: (
       <Dialog.Trigger asChild>
         <Button size="sm">
           <Plus className="h-4 w-4" />
-          Add Field
+          {tr(locale, 'Add Field', 'Добавить поле')}
         </Button>
       </Dialog.Trigger>
       <Dialog.Portal>
@@ -518,32 +547,32 @@ function CreateFieldDialog({ projectId, onDone }: { projectId: string; onDone: (
             <X className="h-4 w-4" />
           </Dialog.Close>
           <Dialog.Title className="text-base font-semibold text-text-primary">
-            Add Metadata Field
+            {tr(locale, 'Add Metadata Field', 'Добавить поле метаданных')}
           </Dialog.Title>
           <form onSubmit={handleSubmit} className="mt-4 space-y-4">
             <Input
-              label="Field name"
+              label={tr(locale, 'Field name', 'Название поля')}
               value={name}
               onChange={(e) => setName(e.target.value)}
-              placeholder="Scene number"
+              placeholder={tr(locale, 'Scene number', 'Номер сцены')}
               required
             />
             <SimpleSelect<MetadataFieldType>
-              label="Field type"
+              label={tr(locale, 'Field type', 'Тип поля')}
               value={fieldType}
-              options={FIELD_TYPES}
+              options={fieldTypes(locale)}
               onChange={setFieldType}
             />
             {(fieldType === 'select' || fieldType === 'multi_select') && (
               <Input
-                label="Options (comma separated)"
+                label={tr(locale, 'Options (comma separated)', 'Варианты через запятую')}
                 value={options}
                 onChange={(e) => setOptions(e.target.value)}
                 placeholder="Option 1, Option 2, Option 3"
               />
             )}
             <div className="flex items-center justify-between rounded-lg border border-border bg-bg-tertiary px-3 py-2">
-              <span className="text-sm text-text-secondary">Required</span>
+              <span className="text-sm text-text-secondary">{tr(locale, 'Required', 'Обязательное')}</span>
               <Switch.Root
                 checked={required}
                 onCheckedChange={setRequired}
@@ -555,10 +584,10 @@ function CreateFieldDialog({ projectId, onDone }: { projectId: string; onDone: (
             {error && <p className="text-xs text-status-error">{error}</p>}
             <div className="flex justify-end gap-2">
               <Button type="button" variant="secondary" size="sm" onClick={() => setOpen(false)}>
-                Cancel
+                {tr(locale, 'Cancel', 'Отмена')}
               </Button>
               <Button type="submit" size="sm" loading={loading}>
-                Create
+                {tr(locale, 'Create', 'Создать')}
               </Button>
             </div>
           </form>
@@ -569,6 +598,7 @@ function CreateFieldDialog({ projectId, onDone }: { projectId: string; onDone: (
 }
 
 function MetadataTab({ projectId }: { projectId: string }) {
+  const { locale } = useI18n()
   const key = `/projects/${projectId}/metadata-fields`
   const { data: fields, isLoading } = useSWR<MetadataField[]>(
     key,
@@ -588,7 +618,7 @@ function MetadataTab({ projectId }: { projectId: string }) {
     <div className="space-y-4">
       <div className="flex items-center justify-between">
         <p className="text-sm text-text-secondary">
-          Define custom fields for assets in this project.
+          {tr(locale, 'Define custom fields for assets in this project.', 'Настройте дополнительные поля для материалов этого проекта.')}
         </p>
         <CreateFieldDialog projectId={projectId} onDone={() => globalMutate(key)} />
       </div>
@@ -601,17 +631,17 @@ function MetadataTab({ projectId }: { projectId: string }) {
         </div>
       ) : !fields || fields.length === 0 ? (
         <div className="rounded-lg border border-border bg-bg-secondary p-6 text-center">
-          <p className="text-sm text-text-secondary">No custom fields yet.</p>
+          <p className="text-sm text-text-secondary">{tr(locale, 'No custom fields yet.', 'Дополнительных полей пока нет.')}</p>
         </div>
       ) : (
         <div className="rounded-lg border border-border bg-bg-secondary overflow-hidden">
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b border-border bg-bg-tertiary">
-                <th className="px-4 py-2.5 text-left text-xs font-medium text-text-tertiary">Name</th>
-                <th className="px-4 py-2.5 text-left text-xs font-medium text-text-tertiary">Type</th>
-                <th className="px-4 py-2.5 text-left text-xs font-medium text-text-tertiary">Options</th>
-                <th className="px-4 py-2.5 text-left text-xs font-medium text-text-tertiary">Required</th>
+                <th className="px-4 py-2.5 text-left text-xs font-medium text-text-tertiary">{tr(locale, 'Name', 'Название')}</th>
+                <th className="px-4 py-2.5 text-left text-xs font-medium text-text-tertiary">{tr(locale, 'Type', 'Тип')}</th>
+                <th className="px-4 py-2.5 text-left text-xs font-medium text-text-tertiary">{tr(locale, 'Options', 'Варианты')}</th>
+                <th className="px-4 py-2.5 text-left text-xs font-medium text-text-tertiary">{tr(locale, 'Required', 'Обязательное')}</th>
                 <th className="px-4 py-2.5 text-right text-xs font-medium text-text-tertiary" />
               </tr>
             </thead>
@@ -628,7 +658,7 @@ function MetadataTab({ projectId }: { projectId: string }) {
                       : '—'}
                   </td>
                   <td className="px-4 py-3 text-xs text-text-tertiary">
-                    {field.required ? 'Yes' : 'No'}
+                    {field.required ? tr(locale, 'Yes', 'Да') : tr(locale, 'No', 'Нет')}
                   </td>
                   <td className="px-4 py-3 text-right">
                     <Button
@@ -653,6 +683,7 @@ function MetadataTab({ projectId }: { projectId: string }) {
 // ─── Page ─────────────────────────────────────────────────────────────────────
 
 export default function ProjectSettingsPage() {
+  const { locale } = useI18n()
   const params = useParams()
   const searchParams = useSearchParams()
   const projectId = params.id as string
@@ -661,14 +692,14 @@ export default function ProjectSettingsPage() {
 
   return (
     <div className="p-6 space-y-6 max-w-3xl">
-      <h1 className="text-xl font-semibold text-text-primary">Project Settings</h1>
+      <h1 className="text-xl font-semibold text-text-primary">{tr(locale, 'Project Settings', 'Настройки проекта')}</h1>
 
       <Tabs.Root defaultValue={defaultTab}>
         <Tabs.List className="flex items-center gap-1 border-b border-border -mb-px">
           {[
-            { value: 'branding', label: 'Branding', icon: Palette },
-            { value: 'watermark', label: 'Watermark', icon: Droplets },
-            { value: 'metadata', label: 'Metadata Fields', icon: List },
+            { value: 'branding', label: tr(locale, 'Branding', 'Брендинг'), icon: Palette },
+            { value: 'watermark', label: tr(locale, 'Watermark', 'Водяной знак'), icon: Droplets },
+            { value: 'metadata', label: tr(locale, 'Metadata Fields', 'Поля метаданных'), icon: List },
           ].map(({ value, label, icon: Icon }) => (
             <Tabs.Trigger
               key={value}

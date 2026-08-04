@@ -35,7 +35,7 @@ const themes: {
 
 export default function AppearancePage() {
   const { theme, setTheme } = useThemeStore()
-  const { locale, setLocale } = useLocaleStore()
+  const { locale, setLocale, isSaving, saveError } = useLocaleStore()
   const { t } = useI18n()
 
   return (
@@ -181,6 +181,12 @@ export default function AppearancePage() {
             )
           })}
         </div>
+        {isSaving && (
+          <p className="text-xs text-text-tertiary">
+            {locale === 'ru' ? 'Сохранение языка…' : 'Saving language…'}
+          </p>
+        )}
+        {saveError && <p className="text-xs text-status-error">{saveError}</p>}
       </div>
     </div>
   )

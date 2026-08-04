@@ -2,7 +2,11 @@
 
 import { useEffect } from 'react'
 import { useAuthStore } from '@/stores/auth-store'
-import { isLocale, useLocaleStore } from '@/stores/locale-store'
+import {
+  PUBLIC_LOCALE_STORAGE_KEY,
+  isLocale,
+  useLocaleStore,
+} from '@/stores/locale-store'
 
 export function LocaleInitializer() {
   const locale = useLocaleStore((state) => state.locale)
@@ -15,12 +19,11 @@ export function LocaleInitializer() {
   }, [applyLocale, locale])
 
   useEffect(() => {
-    if (user?.preferences) syncFromServer(user.preferences)
-  }, [user?.preferences, syncFromServer])
-
-  useEffect(() => {
     const publicShare = window.location.pathname.startsWith('/share/')
-    if (!publicShare) return
+    if (!publicShare) {
+      if (user?.preferences) syncFromServer(user.preferences)
+      return
+    }
 
     const requestedLocale = new URLSearchParams(window.location.search).get('lang')
     if (isLocale(requestedLocale)) {
@@ -28,15 +31,22 @@ export function LocaleInitializer() {
       return
     }
 
-    applyLocale('ru')
-  }, [applyLocale])
+    const profileLocale = user?.preferences?.locale
+    if (isLocale(profileLocale)) {
+      applyLocale(profileLocale)
+      return
+    }
+
+    const localPublicLocale = localStorage.getItem(PUBLIC_LOCALE_STORAGE_KEY)
+    applyLocale(isLocale(localPublicLocale) ? localPublicLocale : 'ru')
+  }, [applyLocale, syncFromServer, user?.preferences])
 
   return null
 }
 
 export function PublicLocaleSwitcher() {
   const locale = useLocaleStore((state) => state.locale)
-  const setLocale = useLocaleStore((state) => state.setLocale)
+  const setPublicLocale = useLocaleStore((state) => state.setPublicLocale)
 
   return (
     <label className="flex h-8 shrink-0 items-center gap-1.5 rounded-md border border-border bg-bg-tertiary px-2 text-xs text-text-tertiary">
@@ -45,7 +55,7 @@ export function PublicLocaleSwitcher() {
         value={locale}
         onChange={(event) => {
           const nextLocale = event.target.value === 'ru' ? 'ru' : 'en'
-          setLocale(nextLocale)
+          setPublicLocale(nextLocale)
           const url = new URL(window.location.href)
           url.searchParams.set('lang', nextLocale)
           window.history.replaceState({}, '', url)
