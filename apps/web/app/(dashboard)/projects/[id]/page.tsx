@@ -542,7 +542,7 @@ export default function ProjectDetailPage() {
                           }
                         >
                           <ExternalLink className="h-4 w-4 text-text-tertiary" />
-                          Open Share
+                          {t("share.open")}
                         </DropdownMenu.Item>
                         <DropdownMenu.Item
                           className="flex items-center gap-2.5 rounded-lg px-3 py-2 text-sm text-text-secondary hover:bg-bg-hover hover:text-text-primary cursor-pointer outline-none transition-colors"
@@ -553,7 +553,7 @@ export default function ProjectDetailPage() {
                           }
                         >
                           <LinkIcon className="h-4 w-4 text-text-tertiary" />
-                          Copy Link
+                          {t("share.copyLink")}
                         </DropdownMenu.Item>
                         <DropdownMenu.Separator className="my-1 h-px bg-border" />
                         <DropdownMenu.Item
@@ -563,7 +563,9 @@ export default function ProjectDetailPage() {
                           }
                         >
                           <MinusCircle className="h-4 w-4 text-text-tertiary" />
-                          {link.is_enabled ? "Disable Access" : "Enable Access"}
+                          {link.is_enabled
+                            ? t("share.disableAccess")
+                            : t("share.enableAccess")}
                         </DropdownMenu.Item>
                         <DropdownMenu.Item
                           className="flex items-center gap-2.5 rounded-lg px-3 py-2 text-sm text-status-error hover:bg-status-error/10 cursor-pointer outline-none transition-colors"

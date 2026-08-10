@@ -467,6 +467,7 @@ function ShareUserSearch({ shareLink }: { shareLink: ShareLink }) {
 
 function CopyButton({ text, className }: { text: string; className?: string }) {
   const [copied, setCopied] = React.useState(false);
+  const { t } = useI18n();
 
   async function handleCopy() {
     try {
@@ -485,17 +486,17 @@ function CopyButton({ text, className }: { text: string; className?: string }) {
         "inline-flex items-center gap-1.5 rounded px-2 py-1 text-xs text-text-secondary hover:bg-bg-hover hover:text-text-primary transition-colors",
         className,
       )}
-      title="Copy to clipboard"
+      title={t("share.copyToClipboard")}
     >
       {copied ? (
         <>
           <Check className="h-3.5 w-3.5 text-green-400" />
-          <span>Copied!</span>
+          <span>{t("share.linkCopied")}</span>
         </>
       ) : (
         <>
           <Copy className="h-3.5 w-3.5" />
-          <span>Copy</span>
+          <span>{t("share.copyLink")}</span>
         </>
       )}
     </button>
