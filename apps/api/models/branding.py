@@ -49,5 +49,6 @@ class WatermarkSettings(Base):
     content: Mapped[WatermarkContent] = mapped_column(Enum(WatermarkContent), default=WatermarkContent.email)
     custom_text: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)
     image_s3_key: Mapped[Optional[str]] = mapped_column(String(1000), nullable=True)
+    image_scale: Mapped[str] = mapped_column(String(20), nullable=False, default="fit", server_default="fit")
     opacity: Mapped[float] = mapped_column(Float, default=0.3)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())

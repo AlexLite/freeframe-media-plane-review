@@ -305,6 +305,7 @@ function WatermarkTab({ projectId }: { projectId: string }) {
         content: form.content,
         custom_text: form.custom_text,
         image_s3_key: form.image_s3_key,
+        image_scale: form.image_scale,
         opacity: form.opacity,
       })
       setMsg('Watermark settings saved.')
@@ -451,6 +452,18 @@ function WatermarkTab({ projectId }: { projectId: string }) {
               </Button>
             )}
           </div>
+          <SimpleSelect<'fit' | 'original'>
+            label={tr(locale, 'Image scale', 'Масштаб изображения')}
+            value={form.image_scale ?? 'fit'}
+            options={[
+              { value: 'fit', label: tr(locale, 'Fit watermark', 'Уменьшить под водяной знак') },
+              { value: 'original', label: tr(locale, 'Original size (1:1)', 'Оригинальный размер (1:1)') },
+            ]}
+            onChange={(value) => set('image_scale', value)}
+          />
+          <p className="text-xs text-text-tertiary">
+            {tr(locale, 'Original size preserves the PNG dimensions and alpha channel.', 'Оригинальный размер сохраняет разрешение PNG и альфа-канал.')}
+          </p>
         </div>
       )}
 

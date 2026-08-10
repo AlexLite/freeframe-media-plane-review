@@ -31,6 +31,7 @@ def _watermarked_stream_mocks():
     watermark.content = "custom_text"
     watermark.custom_text = "CONFIDENTIAL"
     watermark.image_s3_key = None
+    watermark.image_scale = "fit"
     watermark.position = "corner"
     watermark.opacity = 0.3
     return asset_id, link, asset, media, watermark

@@ -174,7 +174,7 @@ def _public_watermark_spec(
     link: ShareLink,
     asset: Asset,
     current_user: Optional[User],
-) -> tuple[WatermarkSettings, str, Optional[str], str]:
+) -> tuple[WatermarkSettings, str, Optional[str], str, str]:
     """Resolve the project/share watermark and its viewer-specific cache key."""
     wm = db.query(WatermarkSettings).filter(
         WatermarkSettings.project_id == asset.project_id,
@@ -206,10 +206,10 @@ def _public_watermark_spec(
     fingerprint = hashlib.sha256(
         "|".join([
             str(link.id), str(wm.id), getattr(wm.position, "value", str(wm.position)), str(wm.opacity),
-            getattr(wm.content, "value", str(wm.content)), watermark_text, image_key or "",
+            getattr(wm.content, "value", str(wm.content)), watermark_text, image_key or "", wm.image_scale,
         ]).encode("utf-8")
     ).hexdigest()[:24]
-    return wm, watermark_text, image_key, fingerprint
+    return wm, watermark_text, image_key, wm.image_scale, fingerprint
 
 
 def _queue_public_watermark(
@@ -219,6 +219,7 @@ def _queue_public_watermark(
     watermark_text: str,
     image_key: Optional[str],
     target_key: str,
+    image_scale: str,
 ) -> None:
     """Queue a derivative once per target key while repeated clients poll."""
     should_queue = True
@@ -244,6 +245,7 @@ def _queue_public_watermark(
         image_key,
         str(media_file.version_id),
         target_key,
+        image_scale,
     )
 
 
@@ -1501,13 +1503,13 @@ def get_share_stream_url(
         raise HTTPException(status_code=404, detail="No ready media file found")
 
     if link.show_watermark is True and asset.asset_type == AssetType.video:
-        wm, watermark_text, image_key, fingerprint = _public_watermark_spec(
+        wm, watermark_text, image_key, image_scale, fingerprint = _public_watermark_spec(
             db, link, asset, current_user,
         )
         watermarked_key = f"watermarked/{asset.id}/{media_file.version_id}/{fingerprint}.mp4"
         if not object_exists(watermarked_key):
             _queue_public_watermark(
-                asset, media_file, wm, watermark_text, image_key, watermarked_key,
+                asset, media_file, wm, watermark_text, image_key, watermarked_key, image_scale,
             )
             return JSONResponse(
                 status_code=status.HTTP_202_ACCEPTED,

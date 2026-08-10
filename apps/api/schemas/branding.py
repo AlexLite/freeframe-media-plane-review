@@ -63,6 +63,7 @@ class WatermarkUpdate(BaseModel):
     content: Optional[Literal["email", "name", "custom_text", "image"]] = None
     custom_text: Optional[str] = None
     image_s3_key: Optional[str] = None
+    image_scale: Optional[Literal["fit", "original"]] = None
     opacity: Optional[float] = None
 
     @field_validator("opacity", mode="before")
@@ -82,6 +83,7 @@ class WatermarkResponse(BaseModel):
     custom_text: Optional[str] = None
     image_s3_key: Optional[str] = None
     image_url: Optional[str] = None
+    image_scale: str = "fit"
     opacity: float
 
     model_config = {"from_attributes": True}

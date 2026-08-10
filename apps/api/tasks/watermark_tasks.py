@@ -14,7 +14,7 @@ from ..models.asset import Asset, MediaFile
 from ..config import settings
 
 
-def build_image_watermark_filter(position: str, opacity: float) -> str:
+def build_image_watermark_filter(position: str, opacity: float, image_scale: str = "fit") -> str:
     """Build an FFmpeg graph for one centered/corner image or a real 3x3 tile."""
     if position != "tiled":
         x, y = (
@@ -22,8 +22,9 @@ def build_image_watermark_filter(position: str, opacity: float) -> str:
             if position == "center"
             else ("main_w-overlay_w-20", "main_h-overlay_h-20")
         )
+        scale_filter = "" if image_scale == "original" else "scale=w='min(300,iw)':h=-1,"
         return (
-            f"[1:v]scale=w='min(300,iw)':h=-1,format=rgba,"
+            f"[1:v]{scale_filter}format=rgba,"
             f"colorchannelmixer=aa={opacity}[wm];"
             f"[0:v][wm]overlay=x={x}:y={y}[outv]"
         )
@@ -72,6 +73,7 @@ def apply_watermark(
     image_key: str | None,
     version_id: str | None = None,
     target_key: str | None = None,
+    image_scale: str = "fit",
 ):
     """Burn a watermark into a video asset and upload the MP4 derivative to S3."""
     from ..services.s3_service import get_s3_client, put_object
@@ -128,7 +130,7 @@ def apply_watermark(
             if image_key:
                 image_path = os.path.join(tmp, "watermark.png")
                 s3.download_file(settings.s3_bucket, image_key, image_path)
-                filter_complex = build_image_watermark_filter(position, opacity)
+                filter_complex = build_image_watermark_filter(position, opacity, image_scale)
                 cmd = [
                     "ffmpeg", "-y",
                     "-i", local_path,

@@ -9,10 +9,15 @@ from apps.api.tasks.celery_app import celery_app
 
 
 def test_watermark_update_accepts_png_image_content():
-    update = WatermarkUpdate(content="image", image_s3_key="branding/project/watermark/test.png")
+    update = WatermarkUpdate(
+        content="image",
+        image_s3_key="branding/project/watermark/test.png",
+        image_scale="original",
+    )
 
     assert update.content == "image"
     assert update.image_s3_key.endswith(".png")
+    assert update.image_scale == "original"
 
 
 def test_watermark_update_can_explicitly_clear_image():
@@ -29,6 +34,13 @@ def test_tiled_image_filter_contains_nine_overlays():
     assert graph.endswith("[outv]")
 
 
+def test_original_image_scale_preserves_png_dimensions():
+    graph = build_image_watermark_filter("center", 0.3, "original")
+
+    assert "scale=" not in graph
+    assert "format=rgba" in graph
+
+
 def test_watermark_response_exposes_image_preview_url():
     response = WatermarkResponse(
         id="00000000-0000-0000-0000-000000000001",
@@ -38,11 +50,13 @@ def test_watermark_response_exposes_image_preview_url():
         content="image",
         image_s3_key="branding/project/watermark/test.png",
         image_url="https://storage.example/test.png",
+        image_scale="original",
         opacity=0.3,
     )
 
     assert response.content == "image"
     assert response.image_url == "https://storage.example/test.png"
+    assert response.image_scale == "original"
 
 
 @patch("apps.api.services.s3_service._get_presign_client")
@@ -107,7 +121,7 @@ def test_watermark_task_uses_requested_version_and_target_key(
 
     apply_watermark.run(
         str(asset_id), "CONFIDENTIAL", "corner", 0.3, None,
-        str(version_id), target_key,
+        str(version_id), target_key, "fit",
     )
 
     put_object.assert_called_once()
