@@ -18,7 +18,6 @@ from ..schemas.branding import (
 )
 from ..services.permissions import require_project_role, require_asset_access
 from ..services import s3_service
-from ..config import settings
 
 router = APIRouter(tags=["branding"])
 
@@ -112,15 +111,7 @@ def get_logo_upload_url(
 ):
     require_project_role(db, project_id, current_user, ProjectRole.editor)
     key = f"branding/{project_id}/logo/{uuid.uuid4()}.webp"
-    upload_url = s3_service.get_s3_client().generate_presigned_url(
-        "put_object",
-        Params={
-            "Bucket": settings.s3_bucket,
-            "Key": key,
-            "ContentType": "image/webp",
-        },
-        ExpiresIn=3600,
-    )
+    upload_url = s3_service.generate_presigned_put_url(key, "image/webp")
     return BrandingLogoUploadResponse(upload_url=upload_url, key=key)
 
 
@@ -152,6 +143,10 @@ def upsert_watermark(
     new_image_key = update_data.get("image_s3_key")
     if new_image_key and not new_image_key.startswith(f"branding/{project_id}/watermark/"):
         raise HTTPException(status_code=400, detail="Invalid watermark image key")
+    next_content = update_data.get("content", wm.content)
+    next_image_key = update_data.get("image_s3_key", wm.image_s3_key)
+    if getattr(next_content, "value", next_content) == "image" and not next_image_key:
+        raise HTTPException(status_code=400, detail="Upload a PNG watermark image before selecting image mode")
     previous_image_key = wm.image_s3_key
     for field, value in update_data.items():
         setattr(wm, field, value)
@@ -177,15 +172,7 @@ def get_watermark_image_upload_url(
 ):
     require_project_role(db, project_id, current_user, ProjectRole.editor)
     key = f"branding/{project_id}/watermark/{uuid.uuid4()}.png"
-    upload_url = s3_service.get_s3_client().generate_presigned_url(
-        "put_object",
-        Params={
-            "Bucket": settings.s3_bucket,
-            "Key": key,
-            "ContentType": "image/png",
-        },
-        ExpiresIn=3600,
-    )
+    upload_url = s3_service.generate_presigned_put_url(key, "image/png")
     return WatermarkImageUploadResponse(upload_url=upload_url, key=key)
 
 

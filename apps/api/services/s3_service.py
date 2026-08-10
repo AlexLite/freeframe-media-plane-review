@@ -221,6 +221,23 @@ def presign_upload_part(s3_key: str, upload_id: str, part_number: int, expires_i
         ExpiresIn=expires_in,
     )
 
+
+def generate_presigned_put_url(
+    s3_key: str,
+    content_type: str,
+    expires_in: int = 3600,
+) -> str:
+    """Generate a browser-accessible presigned URL for a single PUT upload."""
+    return _get_presign_client().generate_presigned_url(
+        "put_object",
+        Params={
+            "Bucket": settings.s3_bucket,
+            "Key": s3_key,
+            "ContentType": content_type,
+        },
+        ExpiresIn=expires_in,
+    )
+
 def complete_multipart_upload(s3_key: str, upload_id: str, parts: list[dict]) -> None:
     """Complete a multipart upload. `parts` is a list of {"PartNumber": int, "ETag": str}."""
     s3 = get_s3_client()

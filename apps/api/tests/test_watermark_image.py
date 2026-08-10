@@ -4,6 +4,8 @@ import uuid
 
 from apps.api.schemas.branding import WatermarkResponse, WatermarkUpdate
 from apps.api.tasks.watermark_tasks import apply_watermark, build_image_watermark_filter
+from apps.api.services import s3_service
+from apps.api.tasks.celery_app import celery_app
 
 
 def test_watermark_update_accepts_png_image_content():
@@ -41,6 +43,32 @@ def test_watermark_response_exposes_image_preview_url():
 
     assert response.content == "image"
     assert response.image_url == "https://storage.example/test.png"
+
+
+@patch("apps.api.services.s3_service._get_presign_client")
+def test_single_put_upload_uses_browser_accessible_presign_client(get_presign_client):
+    client = get_presign_client.return_value
+    client.generate_presigned_url.return_value = "https://storage.example/upload.png"
+
+    result = s3_service.generate_presigned_put_url(
+        "branding/project/watermark/test.png", "image/png"
+    )
+    assert result == "https://storage.example/upload.png"
+    client.generate_presigned_url.assert_called_once_with(
+        "put_object",
+        Params={
+            "Bucket": s3_service.settings.s3_bucket,
+            "Key": "branding/project/watermark/test.png",
+            "ContentType": "image/png",
+        },
+        ExpiresIn=3600,
+    )
+
+
+def test_watermark_task_is_routed_to_transcoding_worker():
+    route = celery_app.conf.task_routes["apply_watermark"]
+
+    assert route == {"queue": "transcoding"}
 
 
 @patch("apps.api.tasks.watermark_tasks._publish_event")
