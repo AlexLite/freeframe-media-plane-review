@@ -14,6 +14,29 @@ from ..models.asset import Asset, MediaFile
 from ..config import settings
 
 
+def _run_video_ffmpeg(cmd: list[str], *, timeout: int = 600) -> None:
+    """Prefer NVENC on GPU workers and retry with libx264 if it fails."""
+    use_nvenc = (
+        os.getenv("FFMPEG_ACCELERATION", "auto").strip().lower() != "cpu"
+        and os.path.exists("/dev/nvidia0")
+    )
+    codec = (
+        ["-c:v", "h264_nvenc", "-preset", os.getenv("NVENC_PRESET", "p4"), "-cq", "23"]
+        if use_nvenc
+        else ["-c:v", "libx264", "-preset", "fast", "-crf", "23"]
+    )
+    gpu_cmd = list(cmd[:-1]) + codec + [cmd[-1]]
+    try:
+        subprocess.run(gpu_cmd, check=True, timeout=timeout)
+    except (subprocess.CalledProcessError, OSError):
+        if not use_nvenc:
+            raise
+        cpu_cmd = list(cmd[:-1]) + [
+            "-c:v", "libx264", "-preset", "fast", "-crf", "23", cmd[-1]
+        ]
+        subprocess.run(cpu_cmd, check=True, timeout=timeout)
+
+
 def build_image_watermark_filter(position: str, opacity: float, image_scale: str = "fit") -> str:
     """Build an FFmpeg graph for one centered/corner image or a real 3x3 tile."""
     if position != "tiled":
@@ -141,7 +164,7 @@ def apply_watermark(
                     "-c:a", "copy",
                     output_path,
                 ]
-                subprocess.run(cmd, check=True, timeout=600)
+                _run_video_ffmpeg(cmd)
             elif watermark_text:
                 escaped = watermark_text.replace("'", r"'\''").replace(":", r"\:")
                 fontsize = 24
@@ -178,7 +201,7 @@ def apply_watermark(
                     "-c:a", "copy",
                     output_path,
                 ]
-                subprocess.run(cmd, check=True, timeout=600)
+                _run_video_ffmpeg(cmd)
             else:
                 # No watermark text — copy as-is
                 output_path = local_path
