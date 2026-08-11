@@ -40,5 +40,6 @@ class DeviceFlowCORSMiddleware(BaseHTTPMiddleware):
         response = await call_next(request)
         if is_device_request and request.headers.get("origin"):
             response.headers["Access-Control-Allow-Origin"] = DEVICE_FLOW_ALLOW_ORIGIN
-            response.headers.pop("Access-Control-Allow-Credentials", None)
+            if "Access-Control-Allow-Credentials" in response.headers:
+                del response.headers["Access-Control-Allow-Credentials"]
         return response
