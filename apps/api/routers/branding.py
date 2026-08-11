@@ -5,7 +5,7 @@ from sqlalchemy.orm import Session
 from ..database import get_db
 from ..middleware.auth import get_current_user
 from ..models.user import User
-from ..models.asset import Asset
+from ..models.asset import Asset, AssetType
 from ..models.project import ProjectRole
 from ..models.branding import ProjectBranding, WatermarkSettings
 from ..schemas.branding import (
@@ -18,7 +18,6 @@ from ..schemas.branding import (
 )
 from ..services.permissions import require_project_role, require_asset_access
 from ..services import s3_service
-from ..config import settings
 
 router = APIRouter(tags=["branding"])
 
@@ -58,6 +57,16 @@ def _branding_to_response(branding: ProjectBranding) -> BrandingResponse:
         except Exception:
             resp.logo_url = None
     return resp
+
+
+def _watermark_to_response(watermark: WatermarkSettings) -> WatermarkResponse:
+    response = WatermarkResponse.model_validate(watermark)
+    if watermark.image_s3_key:
+        try:
+            response.image_url = s3_service.generate_presigned_get_url(watermark.image_s3_key)
+        except Exception:
+            response.image_url = None
+    return response
 
 
 # ── Project Branding ──────────────────────────────────────────────────────────
@@ -102,15 +111,7 @@ def get_logo_upload_url(
 ):
     require_project_role(db, project_id, current_user, ProjectRole.editor)
     key = f"branding/{project_id}/logo/{uuid.uuid4()}.webp"
-    upload_url = s3_service.get_s3_client().generate_presigned_url(
-        "put_object",
-        Params={
-            "Bucket": settings.s3_bucket,
-            "Key": key,
-            "ContentType": "image/webp",
-        },
-        ExpiresIn=3600,
-    )
+    upload_url = s3_service.generate_presigned_put_url(key, "image/webp")
     return BrandingLogoUploadResponse(upload_url=upload_url, key=key)
 
 
@@ -124,7 +125,7 @@ def get_watermark(
 ):
     require_project_role(db, project_id, current_user, ProjectRole.viewer)
     wm = _get_or_create_watermark(db, project_id)
-    return WatermarkResponse.model_validate(wm)
+    return _watermark_to_response(wm)
 
 
 @router.put("/projects/{project_id}/watermark", response_model=WatermarkResponse)
@@ -136,12 +137,27 @@ def upsert_watermark(
 ):
     require_project_role(db, project_id, current_user, ProjectRole.editor)
     wm = _get_or_create_watermark(db, project_id)
-    update_data = body.model_dump(exclude_none=True)
+    # ``exclude_unset`` keeps PATCH-like semantics while still allowing an
+    # explicit JSON null to remove a previously uploaded watermark image.
+    update_data = body.model_dump(exclude_unset=True)
+    new_image_key = update_data.get("image_s3_key")
+    if new_image_key and not new_image_key.startswith(f"branding/{project_id}/watermark/"):
+        raise HTTPException(status_code=400, detail="Invalid watermark image key")
+    next_content = update_data.get("content", wm.content)
+    next_image_key = update_data.get("image_s3_key", wm.image_s3_key)
+    if getattr(next_content, "value", next_content) == "image" and not next_image_key:
+        raise HTTPException(status_code=400, detail="Upload a PNG watermark image before selecting image mode")
+    previous_image_key = wm.image_s3_key
     for field, value in update_data.items():
         setattr(wm, field, value)
     db.commit()
     db.refresh(wm)
-    return WatermarkResponse.model_validate(wm)
+    if "image_s3_key" in update_data and previous_image_key and previous_image_key != new_image_key:
+        try:
+            s3_service.delete_object(previous_image_key)
+        except Exception:
+            pass
+    return _watermark_to_response(wm)
 
 
 @router.post(
@@ -156,15 +172,7 @@ def get_watermark_image_upload_url(
 ):
     require_project_role(db, project_id, current_user, ProjectRole.editor)
     key = f"branding/{project_id}/watermark/{uuid.uuid4()}.png"
-    upload_url = s3_service.get_s3_client().generate_presigned_url(
-        "put_object",
-        Params={
-            "Bucket": settings.s3_bucket,
-            "Key": key,
-            "ContentType": "image/png",
-        },
-        ExpiresIn=3600,
-    )
+    upload_url = s3_service.generate_presigned_put_url(key, "image/png")
     return WatermarkImageUploadResponse(upload_url=upload_url, key=key)
 
 
@@ -179,6 +187,8 @@ def apply_watermark_to_asset(
     asset = db.query(Asset).filter(Asset.id == asset_id, Asset.deleted_at.is_(None)).first()
     if not asset:
         raise HTTPException(status_code=404, detail="Asset not found")
+    if asset.asset_type != AssetType.video:
+        raise HTTPException(status_code=400, detail="Watermark rendering currently supports video assets only")
 
     require_project_role(db, asset.project_id, current_user, ProjectRole.editor)
 
@@ -194,8 +204,12 @@ def apply_watermark_to_asset(
         watermark_text = current_user.email
     elif wm.content == "name":
         watermark_text = current_user.name or current_user.email
-    else:  # custom_text
+    elif wm.content == "custom_text":
         watermark_text = wm.custom_text or ""
+    else:  # image
+        watermark_text = ""
+        if not wm.image_s3_key:
+            raise HTTPException(status_code=400, detail="Watermark image not uploaded")
 
     from ..tasks.watermark_tasks import apply_watermark
     from ..tasks.celery_app import send_task_safe
@@ -205,6 +219,6 @@ def apply_watermark_to_asset(
         watermark_text,
         wm.position,
         wm.opacity,
-        None,  # image_key not stored in model
+        wm.image_s3_key if wm.content == "image" else None,
     )
     return {"status": "watermark_queued"}

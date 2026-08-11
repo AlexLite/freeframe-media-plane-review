@@ -23,6 +23,7 @@ class WatermarkContent(str, PyEnum):
     email = "email"
     name = "name"
     custom_text = "custom_text"
+    image = "image"
 
 class ProjectBranding(Base):
     __tablename__ = "project_brandings"
@@ -47,5 +48,7 @@ class WatermarkSettings(Base):
     position: Mapped[WatermarkPosition] = mapped_column(Enum(WatermarkPosition), default=WatermarkPosition.corner)
     content: Mapped[WatermarkContent] = mapped_column(Enum(WatermarkContent), default=WatermarkContent.email)
     custom_text: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)
+    image_s3_key: Mapped[Optional[str]] = mapped_column(String(1000), nullable=True)
+    image_scale: Mapped[str] = mapped_column(String(20), nullable=False, default="fit", server_default="fit")
     opacity: Mapped[float] = mapped_column(Float, default=0.3)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())

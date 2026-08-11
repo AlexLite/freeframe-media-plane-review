@@ -221,6 +221,23 @@ def presign_upload_part(s3_key: str, upload_id: str, part_number: int, expires_i
         ExpiresIn=expires_in,
     )
 
+
+def generate_presigned_put_url(
+    s3_key: str,
+    content_type: str,
+    expires_in: int = 3600,
+) -> str:
+    """Generate a browser-accessible presigned URL for a single PUT upload."""
+    return _get_presign_client().generate_presigned_url(
+        "put_object",
+        Params={
+            "Bucket": settings.s3_bucket,
+            "Key": s3_key,
+            "ContentType": content_type,
+        },
+        ExpiresIn=expires_in,
+    )
+
 def complete_multipart_upload(s3_key: str, upload_id: str, parts: list[dict]) -> None:
     """Complete a multipart upload. `parts` is a list of {"PartNumber": int, "ETag": str}."""
     s3 = get_s3_client()
@@ -291,6 +308,19 @@ def put_object(s3_key: str, body: bytes, content_type: str | None = None, cache_
 def delete_object(s3_key: str) -> None:
     s3 = get_s3_client()
     s3.delete_object(Bucket=settings.s3_bucket, Key=s3_key)
+
+
+def object_exists(s3_key: str) -> bool:
+    """Return whether an S3 object exists without downloading it."""
+    try:
+        get_s3_client().head_object(Bucket=settings.s3_bucket, Key=s3_key)
+        return True
+    except Exception as exc:
+        response = getattr(exc, "response", {})
+        code = str(response.get("Error", {}).get("Code", ""))
+        if code in {"404", "NoSuchKey", "NotFound"}:
+            return False
+        raise
 
 
 def list_stale_multipart_uploads(cutoff):

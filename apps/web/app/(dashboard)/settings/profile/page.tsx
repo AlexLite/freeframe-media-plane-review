@@ -7,9 +7,11 @@ import { api } from '@/lib/api'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Avatar } from '@/components/shared/avatar'
+import { useI18n } from '@/hooks/use-i18n'
 
 export default function ProfilePage() {
   const { user, fetchUser } = useAuthStore()
+  const { t, localizeError } = useI18n()
 
   const [name, setName] = React.useState(user?.name ?? '')
   const [isSavingProfile, setIsSavingProfile] = React.useState(false)
@@ -23,7 +25,6 @@ export default function ProfilePage() {
   const [passwordError, setPasswordError] = React.useState('')
   const [passwordSuccess, setPasswordSuccess] = React.useState(false)
 
-  // Sync name when user loads
   React.useEffect(() => {
     if (user?.name) setName(user.name)
   }, [user?.name])
@@ -33,7 +34,7 @@ export default function ProfilePage() {
     setProfileError('')
     setProfileSuccess(false)
     if (!name.trim()) {
-      setProfileError('Name is required')
+      setProfileError(t('profile.nameRequired'))
       return
     }
     setIsSavingProfile(true)
@@ -42,9 +43,8 @@ export default function ProfilePage() {
       await fetchUser()
       setProfileSuccess(true)
       setTimeout(() => setProfileSuccess(false), 3000)
-    } catch (err: unknown) {
-      const message = err instanceof Error ? err.message : 'Failed to save profile'
-      setProfileError(message)
+    } catch (error: unknown) {
+      setProfileError(localizeError(error, 'profile.saveFailed'))
     } finally {
       setIsSavingProfile(false)
     }
@@ -56,15 +56,15 @@ export default function ProfilePage() {
     setPasswordSuccess(false)
 
     if (!currentPassword || !newPassword || !confirmPassword) {
-      setPasswordError('All fields are required')
+      setPasswordError(t('profile.allFieldsRequired'))
       return
     }
     if (newPassword.length < 8) {
-      setPasswordError('Password must be at least 8 characters')
+      setPasswordError(t('auth.passwordLength'))
       return
     }
     if (newPassword !== confirmPassword) {
-      setPasswordError('Passwords do not match')
+      setPasswordError(t('auth.passwordMismatch'))
       return
     }
 
@@ -79,145 +79,129 @@ export default function ProfilePage() {
       setConfirmPassword('')
       setPasswordSuccess(true)
       setTimeout(() => setPasswordSuccess(false), 3000)
-    } catch (err: unknown) {
-      const message = err instanceof Error ? err.message : 'Failed to change password'
-      setPasswordError(message)
+    } catch (error: unknown) {
+      setPasswordError(localizeError(error, 'profile.passwordSaveFailed'))
     } finally {
       setIsSavingPassword(false)
     }
   }
 
   return (
-    <div className="p-6 max-w-xl space-y-8">
-      <div className="flex items-center gap-3">
-        <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-accent-muted">
+    <div className="max-w-xl space-y-8 p-4 sm:p-6">
+      <div className="flex items-start gap-3">
+        <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-accent-muted">
           <User className="h-5 w-5 text-accent" />
         </div>
-        <div>
-          <h1 className="text-lg font-semibold text-text-primary">Profile</h1>
-          <p className="text-sm text-text-secondary">
-            Manage your profile and account settings
-          </p>
+        <div className="min-w-0">
+          <h1 className="text-lg font-semibold text-text-primary">{t('profile.title')}</h1>
+          <p className="text-sm text-text-secondary">{t('profile.description')}</p>
         </div>
       </div>
 
-      {/* Profile section */}
       <section className="space-y-4">
-        <h2 className="text-sm font-semibold text-text-primary border-b border-border pb-2">
-          Profile
+        <h2 className="border-b border-border pb-2 text-sm font-semibold text-text-primary">
+          {t('profile.title')}
         </h2>
 
-        <div className="flex items-center gap-4">
+        <div className="flex min-w-0 items-center gap-4">
           <Avatar src={user?.avatar_url} name={user?.name} size="lg" />
-          <div>
-            <p className="text-sm font-medium text-text-primary">
-              {user?.name ?? 'Loading...'}
+          <div className="min-w-0">
+            <p className="truncate text-sm font-medium text-text-primary">
+              {user?.name ?? t('common.loading')}
             </p>
-            <p className="text-xs text-text-tertiary">{user?.email ?? ''}</p>
+            <p className="truncate text-xs text-text-tertiary">{user?.email ?? ''}</p>
           </div>
         </div>
 
         <form onSubmit={handleProfileSave} className="space-y-4">
           <div className="space-y-1.5">
             <label htmlFor="name" className="text-xs font-medium text-text-secondary">
-              Full Name
+              {t('profile.fullName')}
             </label>
             <Input
               id="name"
               value={name}
               onChange={(e) => setName(e.target.value)}
-              placeholder="Your name"
+              placeholder={t('profile.namePlaceholder')}
             />
           </div>
 
           <div className="space-y-1.5">
             <label htmlFor="email" className="text-xs font-medium text-text-secondary">
-              Email
+              {t('profile.email')}
             </label>
             <Input
               id="email"
               value={user?.email ?? ''}
               disabled
-              className="opacity-60 cursor-not-allowed"
+              className="cursor-not-allowed opacity-60"
             />
-            <p className="text-2xs text-text-tertiary">
-              Email cannot be changed. Contact your admin for help.
-            </p>
+            <p className="text-2xs text-text-tertiary">{t('profile.emailLocked')}</p>
           </div>
 
-          {profileError && (
-            <p className="text-xs text-status-error">{profileError}</p>
-          )}
+          {profileError && <p className="text-xs text-status-error">{profileError}</p>}
           {profileSuccess && (
-            <p className="text-xs text-status-success">Profile saved successfully.</p>
+            <p className="text-xs text-status-success">{t('profile.saved')}</p>
           )}
 
           <Button type="submit" variant="primary" size="sm" loading={isSavingProfile}>
-            Save Profile
+            {t('profile.save')}
           </Button>
         </form>
       </section>
 
-      {/* Password section */}
       <section className="space-y-4">
-        <h2 className="text-sm font-semibold text-text-primary border-b border-border pb-2">
-          Change Password
+        <h2 className="border-b border-border pb-2 text-sm font-semibold text-text-primary">
+          {t('profile.changePassword')}
         </h2>
 
         <form onSubmit={handlePasswordSave} className="space-y-4">
           <div className="space-y-1.5">
             <label htmlFor="currentPassword" className="text-xs font-medium text-text-secondary">
-              Current Password
+              {t('profile.currentPassword')}
             </label>
             <Input
               id="currentPassword"
               type="password"
               value={currentPassword}
               onChange={(e) => setCurrentPassword(e.target.value)}
-              placeholder="Enter current password"
+              placeholder={t('profile.currentPasswordPlaceholder')}
             />
           </div>
 
           <div className="space-y-1.5">
             <label htmlFor="newPassword" className="text-xs font-medium text-text-secondary">
-              New Password
+              {t('profile.newPassword')}
             </label>
             <Input
               id="newPassword"
               type="password"
               value={newPassword}
               onChange={(e) => setNewPassword(e.target.value)}
-              placeholder="Min 8 characters"
+              placeholder={t('profile.newPasswordPlaceholder')}
             />
           </div>
 
           <div className="space-y-1.5">
             <label htmlFor="confirmPassword" className="text-xs font-medium text-text-secondary">
-              Confirm New Password
+              {t('profile.confirmNewPassword')}
             </label>
             <Input
               id="confirmPassword"
               type="password"
               value={confirmPassword}
               onChange={(e) => setConfirmPassword(e.target.value)}
-              placeholder="Repeat new password"
+              placeholder={t('profile.confirmPasswordPlaceholder')}
             />
           </div>
 
-          {passwordError && (
-            <p className="text-xs text-status-error">{passwordError}</p>
-          )}
+          {passwordError && <p className="text-xs text-status-error">{passwordError}</p>}
           {passwordSuccess && (
-            <p className="text-xs text-status-success">Password changed successfully.</p>
+            <p className="text-xs text-status-success">{t('profile.passwordSaved')}</p>
           )}
 
-          <Button
-            type="submit"
-            variant="secondary"
-            size="sm"
-            loading={isSavingPassword}
-          >
-            Change Password
+          <Button type="submit" variant="secondary" size="sm" loading={isSavingPassword}>
+            {t('profile.changePassword')}
           </Button>
         </form>
       </section>

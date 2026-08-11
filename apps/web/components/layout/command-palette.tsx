@@ -19,6 +19,7 @@ import { cn } from "@/lib/utils";
 import { api } from "@/lib/api";
 import { Film, Music, Image as ImageIcon } from "lucide-react";
 import type { Project, AssetResponse } from "@/types";
+import { useI18n } from "@/hooks/use-i18n";
 
 interface CommandPaletteProps {
   open: boolean;
@@ -37,6 +38,7 @@ interface CommandItem {
 
 export function CommandPalette({ open, onOpenChange }: CommandPaletteProps) {
   const router = useRouter();
+  const { t } = useI18n();
   const [query, setQuery] = React.useState("");
 
   const [debouncedQuery, setDebouncedQuery] = React.useState("");
@@ -93,7 +95,7 @@ export function CommandPalette({ open, onOpenChange }: CommandPaletteProps) {
   const staticItems: CommandItem[] = [
     {
       id: "home",
-      label: "Home",
+      label: t("command.home"),
       icon: LayoutDashboard,
       href: "/",
       group: "navigation",
@@ -101,7 +103,7 @@ export function CommandPalette({ open, onOpenChange }: CommandPaletteProps) {
     },
     {
       id: "projects",
-      label: "Projects",
+      label: t("projects.title"),
       icon: Layers,
       href: "/projects",
       group: "navigation",
@@ -109,21 +111,21 @@ export function CommandPalette({ open, onOpenChange }: CommandPaletteProps) {
     },
     {
       id: "notifications",
-      label: "Notifications",
+      label: t("notifications.title"),
       icon: Bell,
       href: "/notifications",
       group: "navigation",
     },
     {
       id: "settings",
-      label: "Settings",
+      label: t("settings.title"),
       icon: Settings,
       href: "/settings",
       group: "navigation",
     },
     {
       id: "new-project",
-      label: "New Project",
+      label: t("command.newProject"),
       icon: FolderPlus,
       href: "/projects/new",
       group: "actions",
@@ -131,7 +133,7 @@ export function CommandPalette({ open, onOpenChange }: CommandPaletteProps) {
     },
     {
       id: "upload-asset",
-      label: "Upload Asset",
+      label: t("command.uploadAsset"),
       icon: Upload,
       href: "/assets/upload",
       group: "actions",
@@ -184,7 +186,7 @@ export function CommandPalette({ open, onOpenChange }: CommandPaletteProps) {
       <Dialog.Portal>
         <Dialog.Overlay className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm data-[state=open]:animate-in data-[state=open]:fade-in-0 data-[state=open]:duration-200" />
         <Dialog.Content className="fixed left-1/2 top-[20%] z-50 w-full max-w-lg -translate-x-1/2 -translate-y-0 data-[state=open]:animate-in data-[state=open]:fade-in-0 data-[state=open]:zoom-in-95 data-[state=open]:duration-200">
-          <Dialog.Title className="sr-only">Command Palette</Dialog.Title>
+          <Dialog.Title className="sr-only">{t("command.title")}</Dialog.Title>
           <Command
             className="overflow-hidden rounded-xl border border-border bg-bg-elevated shadow-2xl"
             loop
@@ -193,7 +195,7 @@ export function CommandPalette({ open, onOpenChange }: CommandPaletteProps) {
             <div className="flex items-center border-b border-border px-3 gap-2">
               <Search className="h-4 w-4 text-text-tertiary shrink-0" />
               <Command.Input
-                placeholder="Search projects, assets, or jump to..."
+                placeholder={t("command.search")}
                 value={query}
                 onValueChange={setQuery}
                 className="h-12 w-full bg-transparent text-sm text-text-primary placeholder:text-text-tertiary focus:outline-none"
@@ -201,13 +203,13 @@ export function CommandPalette({ open, onOpenChange }: CommandPaletteProps) {
             </div>
             <Command.List className="max-h-80 overflow-y-auto p-1.5">
               <Command.Empty className="py-8 text-center text-sm text-text-tertiary">
-                No results found
+                {t("command.noResults")}
               </Command.Empty>
 
               {/* Projects — show when searching */}
               {hasQuery && projects && projects.length > 0 && (
                 <Command.Group
-                  heading="Projects"
+                  heading={t("projects.title")}
                   className="[&>[cmdk-group-heading]]:px-2 [&>[cmdk-group-heading]]:py-1.5 [&>[cmdk-group-heading]]:text-2xs [&>[cmdk-group-heading]]:font-medium [&>[cmdk-group-heading]]:text-text-tertiary [&>[cmdk-group-heading]]:uppercase [&>[cmdk-group-heading]]:tracking-wider"
                 >
                   {projects.map((project) => (
@@ -233,7 +235,7 @@ export function CommandPalette({ open, onOpenChange }: CommandPaletteProps) {
                         )}
                       </div>
                       <span className="text-2xs text-text-tertiary shrink-0">
-                        {project.asset_count ?? 0} items
+                        {t("command.items", { count: project.asset_count ?? 0 })}
                       </span>
                     </Command.Item>
                   ))}
@@ -243,7 +245,7 @@ export function CommandPalette({ open, onOpenChange }: CommandPaletteProps) {
               {/* Folders — show when searching (2+ chars) */}
               {hasQuery && folders && folders.length > 0 && (
                 <Command.Group
-                  heading="Folders"
+                  heading={t("command.folders")}
                   className="[&>[cmdk-group-heading]]:px-2 [&>[cmdk-group-heading]]:py-1.5 [&>[cmdk-group-heading]]:text-2xs [&>[cmdk-group-heading]]:font-medium [&>[cmdk-group-heading]]:text-text-tertiary [&>[cmdk-group-heading]]:uppercase [&>[cmdk-group-heading]]:tracking-wider"
                 >
                   {folders.map((folder) => (
@@ -264,7 +266,7 @@ export function CommandPalette({ open, onOpenChange }: CommandPaletteProps) {
                         <span className="block truncate">{folder.name}</span>
                         {folder.project_name && (
                           <span className="block text-2xs text-text-tertiary truncate">
-                            in {folder.project_name}
+                            {t("command.inProject", { project: folder.project_name })}
                           </span>
                         )}
                       </div>
@@ -276,7 +278,7 @@ export function CommandPalette({ open, onOpenChange }: CommandPaletteProps) {
               {/* Assets — show when searching (2+ chars) */}
               {hasQuery && assets && assets.length > 0 && (
                 <Command.Group
-                  heading="Assets"
+                  heading={t("command.assets")}
                   className="[&>[cmdk-group-heading]]:px-2 [&>[cmdk-group-heading]]:py-1.5 [&>[cmdk-group-heading]]:text-2xs [&>[cmdk-group-heading]]:font-medium [&>[cmdk-group-heading]]:text-text-tertiary [&>[cmdk-group-heading]]:uppercase [&>[cmdk-group-heading]]:tracking-wider"
                 >
                   {assets.map((asset) => {
@@ -318,7 +320,7 @@ export function CommandPalette({ open, onOpenChange }: CommandPaletteProps) {
 
               {/* Navigation */}
               <Command.Group
-                heading="Navigation"
+                heading={t("command.navigation")}
                 className="[&>[cmdk-group-heading]]:px-2 [&>[cmdk-group-heading]]:py-1.5 [&>[cmdk-group-heading]]:text-2xs [&>[cmdk-group-heading]]:font-medium [&>[cmdk-group-heading]]:text-text-tertiary [&>[cmdk-group-heading]]:uppercase [&>[cmdk-group-heading]]:tracking-wider"
               >
                 {navItems.map((item) => (
@@ -333,7 +335,7 @@ export function CommandPalette({ open, onOpenChange }: CommandPaletteProps) {
               <Command.Separator className="my-1 h-px bg-border-secondary" />
 
               <Command.Group
-                heading="Actions"
+                heading={t("command.actions")}
                 className="[&>[cmdk-group-heading]]:px-2 [&>[cmdk-group-heading]]:py-1.5 [&>[cmdk-group-heading]]:text-2xs [&>[cmdk-group-heading]]:font-medium [&>[cmdk-group-heading]]:text-text-tertiary [&>[cmdk-group-heading]]:uppercase [&>[cmdk-group-heading]]:tracking-wider"
               >
                 {actionItems.map((item) => (
@@ -351,15 +353,15 @@ export function CommandPalette({ open, onOpenChange }: CommandPaletteProps) {
                 <kbd className="rounded border border-border px-1 py-0.5 font-mono text-2xs">
                   ↑↓
                 </kbd>{" "}
-                navigate{" "}
+                {t("command.navigate")}{" "}
                 <kbd className="rounded border border-border px-1 py-0.5 font-mono text-2xs">
                   ↵
                 </kbd>{" "}
-                select{" "}
+                {t("command.select")}{" "}
                 <kbd className="rounded border border-border px-1 py-0.5 font-mono text-2xs">
                   esc
                 </kbd>{" "}
-                close
+                {t("command.close")}
               </p>
             </div>
           </Command>

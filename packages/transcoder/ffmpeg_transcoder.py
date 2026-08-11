@@ -16,6 +16,12 @@ class FFmpegTranscoder(BaseTranscoder):
         self.s3 = s3_client
         self.bucket = bucket
         self.s3_endpoint = s3_endpoint
+
+    @staticmethod
+    def _use_nvenc() -> bool:
+        """Prefer NVENC when the worker has a GPU, while allowing CPU override."""
+        mode = os.getenv("FFMPEG_ACCELERATION", "auto").strip().lower()
+        return mode == "nvenc" or (mode == "auto" and os.path.exists("/dev/nvidia0"))
     
     def _get_presigned_url(self, s3_key: str, expires_in: int = 7200) -> str:
         """Generate a presigned URL for streaming input to FFmpeg."""
@@ -139,13 +145,17 @@ class FFmpegTranscoder(BaseTranscoder):
                 "-filter_complex", filter_complex,
             ]
 
+            nvenc = self._use_nvenc()
             for i, quality in enumerate(qualities):
                 scale, crf = QUALITY_MAP[quality]
                 ffmpeg_cmd += ["-map", f"[{quality}]"]
                 if has_audio:
                     ffmpeg_cmd += ["-map", "a:0"]
+                encoder = "h264_nvenc" if nvenc else "libx264"
+                rate_control = "-cq" if nvenc else "-crf"
+                preset = os.getenv("NVENC_PRESET", "p4") if nvenc else "fast"
                 ffmpeg_cmd += [
-                    f"-c:v:{i}", "libx264", f"-crf", str(crf), "-preset", "fast",
+                    f"-c:v:{i}", encoder, rate_control, str(crf), "-preset", preset,
                     "-force_key_frames", "expr:gte(t,n_forced*2)",
                 ]
 
@@ -170,7 +180,22 @@ class FFmpegTranscoder(BaseTranscoder):
                 (hls_dir / q).mkdir(exist_ok=True)
 
             # Timeout scales with expected duration - 4 hours for very large files
-            self._run(ffmpeg_cmd, timeout=14400, label="ffmpeg")
+            try:
+                self._run(ffmpeg_cmd, timeout=14400, label="ffmpeg")
+            except RuntimeError:
+                if not nvenc:
+                    raise
+                # GPU failure must not strand a transcode: retry the same job on CPU.
+                cpu_cmd = list(ffmpeg_cmd)
+                for i in range(len(qualities)):
+                    encoder_pos = cpu_cmd.index(f"-c:v:{i}") + 1
+                    cpu_cmd[encoder_pos] = "libx264"
+                for pos, value in enumerate(cpu_cmd):
+                    if value == "-cq":
+                        cpu_cmd[pos] = "-crf"
+                    elif value == os.getenv("NVENC_PRESET", "p4"):
+                        cpu_cmd[pos] = "fast"
+                self._run(cpu_cmd, timeout=14400, label="ffmpeg-cpu-fallback")
 
             # 4. Upload HLS files to S3
             uploaded_keys = []

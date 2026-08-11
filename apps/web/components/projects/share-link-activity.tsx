@@ -3,20 +3,20 @@
 import * as React from 'react'
 import { Loader2 } from 'lucide-react'
 import { api } from '@/lib/api'
-import { formatRelativeTime } from '@/lib/utils'
+import { useI18n } from '@/hooks/use-i18n'
 import type { ShareActivityAction, ShareLinkActivity } from '@/types'
 
 interface ShareLinkActivityPanelProps {
   token: string
 }
 
-const ACTION_LABELS: Record<ShareActivityAction, string> = {
-  opened: 'Opened Share Link',
-  viewed_asset: 'Viewed Asset',
-  commented: 'Commented',
-  approved: 'Approved',
-  rejected: 'Rejected',
-  downloaded: 'Downloaded',
+const ACTION_LABEL_KEYS: Record<ShareActivityAction, string> = {
+  opened: 'shareActivity.opened',
+  viewed_asset: 'shareActivity.viewedAsset',
+  commented: 'shareActivity.commented',
+  approved: 'shareActivity.approved',
+  rejected: 'shareActivity.rejected',
+  downloaded: 'shareActivity.downloaded',
 }
 
 function actionLabelColor(action: ShareActivityAction): string {
@@ -44,13 +44,16 @@ function avatarColor(seed: string): string {
   return AVATAR_COLORS[hash % AVATAR_COLORS.length]
 }
 
-function groupByDate(activities: ShareLinkActivity[]): { label: string; items: ShareLinkActivity[] }[] {
+function groupByDate(
+  activities: ShareLinkActivity[],
+  formatDate: (value: Date | string | number, options?: Intl.DateTimeFormatOptions) => string,
+): { label: string; items: ShareLinkActivity[] }[] {
   const groups: { label: string; items: ShareLinkActivity[] }[] = []
   const seen: Record<string, number> = {}
 
   for (const activity of activities) {
     const d = new Date(activity.created_at)
-    const label = d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
+    const label = formatDate(d, { month: 'short', day: 'numeric', year: 'numeric' })
     if (seen[label] === undefined) {
       seen[label] = groups.length
       groups.push({ label, items: [] })
@@ -64,6 +67,7 @@ function groupByDate(activities: ShareLinkActivity[]): { label: string; items: S
 const PER_PAGE = 20
 
 export function ShareLinkActivityPanel({ token }: ShareLinkActivityPanelProps) {
+  const { t, formatDate, formatRelativeTime } = useI18n()
   const [activities, setActivities] = React.useState<ShareLinkActivity[]>([])
   const [page, setPage] = React.useState(1)
   const [hasMore, setHasMore] = React.useState(true)
@@ -140,15 +144,15 @@ export function ShareLinkActivityPanel({ token }: ShareLinkActivityPanelProps) {
   if (activities.length === 0) {
     return (
       <div className="flex flex-col items-center justify-center py-16 px-6 text-center">
-        <p className="text-sm text-text-secondary">No activity yet</p>
+        <p className="text-sm text-text-secondary">{t('shareActivity.empty')}</p>
         <p className="mt-1 text-xs text-text-tertiary">
-          Activity will appear here once someone views this share link.
+          {t('shareActivity.emptyDescription')}
         </p>
       </div>
     )
   }
 
-  const groups = groupByDate(activities)
+  const groups = groupByDate(activities, formatDate)
 
   return (
     <div className="py-2">
@@ -163,10 +167,11 @@ export function ShareLinkActivityPanel({ token }: ShareLinkActivityPanelProps) {
 
           <div className="space-y-0.5 px-3">
             {group.items.map((activity) => {
-              const displayName = activity.actor_name || activity.actor_email
+              const rawDisplayName = activity.actor_name || activity.actor_email
+              const displayName = rawDisplayName === 'anonymous' ? t('shareActivity.anonymous') : rawDisplayName
               const initial = displayName.charAt(0).toUpperCase()
               const colorClass = avatarColor(activity.actor_email)
-              const actionLabel = ACTION_LABELS[activity.action]
+              const actionLabel = t(ACTION_LABEL_KEYS[activity.action])
               const actionColor = actionLabelColor(activity.action)
 
               return (
@@ -181,13 +186,13 @@ export function ShareLinkActivityPanel({ token }: ShareLinkActivityPanelProps) {
                   </div>
                   <div className="flex-1 min-w-0">
                     <div className="flex flex-wrap items-baseline gap-x-1.5 gap-y-0.5">
-                      <span className="text-sm font-medium text-text-primary truncate max-w-[140px]">
+                      <span data-user-content="true" className="text-sm font-medium text-text-primary truncate max-w-[140px]">
                         {displayName}
                       </span>
                       {activity.asset_name && (
                         <>
-                          <span className="text-xs text-text-tertiary">on</span>
-                          <span className="text-xs text-text-secondary truncate max-w-[120px]">
+                          <span className="text-xs text-text-tertiary">{t('shareActivity.on')}</span>
+                          <span data-user-content="true" className="text-xs text-text-secondary truncate max-w-[120px]">
                             {activity.asset_name}
                           </span>
                         </>
@@ -216,7 +221,7 @@ export function ShareLinkActivityPanel({ token }: ShareLinkActivityPanelProps) {
       )}
 
       {!hasMore && activities.length > PER_PAGE && (
-        <p className="text-center text-2xs text-text-tertiary py-3">All activity loaded</p>
+        <p className="text-center text-2xs text-text-tertiary py-3">{t('shareActivity.allLoaded')}</p>
       )}
     </div>
   )

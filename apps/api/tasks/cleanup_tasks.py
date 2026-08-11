@@ -123,6 +123,11 @@ def _purge_share_link(db, share_link_id, counts: PurgeCounts) -> None:
         return
     db.query(ShareLinkItem).filter(ShareLinkItem.share_link_id == share_link_id).delete(synchronize_session=False)
     db.query(ShareLinkActivity).filter(ShareLinkActivity.share_link_id == share_link_id).delete(synchronize_session=False)
+    watermarks = db.query(WatermarkSettings).filter(WatermarkSettings.share_link_id == share_link_id).all()
+    for watermark in watermarks:
+        if watermark.image_s3_key:
+            _safe(delete_object, watermark.image_s3_key)
+            counts.s3_deletes += 1
     db.query(WatermarkSettings).filter(WatermarkSettings.share_link_id == share_link_id).delete(synchronize_session=False)
     db.query(ShareLink).filter(ShareLink.id == share_link_id).delete(synchronize_session=False)
     counts.share_links += 1
@@ -210,6 +215,11 @@ def _purge_project(db, project_id, counts: PurgeCounts) -> None:
             _safe(delete_object, branding.logo_s3_key)
             counts.s3_deletes += 1
         db.query(ProjectBranding).filter(ProjectBranding.project_id == project_id).delete(synchronize_session=False)
+    watermarks = db.query(WatermarkSettings).filter(WatermarkSettings.project_id == project_id).all()
+    for watermark in watermarks:
+        if watermark.image_s3_key:
+            _safe(delete_object, watermark.image_s3_key)
+            counts.s3_deletes += 1
     db.query(WatermarkSettings).filter(WatermarkSettings.project_id == project_id).delete(synchronize_session=False)
     db.query(ProjectMember).filter(ProjectMember.project_id == project_id).delete(synchronize_session=False)
     db.query(ActivityLog).filter(ActivityLog.project_id == project_id).delete(synchronize_session=False)

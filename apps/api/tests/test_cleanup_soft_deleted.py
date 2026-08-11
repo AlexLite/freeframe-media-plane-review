@@ -139,7 +139,9 @@ def _share_link(db, owner, asset=None, folder=None, project=None):
     return link
 
 
-def test_purge_share_link_removes_items_activity_watermark(real_db):
+def test_purge_share_link_removes_items_activity_watermark(real_db, monkeypatch):
+    deleted = []
+    monkeypatch.setattr(ct, "delete_object", lambda key: deleted.append(key))
     owner = _user(real_db)
     project = _project(real_db, owner)
     asset = _asset(real_db, project, owner)
@@ -147,7 +149,7 @@ def test_purge_share_link_removes_items_activity_watermark(real_db):
     real_db.add(ShareLinkItem(share_link_id=link.id, asset_id=asset.id))
     real_db.add(ShareLinkActivity(share_link_id=link.id, action=ShareActivityAction.opened,
                                   actor_email="x@t.local"))
-    real_db.add(WatermarkSettings(project_id=project.id, share_link_id=link.id))
+    real_db.add(WatermarkSettings(project_id=project.id, share_link_id=link.id, image_s3_key="branding/share/watermark.png"))
     real_db.flush()
 
     counts = ct.PurgeCounts()
@@ -157,6 +159,7 @@ def test_purge_share_link_removes_items_activity_watermark(real_db):
     assert real_db.query(ShareLinkItem).filter_by(share_link_id=link.id).count() == 0
     assert real_db.query(ShareLinkActivity).filter_by(share_link_id=link.id).count() == 0
     assert real_db.query(WatermarkSettings).filter_by(share_link_id=link.id).count() == 0
+    assert "branding/share/watermark.png" in deleted
     assert counts.share_links == 1
 
 
@@ -279,7 +282,7 @@ def test_purge_project_removes_everything(real_db, monkeypatch):
     loose = _asset(real_db, project, owner)
     _version(real_db, loose, owner)
     real_db.add(ProjectBranding(project_id=project.id, logo_s3_key="branding/logo.png"))
-    real_db.add(WatermarkSettings(project_id=project.id))
+    real_db.add(WatermarkSettings(project_id=project.id, image_s3_key="branding/project/watermark.png"))
     real_db.add(ProjectMember(project_id=project.id, user_id=owner.id))
     coll = Collection(project_id=project.id, name="c", created_by=owner.id)
     real_db.add(coll); real_db.flush()
@@ -305,7 +308,7 @@ def test_purge_project_removes_everything(real_db, monkeypatch):
     assert real_db.query(MetadataField).filter_by(project_id=project.id).count() == 0
     assert real_db.query(ShareLink).filter_by(project_id=project.id).count() == 0
     assert real_db.query(ActivityLog).filter_by(project_id=project.id).count() == 0
-    assert "branding/logo.png" in deleted and "posters/p.webp" in deleted
+    assert "branding/logo.png" in deleted and "branding/project/watermark.png" in deleted and "posters/p.webp" in deleted
     assert counts.projects == 1 and counts.assets == 2 and counts.folders == 1
 
 

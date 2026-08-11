@@ -14,8 +14,12 @@ import { useAuthStore } from "@/stores/auth-store";
 import { useRouter } from "next/navigation";
 import type { User, UserStatus } from "@/types";
 import { InstanceSettingsTab } from "@/components/settings/instance-settings-tab";
+import { useI18n } from "@/hooks/use-i18n";
+
+const tr = (locale: string, en: string, ru: string) => locale === "ru" ? ru : en;
 
 function BulkInviteDialog() {
+  const { locale } = useI18n();
   const [open, setOpen] = React.useState(false);
   const [emails, setEmails] = React.useState("");
   const [loading, setLoading] = React.useState(false);
@@ -77,7 +81,7 @@ function BulkInviteDialog() {
       <Dialog.Trigger asChild>
         <Button variant="secondary" size="sm">
           <Users className="h-4 w-4" />
-          Bulk Invite
+          {tr(locale, "Bulk Invite", "Массовое приглашение")}
         </Button>
       </Dialog.Trigger>
 
@@ -89,16 +93,16 @@ function BulkInviteDialog() {
           </Dialog.Close>
 
           <Dialog.Title className="text-base font-semibold text-text-primary">
-            Bulk Invite Users
+            {tr(locale, "Bulk Invite Users", "Пригласить пользователей")}
           </Dialog.Title>
           <Dialog.Description className="mt-1 text-sm text-text-secondary">
-            Enter email addresses separated by commas or newlines.
+            {tr(locale, "Enter email addresses separated by commas or newlines.", "Введите адреса email через запятую или с новой строки.")}
           </Dialog.Description>
 
           <form onSubmit={handleSubmit} className="mt-4 space-y-4">
             <div className="flex flex-col gap-1.5">
               <label className="text-sm font-medium text-text-secondary">
-                Email addresses
+                {tr(locale, "Email addresses", "Адреса email")}
               </label>
               <textarea
                 value={emails}
@@ -119,10 +123,10 @@ function BulkInviteDialog() {
                 size="sm"
                 onClick={() => setOpen(false)}
               >
-                Close
+                {tr(locale, "Close", "Закрыть")}
               </Button>
               <Button type="submit" size="sm" loading={loading}>
-                Send Invites
+                {tr(locale, "Send Invites", "Отправить приглашения")}
               </Button>
             </div>
           </form>
@@ -132,22 +136,22 @@ function BulkInviteDialog() {
   );
 }
 
-function userStatusBadge(status: UserStatus) {
+function userStatusBadge(status: UserStatus, locale: string) {
   const map: Record<UserStatus, { label: string; className: string }> = {
     active: {
-      label: "Active",
+      label: tr(locale, "Active", "Активен"),
       className: "bg-status-success/15 text-status-success",
     },
     deactivated: {
-      label: "Deactivated",
+      label: tr(locale, "Deactivated", "Деактивирован"),
       className: "bg-status-error/15 text-status-error",
     },
     pending_invite: {
-      label: "Pending",
+      label: tr(locale, "Pending", "Ожидает"),
       className: "bg-status-warning/15 text-status-warning",
     },
     pending_verification: {
-      label: "Unverified",
+      label: tr(locale, "Unverified", "Не подтверждён"),
       className: "bg-bg-tertiary text-text-secondary",
     },
   };
@@ -165,6 +169,7 @@ function userStatusBadge(status: UserStatus) {
 }
 
 export default function AdminPage() {
+  const { locale, formatDate } = useI18n();
   const { user, isSuperAdmin } = useAuthStore();
   const router = useRouter();
   const [tab, setTab] = React.useState<"users" | "instance">("users");
@@ -241,15 +246,15 @@ export default function AdminPage() {
         </div>
         <div>
           <h1 className="text-xl font-semibold text-text-primary">
-            Admin Dashboard
+            {tr(locale, "Admin Dashboard", "Панель администратора")}
           </h1>
-          <p className="text-sm text-text-secondary">Manage platform users</p>
+          <p className="text-sm text-text-secondary">{tr(locale, "Manage platform users", "Управление пользователями платформы")}</p>
         </div>
       </div>
 
       {/* Sub-tabs */}
       <div className="flex gap-1 border-b border-border">
-        {([["users", "Users"], ["instance", "Instance settings"]] as const).map(([key, label]) => (
+        {([["users", tr(locale, "Users", "Пользователи")], ["instance", tr(locale, "Instance settings", "Настройки инстанса")]] as const).map(([key, label]) => (
           <button
             key={key}
             onClick={() => setTab(key)}
@@ -272,7 +277,7 @@ export default function AdminPage() {
       <section className="space-y-4">
         <div className="flex items-center justify-between">
           <h2 className="text-sm font-semibold text-text-primary">
-            Platform Users
+            {tr(locale, "Platform Users", "Пользователи платформы")}
           </h2>
           <BulkInviteDialog />
         </div>
@@ -290,8 +295,8 @@ export default function AdminPage() {
           <div className="rounded-lg border border-border bg-bg-secondary">
             <EmptyState
               icon={Users}
-              title="No users"
-              description="Users will appear here once they register or are invited."
+              title={tr(locale, "No users", "Пользователей пока нет")}
+              description={tr(locale, "Users will appear here once they register or are invited.", "Здесь появятся зарегистрированные и приглашённые пользователи.")}
             />
           </div>
         ) : (
@@ -300,19 +305,19 @@ export default function AdminPage() {
               <thead>
                 <tr className="border-b border-border bg-bg-tertiary">
                   <th className="px-4 py-2.5 text-left text-xs font-medium text-text-tertiary">
-                    User
+                    {tr(locale, "User", "Пользователь")}
                   </th>
                   <th className="px-4 py-2.5 text-left text-xs font-medium text-text-tertiary">
-                    Role
+                    {tr(locale, "Role", "Роль")}
                   </th>
                   <th className="px-4 py-2.5 text-left text-xs font-medium text-text-tertiary">
-                    Status
+                    {tr(locale, "Status", "Статус")}
                   </th>
                   <th className="px-4 py-2.5 text-left text-xs font-medium text-text-tertiary">
-                    Joined
+                    {tr(locale, "Joined", "Дата регистрации")}
                   </th>
                   <th className="px-4 py-2.5 text-right text-xs font-medium text-text-tertiary">
-                    Actions
+                    {tr(locale, "Actions", "Действия")}
                   </th>
                 </tr>
               </thead>
@@ -326,10 +331,10 @@ export default function AdminPage() {
                       <div className="flex items-center gap-2.5">
                         <Avatar src={u.avatar_url} name={u.name} size="sm" />
                         <div className="min-w-0">
-                          <p className="text-sm font-medium text-text-primary truncate">
+                          <p data-user-content="true" className="text-sm font-medium text-text-primary truncate">
                             {u.name}
                           </p>
-                          <p className="text-xs text-text-tertiary truncate">
+                          <p data-user-content="true" className="text-xs text-text-tertiary truncate">
                             {u.email}
                           </p>
                         </div>
@@ -339,16 +344,16 @@ export default function AdminPage() {
                       {u.is_superadmin ? (
                         <span className="inline-flex items-center gap-1 rounded-full bg-accent/10 px-2 py-0.5 text-xs font-medium text-accent">
                           <Shield className="h-3 w-3" />
-                          Admin
+                          {tr(locale, "Admin", "Администратор")}
                         </span>
                       ) : (
-                        <span className="text-xs text-text-tertiary">User</span>
+                        <span className="text-xs text-text-tertiary">{tr(locale, "User", "Пользователь")}</span>
                       )}
                     </td>
-                    <td className="px-4 py-3">{userStatusBadge(u.status)}</td>
+                    <td className="px-4 py-3">{userStatusBadge(u.status, locale)}</td>
                     <td className="px-4 py-3 text-xs text-text-tertiary">
                       {u.created_at
-                        ? new Date(u.created_at).toLocaleDateString()
+                        ? formatDate(u.created_at)
                         : "—"}
                     </td>
                     <td className="px-4 py-3">
@@ -363,12 +368,11 @@ export default function AdminPage() {
                             {copiedId === u.id ? (
                               <>
                                 <Check className="h-3.5 w-3.5 text-status-success" />{" "}
-                                Copied
+                                {tr(locale, "Copied", "Скопировано")}
                               </>
                             ) : (
                               <>
-                                <Link2 className="h-3.5 w-3.5" /> Copy Invite
-                                Link
+                                <Link2 className="h-3.5 w-3.5" /> {tr(locale, "Copy Invite Link", "Копировать ссылку")}
                               </>
                             )}
                           </Button>
@@ -381,7 +385,7 @@ export default function AdminPage() {
                               handleToggleAdmin(u.id, u.is_superadmin)
                             }
                           >
-                            {u.is_superadmin ? "Remove Admin" : "Make Admin"}
+                            {u.is_superadmin ? tr(locale, "Remove Admin", "Снять права администратора") : tr(locale, "Make Admin", "Назначить администратором")}
                           </Button>
                         )}
                         {u.id !== user?.id && u.status === "active" ? (
@@ -391,7 +395,7 @@ export default function AdminPage() {
                             onClick={() => handleDeactivate(u.id)}
                             className="text-status-error hover:text-status-error"
                           >
-                            Deactivate
+                            {tr(locale, "Deactivate", "Деактивировать")}
                           </Button>
                         ) : u.id !== user?.id && u.status === "deactivated" ? (
                           <Button
@@ -399,11 +403,11 @@ export default function AdminPage() {
                             size="sm"
                             onClick={() => handleReactivate(u.id)}
                           >
-                            Reactivate
+                            {tr(locale, "Reactivate", "Активировать")}
                           </Button>
                         ) : u.id === user?.id ? (
                           <span className="text-xs text-text-tertiary italic">
-                            You
+                            {tr(locale, "You", "Вы")}
                           </span>
                         ) : null}
                       </div>

@@ -20,6 +20,11 @@ def _settings(**overrides) -> Settings:
         "database_url": "postgresql://u:p@localhost:5432/db",
         "redis_url": "redis://localhost:6379/0",
         "jwt_secret": FREEFRAME_SECRET,
+        # Keep these tests deterministic when they run inside a configured
+        # production/staging container whose process environment enables Plane.
+        "media_plane_mode": False,
+        "plane_base_url": None,
+        "plane_jwt_secret": None,
     }
     values.update(overrides)
     return Settings(_env_file=None, **values)

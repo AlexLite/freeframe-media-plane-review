@@ -26,6 +26,7 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { api } from "@/lib/api";
+import { useI18n } from "@/hooks/use-i18n";
 import { ShareLinkActivityPanel } from "@/components/projects/share-link-activity";
 import type { ShareLink, ShareLinkAppearance } from "@/types";
 
@@ -78,6 +79,7 @@ function useShareLinkData(token: string) {
     aspect_ratio: "landscape",
     thumbnail_scale: "fit",
     show_card_info: true,
+    comment_mode: "detailed",
   };
 
   const updateAppearance = React.useCallback(
@@ -465,6 +467,7 @@ function ShareUserSearch({ shareLink }: { shareLink: ShareLink }) {
 
 function CopyButton({ text, className }: { text: string; className?: string }) {
   const [copied, setCopied] = React.useState(false);
+  const { t } = useI18n();
 
   async function handleCopy() {
     try {
@@ -483,17 +486,17 @@ function CopyButton({ text, className }: { text: string; className?: string }) {
         "inline-flex items-center gap-1.5 rounded px-2 py-1 text-xs text-text-secondary hover:bg-bg-hover hover:text-text-primary transition-colors",
         className,
       )}
-      title="Copy to clipboard"
+      title={t("share.copyToClipboard")}
     >
       {copied ? (
         <>
           <Check className="h-3.5 w-3.5 text-green-400" />
-          <span>Copied!</span>
+          <span>{t("share.linkCopied")}</span>
         </>
       ) : (
         <>
           <Copy className="h-3.5 w-3.5" />
-          <span>Copy</span>
+          <span>{t("share.copyLink")}</span>
         </>
       )}
     </button>
@@ -564,6 +567,7 @@ export function ShareLinkContent({
   onUpdate,
 }: ShareLinkContentProps) {
   const { shareLink, immediateUpdate } = useShareLinkData(token);
+  const { locale, formatCount } = useI18n();
 
   const [localTitle, setLocalTitle] = React.useState("");
   const [localDescription, setLocalDescription] = React.useState("");
@@ -661,7 +665,7 @@ export function ShareLinkContent({
           className="flex items-center gap-1.5 text-sm text-text-secondary hover:text-text-primary transition-colors"
         >
           <ArrowLeft className="h-4 w-4" />
-          All Share Links
+          {locale === "ru" ? "Все ссылки общего доступа" : "All Share Links"}
         </button>
 
         {/* Editable title */}
@@ -687,7 +691,7 @@ export function ShareLinkContent({
               immediateUpdate({ description: localDescription || null });
             }
           }}
-          placeholder="Add a description..."
+          placeholder={locale === "ru" ? "Добавьте описание..." : "Add a description..."}
           rows={2}
           className="w-full bg-transparent text-sm text-text-secondary placeholder:text-text-tertiary outline-none border-none resize-none focus:ring-0"
         />
@@ -699,8 +703,11 @@ export function ShareLinkContent({
             {previewFolders.length > 0 && (
               <>
                 <span className="text-xs text-text-tertiary font-medium uppercase tracking-wider">
-                  {previewFolders.length}{" "}
-                  {previewFolders.length === 1 ? "Folder" : "Folders"}
+                  {formatCount(
+                    previewFolders.length,
+                    ["folder", "folders", "folders"],
+                    ["папка", "папки", "папок"],
+                  )}
                 </span>
                 <div className="grid grid-cols-3 gap-3">
                   {previewFolders.map((folder) => (
@@ -742,8 +749,11 @@ export function ShareLinkContent({
             {previewThumbnails.length > 0 && (
               <>
                 <span className="text-xs text-text-tertiary font-medium uppercase tracking-wider">
-                  {previewThumbnails.length}{" "}
-                  {previewThumbnails.length === 1 ? "Asset" : "Assets"}
+                  {formatCount(
+                    previewThumbnails.length,
+                    ["asset", "assets", "assets"],
+                    ["материал", "материала", "материалов"],
+                  )}
                 </span>
                 <div className="grid grid-cols-3 gap-3">
                   {previewThumbnails.slice(0, 6).map((asset) => (
@@ -927,6 +937,19 @@ export function ShareLinkSettingsPanel({ token }: ShareLinkSettingsPanelProps) {
                   immediateUpdate({ permission: checked ? "comment" : "view" })
                 }
               />
+              {(shareLink.permission === "comment" ||
+                shareLink.permission === "approve") && (
+                <ToggleRow
+                  label="Detailed comments"
+                  description="Attach timecodes and draw annotations"
+                  checked={(appearance.comment_mode || "detailed") === "detailed"}
+                  onCheckedChange={(checked) =>
+                    updateAppearance({
+                      comment_mode: checked ? "detailed" : "simple",
+                    })
+                  }
+                />
+              )}
               <ToggleRow
                 label="Downloads"
                 description="Allow viewers to download files"
