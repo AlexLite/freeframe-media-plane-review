@@ -2,14 +2,42 @@ import logging
 import os
 import threading
 from contextlib import asynccontextmanager
+
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+
 from .config import settings
-from .routers import auth, users, projects, upload, events, assets, me, comments, approvals, share, metadata, branding, notifications, admin, setup, folders, hls_proxy, instance_settings
-from .services.s3_service import run_startup_bucket_setup
-from .services.email_service import mail_is_configured
 from .middleware.global_rate_limit import GlobalRateLimitMiddleware
 from .middleware.setup_guard import SetupGuardMiddleware
+from .routers import (
+    admin,
+    approvals,
+    assets,
+    auth,
+    branding,
+    comments,
+    events,
+    folders,
+    hls_proxy,
+    instance_settings,
+    me,
+    metadata,
+    notifications,
+    plane_integration,
+    plane_review_bootstrap,
+    plane_review_catalog,
+    plane_review_comments,
+    plane_review_link_lifecycle,
+    plane_upload_lifecycle,
+    projects,
+    setup,
+    share,
+    upload,
+    users,
+)
+from .services.email_service import mail_is_configured
+from .services.s3_service import run_startup_bucket_setup
+
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -23,6 +51,7 @@ async def lifespan(app: FastAPI):
             settings.mail_provider,
         )
     yield
+
 
 _disable_docs = os.getenv("DISABLE_DOCS", "").lower() in ("true", "1", "yes")
 
@@ -70,8 +99,14 @@ app.include_router(setup.router)
 app.include_router(folders.router)
 app.include_router(hls_proxy.router)
 app.include_router(instance_settings.router)
+app.include_router(plane_integration.router)
+app.include_router(plane_upload_lifecycle.router)
+app.include_router(plane_review_bootstrap.router)
+app.include_router(plane_review_catalog.router)
+app.include_router(plane_review_comments.router)
+app.include_router(plane_review_link_lifecycle.router)
+
 
 @app.get("/health")
 def health():
     return {"status": "ok"}
-

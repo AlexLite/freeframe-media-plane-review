@@ -117,6 +117,15 @@ def test_transcode_with_audio_includes_audio_map():
         stream_map = ffmpeg_cmd[var_stream_idx + 1]
         assert "a:0" in stream_map, f"Expected audio track in var_stream_map, got: {stream_map}"
 
+        thumbnail_calls = [
+            call[0][0]
+            for call in mock_run.call_args_list
+            if any("thumb_%04d.jpg" in str(argument) for argument in call[0][0])
+        ]
+        assert thumbnail_calls
+        pixel_format_index = thumbnail_calls[0].index("-pix_fmt")
+        assert thumbnail_calls[0][pixel_format_index + 1] == "yuvj420p"
+
 
 # ─── has_audio=False command construction ─────────────────────────────────────
 
@@ -187,3 +196,18 @@ def test_run_returns_stdout():
 
         result = FFmpegTranscoder._run(["echo", "hello"], label="test")
         assert result == "output data"
+
+
+def test_generate_thumbnails_uses_full_range_jpeg_pixel_format():
+    s3_mock = MagicMock()
+    s3_mock.generate_presigned_url.return_value = "https://s3.example.com/uploads/video.mp4"
+    transcoder = FFmpegTranscoder(s3_mock, "test-bucket")
+
+    with patch.object(transcoder, "_run", return_value="") as mock_run, \
+         patch("pathlib.Path.glob", return_value=[]), \
+         patch("shutil.rmtree"):
+        asyncio.run(transcoder.generate_thumbnails("uploads/video.mp4", count=1))
+
+    command = mock_run.call_args.args[0]
+    pixel_format_index = command.index("-pix_fmt")
+    assert command[pixel_format_index + 1] == "yuvj420p"
