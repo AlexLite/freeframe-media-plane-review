@@ -7,6 +7,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from .config import settings
+from .middleware.device_cors import DeviceFlowCORSMiddleware
 from .middleware.global_rate_limit import GlobalRateLimitMiddleware
 from .middleware.setup_guard import SetupGuardMiddleware
 from .routers import (
@@ -80,6 +81,8 @@ app.add_middleware(
 )
 app.add_middleware(GlobalRateLimitMiddleware)
 app.add_middleware(SetupGuardMiddleware)
+# Keep the unauthenticated UXP device-flow CORS rule outermost.
+app.add_middleware(DeviceFlowCORSMiddleware)
 
 app.include_router(auth.router)
 app.include_router(users.router)

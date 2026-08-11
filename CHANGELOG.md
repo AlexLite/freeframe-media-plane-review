@@ -15,6 +15,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 - The Plane review panel now fills its modal host with a responsive player/comments split instead of sizing itself as an inline card.
+- Direct Premiere device authorization now atomically records browser approval or denial, reports `access_denied` to the UXP poller, and keeps its narrow non-credentialed CORS policy isolated from other API routes.
 
 ## [1.4.1] - 2026-07-09
 
