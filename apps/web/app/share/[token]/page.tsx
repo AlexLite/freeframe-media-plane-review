@@ -21,7 +21,9 @@ import {
 import { cn } from '@/lib/utils'
 import { Button } from '@/components/ui/button'
 import { GuestCommentInput } from '@/components/review/guest-comment-input'
-import { FolderShareViewer } from '@/components/share/folder-share-viewer'
+import { FolderShareViewer, ShareReviewScreen } from '@/components/share/folder-share-viewer'
+import { PublicLocaleSwitcher } from '@/components/shared/locale-initializer'
+import { useI18n } from '@/hooks/use-i18n'
 import type { Asset, SharePermission, ProjectBranding, ShareLinkAppearance } from '@/types'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -78,6 +80,16 @@ type CommentsResponse = GuestComment[]
 // ─── Utility ──────────────────────────────────────────────────────────────────
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'
+
+async function fetchPublicStream(url: string) {
+  for (let attempt = 0; attempt < 150; attempt += 1) {
+    const response = await fetch(url)
+    const data = await response.json().catch(() => null)
+    if (response.status !== 202) return response.ok ? data : null
+    await new Promise((resolve) => setTimeout(resolve, Math.max(1, Number(data?.retry_after ?? 2)) * 1000))
+  }
+  return null
+}
 
 async function fetchShareInfo(
   token: string,
@@ -235,7 +247,7 @@ function GuestCommentItem({ comment }: GuestCommentItemProps) {
           {new Date(comment.created_at).toLocaleDateString()}
         </span>
       </div>
-      <p className="text-sm text-zinc-300 leading-relaxed">{comment.body}</p>
+      <p data-user-content="true" className="text-sm text-zinc-300 leading-relaxed">{comment.body}</p>
     </div>
   )
 }
@@ -393,14 +405,13 @@ function ShareTopBar({
   onBack,
   branding,
 }: ShareTopBarProps) {
+  const { locale } = useI18n()
   const [downloading, setDownloading] = React.useState(false)
 
   async function handleDownload() {
     setDownloading(true)
     try {
-      const res = await fetch(`${API_URL}/share/${token}/stream/${assetId}?download=true`)
-      if (!res.ok) return
-      const data = await res.json()
+      const data = await fetchPublicStream(`${API_URL}/share/${token}/stream/${assetId}?download=true`)
       if (data?.url) {
         const iframe = document.createElement('iframe')
         iframe.style.display = 'none'
@@ -450,13 +461,13 @@ function ShareTopBar({
 
         {/* Breadcrumb */}
         <nav className="flex items-center gap-1 text-[13px] min-w-0">
-          <span className="text-zinc-500 shrink-0 truncate max-w-[200px]">
+          <span data-user-content="true" className="text-zinc-500 shrink-0 truncate max-w-[200px]">
             {shareName}
           </span>
           {assetName && (
             <>
               <span className="text-zinc-600">/</span>
-              <span className="text-white font-medium truncate">{assetName}</span>
+              <span data-user-content="true" className="text-white font-medium truncate">{assetName}</span>
             </>
           )}
         </nav>
@@ -464,6 +475,7 @@ function ShareTopBar({
 
       {/* Right: download + panel toggle */}
       <div className="flex items-center gap-2 shrink-0">
+        <PublicLocaleSwitcher />
         {allowDownload && (
           <button
             onClick={handleDownload}
@@ -471,7 +483,7 @@ function ShareTopBar({
             className="inline-flex items-center gap-1.5 rounded-md bg-purple-600 hover:bg-purple-700 px-3 py-1.5 text-xs font-medium text-white transition-colors disabled:opacity-60"
           >
             {downloading ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Download className="h-3.5 w-3.5" />}
-            Download
+            <span className="hidden sm:inline">{locale === 'ru' ? 'Скачать' : 'Download'}</span>
           </button>
         )}
 
@@ -483,7 +495,7 @@ function ShareTopBar({
               ? 'bg-white/10 text-white'
               : 'text-zinc-500 hover:text-white hover:bg-white/10',
           )}
-          title="Toggle panel"
+          title={locale === 'ru' ? 'Показать или скрыть панель' : 'Toggle panel'}
         >
           <Columns2 className="h-4 w-4" />
         </button>
@@ -631,7 +643,7 @@ function ShareMediaViewer({ asset, token, streamUrl, streamLoading }: ShareMedia
                 <div className="h-24 w-24 rounded-2xl bg-white/5 border border-white/10 flex items-center justify-center">
                   <Music className="h-10 w-10 text-zinc-500" />
                 </div>
-                <p className="text-sm font-medium text-zinc-300">{asset.name}</p>
+                <p data-user-content="true" className="text-sm font-medium text-zinc-300">{asset.name}</p>
               </div>
               <audio ref={audioRef} controls className="w-full">
                 Your browser does not support audio playback.
@@ -649,6 +661,7 @@ function ShareMediaViewer({ asset, token, streamUrl, streamLoading }: ShareMedia
       {(asset.asset_type === 'image' || asset.asset_type === 'image_carousel') && (
         <div className="w-full h-full flex items-center justify-center p-4">
           <img
+            data-user-content="true"
             src={asset.thumbnail_url || asset.stream_url || `${API_URL}/share/${token}/thumbnail/${asset.id}`}
             alt={asset.name}
             className="max-h-full max-w-full object-contain"
@@ -690,10 +703,11 @@ function ShareRightPanel({
   commentRefreshKey,
   onCommentPosted,
 }: ShareRightPanelProps) {
+  const { locale, formatDate } = useI18n()
   const [activeTab, setActiveTab] = React.useState<'comments' | 'fields'>('comments')
 
   return (
-    <div className="w-[360px] flex flex-col border-l border-white/[0.06] bg-[#141416] shrink-0 animate-in slide-in-from-right-2 duration-150">
+    <div className="absolute inset-y-0 right-0 z-30 flex w-full max-w-[360px] flex-col border-l border-white/[0.06] bg-[#141416] shadow-2xl animate-in slide-in-from-right-2 duration-150 md:static md:z-auto md:shrink-0 md:shadow-none">
       {/* Tabs */}
       <div className="px-4 pt-3 pb-2 shrink-0">
         <div className="flex items-center bg-white/5 rounded-lg p-0.5">
@@ -707,7 +721,7 @@ function ShareRightPanel({
             )}
           >
             <MessageSquare className="h-3.5 w-3.5" />
-            Comments
+            {locale === 'ru' ? 'Комментарии' : 'Comments'}
           </button>
           <button
             onClick={() => setActiveTab('fields')}
@@ -719,7 +733,7 @@ function ShareRightPanel({
             )}
           >
             <FileText className="h-3.5 w-3.5" />
-            Fields
+            {locale === 'ru' ? 'Поля' : 'Fields'}
           </button>
         </div>
       </div>
@@ -730,7 +744,7 @@ function ShareRightPanel({
           <>
             {/* Comments header */}
             <div className="px-4 py-2 shrink-0 flex items-center justify-between">
-              <span className="text-xs font-medium text-zinc-400">All comments</span>
+              <span className="text-xs font-medium text-zinc-400">{locale === 'ru' ? 'Все комментарии' : 'All comments'}</span>
             </div>
 
             {/* Comment list */}
@@ -759,19 +773,25 @@ function ShareRightPanel({
         ) : (
           <div className="flex-1 overflow-y-auto p-4 space-y-4">
             <div className="space-y-3">
-              <FieldRow label="Name" value={asset.name} />
-              <FieldRow label="Type" value={asset.asset_type.replace('_', ' ')} capitalize />
-{asset.description && <FieldRow label="Description" value={asset.description} />}
-              {asset.rating != null && <FieldRow label="Rating" value={`${asset.rating}/5`} />}
+              <FieldRow label={locale === 'ru' ? 'Название' : 'Name'} value={asset.name} userContent />
+              <FieldRow
+                label={locale === 'ru' ? 'Тип' : 'Type'}
+                value={locale === 'ru'
+                  ? ({ video: 'Видео', audio: 'Аудио', image: 'Изображение', image_carousel: 'Карусель' }[asset.asset_type] ?? asset.asset_type)
+                  : asset.asset_type.replace('_', ' ')}
+                capitalize={locale !== 'ru'}
+              />
+              {asset.description && <FieldRow label={locale === 'ru' ? 'Описание' : 'Description'} value={asset.description} userContent />}
+              {asset.rating != null && <FieldRow label={locale === 'ru' ? 'Оценка' : 'Rating'} value={`${asset.rating}/5`} />}
               {asset.due_date && (
                 <FieldRow
-                  label="Due date"
-                  value={new Date(asset.due_date).toLocaleDateString()}
+                  label={locale === 'ru' ? 'Срок' : 'Due date'}
+                  value={formatDate(asset.due_date)}
                 />
               )}
               {asset.keywords && asset.keywords.length > 0 && (
                 <div className="space-y-1">
-                  <span className="text-xs text-zinc-500">Keywords</span>
+                  <span className="text-xs text-zinc-500">{locale === 'ru' ? 'Ключевые слова' : 'Keywords'}</span>
                   <div className="flex flex-wrap gap-1">
                     {asset.keywords.map((kw: string, i: number) => (
                       <span
@@ -796,15 +816,17 @@ function FieldRow({
   label,
   value,
   capitalize: shouldCapitalize,
+  userContent,
 }: {
   label: string
   value: string
   capitalize?: boolean
+  userContent?: boolean
 }) {
   return (
     <div className="flex items-center justify-between">
       <span className="text-xs text-zinc-500">{label}</span>
-      <span className={cn('text-xs text-zinc-200 font-medium truncate ml-4 max-w-[200px]', shouldCapitalize && 'capitalize')}>
+      <span data-user-content={userContent ? 'true' : undefined} className={cn('text-xs text-zinc-200 font-medium truncate ml-4 max-w-[200px]', shouldCapitalize && 'capitalize')}>
         {value}
       </span>
     </div>
@@ -818,6 +840,9 @@ interface ShareViewerProps {
   asset: Asset & { thumbnail_url?: string; stream_url?: string }
   permission: SharePermission
   allowDownload: boolean
+  showVersions: boolean
+  commentMode: 'detailed' | 'simple'
+  shareSession?: string | null
   branding: ProjectBranding | null
   shareName?: string
   onBack?: () => void
@@ -828,6 +853,9 @@ function ShareViewer({
   asset,
   permission,
   allowDownload,
+  showVersions,
+  commentMode,
+  shareSession,
   branding,
   shareName,
   onBack,
@@ -835,7 +863,11 @@ function ShareViewer({
   const [streamUrl, setStreamUrl] = React.useState<string | null>(asset.stream_url ?? null)
   const [streamLoading, setStreamLoading] = React.useState(false)
   const [commentKey, setCommentKey] = React.useState(0)
-  const [sidebarOpen, setSidebarOpen] = React.useState(true)
+  const [sidebarOpen, setSidebarOpen] = React.useState(false)
+
+  React.useEffect(() => {
+    setSidebarOpen(window.matchMedia('(min-width: 768px)').matches)
+  }, [])
 
   // For video/audio assets, get a stream URL if not already provided
   React.useEffect(() => {
@@ -845,8 +877,7 @@ function ShareViewer({
     }
     if (asset.asset_type !== 'video' && asset.asset_type !== 'audio') return
     setStreamLoading(true)
-    fetch(`${API_URL}/share/${token}/stream/${asset.id}`)
-      .then((r) => (r.ok ? r.json() : null))
+    fetchPublicStream(`${API_URL}/share/${token}/stream/${asset.id}?_=1`)
       .then((data) => {
         if (data?.stream_url) setStreamUrl(data.stream_url)
         else if (data?.url) setStreamUrl(data.url)
@@ -854,6 +885,21 @@ function ShareViewer({
       .catch(() => null)
       .finally(() => setStreamLoading(false))
   }, [token, asset.asset_type, asset.stream_url, asset.id])
+
+  if (commentMode === 'detailed') {
+    return (
+      <ShareReviewScreen
+        token={token}
+        shareSession={shareSession}
+        assetId={asset.id}
+        assetName={asset.name}
+        permission={permission}
+        allowDownload={allowDownload}
+        showVersions={showVersions}
+        onBack={onBack}
+      />
+    )
+  }
 
   const displayName = shareName || branding?.custom_title || 'FreeFrame'
 
@@ -874,7 +920,7 @@ function ShareViewer({
       />
 
       {/* Main content: viewer + sidebar */}
-      <div className="flex flex-1 overflow-hidden min-h-0">
+      <div className="relative flex flex-1 overflow-hidden min-h-0">
         {/* Left: full-screen media viewer */}
         <ShareMediaViewer
           asset={asset}
@@ -1005,6 +1051,8 @@ function FolderAssetViewer({
       asset={pseudoAsset}
       permission={permission}
       allowDownload={allowDownload}
+      showVersions={true}
+      commentMode="detailed"
       branding={branding}
       shareName={folderName}
       onBack={onBack}
@@ -1033,6 +1081,7 @@ export default function SharePage({
         permission: SharePermission
         allowDownload: boolean
         showVersions: boolean
+        appearance: ShareLinkAppearance
         branding: ProjectBranding | null
       }
     | {
@@ -1095,6 +1144,7 @@ export default function SharePage({
           aspect_ratio: 'landscape',
           thumbnail_scale: 'fill',
           show_card_info: true,
+          comment_mode: 'detailed',
         }
         const folderName = data.folder_name ?? data.project_name ?? 'Shared'
         setState({
@@ -1124,6 +1174,19 @@ export default function SharePage({
         permission: data.permission,
         allowDownload: data.allow_download ?? false,
         showVersions: data.show_versions ?? true,
+        appearance: {
+          layout: 'grid',
+          theme: 'dark',
+          accent_color: null,
+          open_in_viewer: true,
+          sort_by: 'created_at',
+          card_size: 'm',
+          aspect_ratio: 'landscape',
+          thumbnail_scale: 'fill',
+          show_card_info: true,
+          comment_mode: 'detailed',
+          ...(data.appearance ?? {}),
+        },
         branding: data.branding ?? null,
       })
     } catch {
@@ -1211,6 +1274,9 @@ export default function SharePage({
       asset={state.asset}
       permission={state.permission}
       allowDownload={state.allowDownload}
+      showVersions={state.showVersions}
+      commentMode={state.appearance.comment_mode || 'detailed'}
+      shareSession={shareSession}
       branding={state.branding}
     />
   )

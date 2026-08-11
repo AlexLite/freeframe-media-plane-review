@@ -19,6 +19,10 @@ import {
   ArrowLeft,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
+import { PublicLocaleSwitcher } from '@/components/shared/locale-initializer'
+import { useI18n } from '@/hooks/use-i18n'
+import { formatBytes as formatLocalizedBytes } from '@/lib/i18n'
+import type { Locale } from '@/stores/locale-store'
 import type {
   SharePermission,
   ShareLinkAppearance,
@@ -56,24 +60,21 @@ interface FolderShareViewerProps {
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
-function formatFileSize(bytes: number | null): string {
+function formatFileSize(bytes: number | null, locale: Locale): string {
   if (bytes == null) return '—'
-  if (bytes < 1024) return `${bytes} B`
-  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} kB`
-  if (bytes < 1024 * 1024 * 1024) return `${(bytes / (1024 * 1024)).toFixed(1)} MB`
-  return `${(bytes / (1024 * 1024 * 1024)).toFixed(2)} GB`
+  return formatLocalizedBytes(locale, bytes)
 }
 
-function formatDate(dateStr: string): string {
-  return new Date(dateStr).toLocaleDateString(undefined, {
+function formatDate(dateStr: string, locale: Locale): string {
+  return new Date(dateStr).toLocaleDateString(locale === 'ru' ? 'ru-RU' : 'en-US', {
     year: 'numeric',
     month: 'short',
     day: 'numeric',
   })
 }
 
-function formatShortDate(dateStr: string): string {
-  return new Date(dateStr).toLocaleDateString(undefined, {
+function formatShortDate(dateStr: string, locale: Locale): string {
+  return new Date(dateStr).toLocaleDateString(locale === 'ru' ? 'ru-RU' : 'en-US', {
     month: 'short',
     day: 'numeric',
   })
@@ -97,13 +98,6 @@ function getAssetTypeIcon(assetType: string): React.ElementType {
   }
 }
 
-function getAssetTypeBadgeLabel(assetType: string): string {
-  switch (assetType) {
-    case 'image_carousel': return 'Carousel'
-    default: return assetType.charAt(0).toUpperCase() + assetType.slice(1)
-  }
-}
-
 // ─── Download handler ─────────────────────────────────────────────────────────
 
 function triggerDownload(url: string) {
@@ -121,10 +115,13 @@ function triggerDownload(url: string) {
 async function fetchDownloadUrl(token: string, assetId: string, shareSession?: string | null): Promise<string | null> {
   const sp = shareSession ? `&share_session=${encodeURIComponent(shareSession)}` : ''
   try {
-    const response = await fetch(`${API_URL}/share/${token}/stream/${assetId}?download=true${sp}`)
-    if (!response.ok) return null
-    const data = await response.json()
-    return data?.url ?? null
+    for (let attempt = 0; attempt < 150; attempt += 1) {
+      const response = await fetch(`${API_URL}/share/${token}/stream/${assetId}?download=true${sp}`)
+      const data = await response.json().catch(() => null)
+      if (response.status !== 202) return response.ok ? (data?.url ?? null) : null
+      await new Promise((resolve) => setTimeout(resolve, Math.max(1, Number(data?.retry_after ?? 2)) * 1000))
+    }
+    return null
   } catch {
     return null
   }
@@ -186,6 +183,7 @@ interface SubfolderCardProps {
 }
 
 function SubfolderCard({ subfolder, onClick }: SubfolderCardProps) {
+  const { locale, formatCount } = useI18n()
   const thumbs = subfolder.thumbnail_urls ?? []
 
   return (
@@ -232,9 +230,9 @@ function SubfolderCard({ subfolder, onClick }: SubfolderCardProps) {
 
       {/* Info */}
       <div className="px-3 py-2.5">
-        <p className="text-sm font-medium text-text-primary truncate">{subfolder.name}</p>
+        <p data-user-content="true" className="text-sm font-medium text-text-primary truncate">{subfolder.name}</p>
         <p className="text-xs text-text-tertiary mt-0.5">
-          {subfolder.item_count} {subfolder.item_count === 1 ? 'Item' : 'Items'}
+          {formatCount(subfolder.item_count, ['item', 'items', 'items'], ['элемент', 'элемента', 'элементов'])}
         </p>
       </div>
     </button>
@@ -249,7 +247,7 @@ function ListRowThumb({ asset, TypeIcon }: { asset: FolderShareAssetItem; TypeIc
     <div className="h-14 w-14 shrink-0 rounded-md overflow-hidden bg-bg-tertiary flex items-center justify-center">
       {asset.thumbnail_url && !imgError ? (
         // eslint-disable-next-line @next/next/no-img-element
-        <img src={asset.thumbnail_url} alt={asset.name} className="h-full w-full object-cover" onError={() => setImgError(true)} />
+        <img data-user-content="true" src={asset.thumbnail_url} alt={asset.name} className="h-full w-full object-cover" onError={() => setImgError(true)} />
       ) : (
         <TypeIcon className="h-6 w-6 text-text-tertiary/60" />
       )}
@@ -273,6 +271,7 @@ interface AssetGridCardProps {
 }
 
 function AssetGridCard({ asset, allowDownload, token, shareSession, isSelected, onSelect, onOpen, aspectClass = 'aspect-[16/10]', thumbnailScale = 'fill', showCardInfo = true }: AssetGridCardProps) {
+  const { locale } = useI18n()
   const TypeIcon = getAssetTypeIcon(asset.asset_type)
   const [imgError, setImgError] = React.useState(false)
 
@@ -293,6 +292,7 @@ function AssetGridCard({ asset, allowDownload, token, shareSession, isSelected, 
         {asset.thumbnail_url && !imgError ? (
           // eslint-disable-next-line @next/next/no-img-element
           <img
+            data-user-content="true"
             src={asset.thumbnail_url}
             alt={asset.name}
             className={cn('h-full w-full transition-transform duration-200 group-hover:scale-[1.02]', thumbnailScale === 'fill' ? 'object-cover' : 'object-contain')}
@@ -339,7 +339,7 @@ function AssetGridCard({ asset, allowDownload, token, shareSession, isSelected, 
               e.stopPropagation()
               handleDownload(token, asset.id, shareSession)
             }}
-            title="Download"
+            title={locale === 'ru' ? 'Скачать' : 'Download'}
           >
             <Download className="h-3 w-3" />
           </button>
@@ -349,11 +349,11 @@ function AssetGridCard({ asset, allowDownload, token, shareSession, isSelected, 
       {/* Info — name, author, date */}
       {showCardInfo && (
         <div className="px-3 py-2.5">
-          <p className="text-sm font-medium text-text-primary line-clamp-1">{asset.name}</p>
+          <p data-user-content="true" className="text-sm font-medium text-text-primary line-clamp-1">{asset.name}</p>
           <p className="text-xs text-text-tertiary mt-0.5 truncate">
             {asset.created_by_name && <>{asset.created_by_name} &middot; </>}
-            {formatShortDate(asset.created_at)}
-            {asset.file_size != null && <> &middot; {formatFileSize(asset.file_size)}</>}
+            {formatShortDate(asset.created_at, locale)}
+            {asset.file_size != null && <> &middot; {formatFileSize(asset.file_size, locale)}</>}
           </p>
         </div>
       )}
@@ -411,6 +411,7 @@ interface GuestComment {
 }
 
 function RightPanel({ selectedAsset, token, permission, allowDownload, onOpenAsset }: RightPanelProps) {
+  const { locale } = useI18n()
   const [comments, setComments] = React.useState<GuestComment[]>([])
   const [loadingComments, setLoadingComments] = React.useState(false)
   const [commentRefresh, setCommentRefresh] = React.useState(0)
@@ -437,7 +438,7 @@ function RightPanel({ selectedAsset, token, permission, allowDownload, onOpenAss
         <div className="h-14 w-14 rounded-full bg-bg-tertiary flex items-center justify-center mb-3">
           <MessageSquare className="h-7 w-7 text-text-tertiary" />
         </div>
-        <p className="text-sm font-medium text-text-primary">Select an asset to view comments</p>
+        <p className="text-sm font-medium text-text-primary">{locale === 'ru' ? 'Выберите материал, чтобы увидеть комментарии' : 'Select an asset to view comments'}</p>
       </div>
     )
   }
@@ -446,14 +447,14 @@ function RightPanel({ selectedAsset, token, permission, allowDownload, onOpenAss
     <div className="flex-1 flex flex-col overflow-hidden">
       {/* Asset name header — minimal */}
       <div className="px-4 py-3 border-b border-border shrink-0">
-        <h3 className="text-sm font-semibold text-text-primary truncate">{selectedAsset.name}</h3>
+        <h3 data-user-content="true" className="text-sm font-semibold text-text-primary truncate">{selectedAsset.name}</h3>
       </div>
 
       {/* Comments section */}
       <div className="flex-1 overflow-y-auto">
         <div className="px-4 py-3 border-b border-border flex items-center justify-between">
           <h4 className="text-xs font-semibold text-text-tertiary uppercase tracking-wider">
-            Comments ({comments.length})
+            {locale === 'ru' ? 'Комментарии' : 'Comments'} ({comments.length})
           </h4>
         </div>
         <ShareCommentList comments={comments} loading={loadingComments} canComment={canComment} />
@@ -485,6 +486,7 @@ interface ShareCommentListProps {
 }
 
 function ShareCommentList({ comments, loading, canComment, onReply }: ShareCommentListProps) {
+  const { locale } = useI18n()
   if (loading) {
     return (
       <div className="flex items-center justify-center py-12">
@@ -497,8 +499,8 @@ function ShareCommentList({ comments, loading, canComment, onReply }: ShareComme
     return (
       <div className="flex flex-col items-center justify-center py-12 px-6 text-center">
         <MessageSquare className="h-8 w-8 text-text-tertiary mb-2" />
-        <p className="text-sm font-medium text-text-primary">No comments yet</p>
-        {canComment && <p className="text-xs text-text-tertiary mt-1">Be the first to leave feedback</p>}
+        <p className="text-sm font-medium text-text-primary">{locale === 'ru' ? 'Комментариев пока нет' : 'No comments yet'}</p>
+        {canComment && <p className="text-xs text-text-tertiary mt-1">{locale === 'ru' ? 'Оставьте первый комментарий' : 'Be the first to leave feedback'}</p>}
       </div>
     )
   }
@@ -518,10 +520,10 @@ function ShareCommentList({ comments, loading, canComment, onReply }: ShareComme
               <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-2">
                   <span className="text-sm font-medium text-text-primary">{name}</span>
-                  <span className="text-2xs text-text-tertiary">{formatShortDate(comment.created_at)}</span>
+                  <span className="text-2xs text-text-tertiary">{formatShortDate(comment.created_at, locale)}</span>
                   <span className="ml-auto text-2xs text-text-tertiary">#{i + 1}</span>
                 </div>
-                <p className="text-sm text-text-secondary mt-1 leading-relaxed">{comment.body}</p>
+                <p data-user-content="true" className="text-sm text-text-secondary mt-1 leading-relaxed">{comment.body}</p>
                 {comment.timecode_start != null && (
                   <span className="inline-flex items-center gap-1 mt-1 text-[10px] text-accent font-mono bg-accent/10 px-1.5 py-0.5 rounded">
                     {Math.floor(comment.timecode_start / 60)}:{String(Math.floor(comment.timecode_start % 60)).padStart(2, '0')}
@@ -529,7 +531,7 @@ function ShareCommentList({ comments, loading, canComment, onReply }: ShareComme
                 )}
                 {canComment && onReply && (
                   <button onClick={() => onReply(comment.id)} className="block mt-1.5 text-xs text-text-tertiary hover:text-text-primary transition-colors">
-                    Reply
+                    {locale === 'ru' ? 'Ответить' : 'Reply'}
                   </button>
                 )}
               </div>
@@ -549,7 +551,7 @@ function ShareCommentList({ comments, loading, canComment, onReply }: ShareComme
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-2">
                           <span className="text-xs font-medium text-text-primary">{rName}</span>
-                          <span className="text-2xs text-text-tertiary">{formatShortDate(r.created_at)}</span>
+                          <span className="text-2xs text-text-tertiary">{formatShortDate(r.created_at, locale)}</span>
                         </div>
                         <p className="text-xs text-text-secondary mt-0.5">{r.body}</p>
                       </div>
@@ -574,6 +576,7 @@ interface ShareCommentInputProps {
 }
 
 function ShareCommentInput({ token, assetId, onCommentPosted }: ShareCommentInputProps) {
+  const { locale } = useI18n()
   const [body, setBody] = React.useState('')
   const [guestName, setGuestName] = React.useState('')
   const [guestEmail, setGuestEmail] = React.useState('')
@@ -586,7 +589,7 @@ function ShareCommentInput({ token, assetId, onCommentPosted }: ShareCommentInpu
   async function handleSubmit() {
     if (!body.trim()) return
     if (!isLoggedIn && (!guestName.trim() || !guestEmail.trim())) {
-      setError('Please enter your name and email')
+      setError(locale === 'ru' ? 'Укажите имя и электронную почту' : 'Please enter your name and email')
       return
     }
 
@@ -629,14 +632,14 @@ function ShareCommentInput({ token, assetId, onCommentPosted }: ShareCommentInpu
             type="text"
             value={guestName}
             onChange={(e) => setGuestName(e.target.value)}
-            placeholder="Your name"
+            placeholder={locale === 'ru' ? 'Ваше имя' : 'Your name'}
             className="flex-1 h-8 rounded-md border border-border bg-bg-hover px-2.5 text-xs text-text-primary placeholder:text-text-tertiary outline-none focus:border-accent/50"
           />
           <input
             type="email"
             value={guestEmail}
             onChange={(e) => setGuestEmail(e.target.value)}
-            placeholder="Email"
+            placeholder={locale === 'ru' ? 'Электронная почта' : 'Email'}
             className="flex-1 h-8 rounded-md border border-border bg-bg-hover px-2.5 text-xs text-text-primary placeholder:text-text-tertiary outline-none focus:border-accent/50"
           />
         </div>
@@ -647,7 +650,7 @@ function ShareCommentInput({ token, assetId, onCommentPosted }: ShareCommentInpu
           value={body}
           onChange={(e) => setBody(e.target.value)}
           onKeyDown={(e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleSubmit() } }}
-          placeholder="Leave a comment…"
+          placeholder={locale === 'ru' ? 'Оставьте комментарий…' : 'Leave a comment…'}
           disabled={submitting}
           className="flex-1 h-8 rounded-md border border-border bg-bg-hover px-2.5 text-sm text-text-primary placeholder:text-text-tertiary outline-none focus:border-accent/50"
         />
@@ -726,10 +729,10 @@ function AssetViewer({ token, shareSession, asset, permission, allowDownload, sh
 }
 
 /** Lazy-imported review components to avoid circular deps */
-function ShareReviewScreen({
+export function ShareReviewScreen({
   token, shareSession, assetId, assetName, permission, allowDownload, showVersions, onBack,
 }: {
-  token: string; shareSession?: string | null; assetId: string; assetName: string; permission: SharePermission; allowDownload: boolean; showVersions: boolean; onBack: () => void
+  token: string; shareSession?: string | null; assetId: string; assetName: string; permission: SharePermission; allowDownload: boolean; showVersions: boolean; onBack?: () => void
 }) {
   const [ReviewProvider, setProvider] = React.useState<any>(null)
   const [VideoPlayer, setVideoPlayer] = React.useState<any>(null)
@@ -791,6 +794,8 @@ function ShareReviewInner({
   token, shareSession, assetName, permission, allowDownload, showVersions, onBack,
   VideoPlayer, ImageViewer, AudioPlayer, CommentPanel, CommentInput, VersionSwitcher,
 }: any) {
+  const { locale } = useI18n()
+  const tr = (en: string, ru: string) => locale === 'ru' ? ru : en
   // Import hooks from the review system
   const { useReview } = require('@/components/review/review-provider')
   const { useReviewStore } = require('@/stores/review-store')
@@ -798,10 +803,14 @@ function ShareReviewInner({
 
   const { asset, versions, isLoading, comments, refetchComments, addComment } = useReview()
   const { currentVersion, isDrawingMode, focusedCommentId } = useReviewStore()
-  const [sidebarOpen, setSidebarOpen] = React.useState(true)
+  const [sidebarOpen, setSidebarOpen] = React.useState(false)
   const [activeTab, setActiveTab] = React.useState<'comments' | 'fields'>('comments')
   const [AnnotationOverlay, setAnnotationOverlay] = React.useState<any>(null)
   const [AnnotationCanvas, setAnnotationCanvas] = React.useState<any>(null)
+
+  React.useEffect(() => {
+    setSidebarOpen(window.matchMedia('(min-width: 768px)').matches)
+  }, [])
 
   React.useEffect(() => {
     Promise.all([
@@ -819,17 +828,24 @@ function ShareReviewInner({
   // Guest identity flow for non-authenticated users
   const [guestIdentity, setGuestIdentity] = React.useState<{ name: string; email: string } | null>(null)
   const [showGuestPrompt, setShowGuestPrompt] = React.useState(false)
-  const pendingCommentRef = React.useRef<{ body: string; timecodeStart?: number; timecodeEnd?: number; annotationData?: Record<string, unknown> } | null>(null)
+  const [isLoggedIn, setIsLoggedIn] = React.useState(false)
+  const pendingCommentRef = React.useRef<{ body: string; parentId?: string; timecodeStart?: number; timecodeEnd?: number; annotationData?: Record<string, unknown> } | null>(null)
   React.useEffect(() => {
     try {
+      const loggedIn = !!localStorage.getItem('ff_access_token')
+      setIsLoggedIn(loggedIn)
       const stored = localStorage.getItem('ff_guest_identity')
-      if (stored) setGuestIdentity(JSON.parse(stored))
+      if (stored) {
+        setGuestIdentity(JSON.parse(stored))
+      } else if (!loggedIn && canComment) {
+        setShowGuestPrompt(true)
+      }
     } catch {}
-  }, [])
-  const isLoggedIn = typeof window !== 'undefined' && !!localStorage.getItem('ff_access_token')
+  }, [canComment])
 
-  const submitComment = React.useCallback(async (body: string, timecodeStart?: number, timecodeEnd?: number, annotationData?: Record<string, unknown>) => {
-    const payload: Record<string, unknown> = { body }
+  const submitComment = React.useCallback(async (body: string, timecodeStart?: number, timecodeEnd?: number, annotationData?: Record<string, unknown>, parentId?: string) => {
+    const payload: Record<string, unknown> = { body, visibility: 'public' }
+    if (parentId) payload.parent_id = parentId
     if (currentVersion?.id) payload.version_id = currentVersion.id
     if (timecodeStart != null) payload.timecode_start = timecodeStart
     if (timecodeEnd != null) payload.timecode_end = timecodeEnd
@@ -846,9 +862,9 @@ function ShareReviewInner({
 
     // Auto-submit the pending comment
     if (pendingCommentRef.current) {
-      const { body, timecodeStart, timecodeEnd, annotationData } = pendingCommentRef.current
+      const { body, parentId, timecodeStart, timecodeEnd, annotationData } = pendingCommentRef.current
       pendingCommentRef.current = null
-      setTimeout(() => submitComment(body, timecodeStart, timecodeEnd, annotationData), 50)
+      setTimeout(() => submitComment(body, timecodeStart, timecodeEnd, annotationData, parentId), 50)
     }
   }, [submitComment])
 
@@ -861,18 +877,21 @@ function ShareReviewInner({
       {/* Top bar — same style as project review */}
       <div className="flex items-center justify-between border-b border-border px-3 h-12 bg-bg-secondary shrink-0">
         <div className="flex items-center gap-1 min-w-0 flex-1">
-          <button onClick={onBack} className="flex items-center justify-center h-7 w-7 rounded-md text-text-secondary hover:text-text-primary hover:bg-bg-hover transition-colors shrink-0">
-            <ArrowLeft className="h-4 w-4" />
-          </button>
-          <span className="text-[13px] font-medium text-text-primary truncate">{assetName}</span>
+          {onBack && (
+            <button onClick={onBack} className="flex items-center justify-center h-7 w-7 rounded-md text-text-secondary hover:text-text-primary hover:bg-bg-hover transition-colors shrink-0">
+              <ArrowLeft className="h-4 w-4" />
+            </button>
+          )}
+          <span data-user-content="true" className="text-[13px] font-medium text-text-primary truncate">{assetName}</span>
         </div>
         <div className="flex items-center gap-2">
+          <PublicLocaleSwitcher />
           {showVersions && VersionSwitcher && versions.length > 0 && (
             <VersionSwitcher versions={versions} />
           )}
           {allowDownload && (
-            <button className="flex items-center gap-1.5 h-7 px-3 rounded-md text-xs font-medium text-text-inverse bg-accent hover:bg-accent-hover transition-colors" onClick={() => handleDownload(token, asset.id, shareSession)}>
-              <Download className="h-3 w-3" /> Download
+            <button className="flex items-center gap-1.5 h-7 px-2 sm:px-3 rounded-md text-xs font-medium text-text-inverse bg-accent hover:bg-accent-hover transition-colors" onClick={() => handleDownload(token, asset.id, shareSession)}>
+              <Download className="h-3 w-3" /> <span className="hidden sm:inline">{tr('Download', 'Скачать')}</span>
             </button>
           )}
           <button onClick={() => setSidebarOpen(v => !v)} className="flex items-center justify-center h-8 w-8 rounded-md text-text-secondary hover:text-text-primary hover:bg-bg-hover transition-colors">
@@ -882,7 +901,7 @@ function ShareReviewInner({
       </div>
 
       {/* Main: viewer + sidebar */}
-      <div className="flex flex-1 overflow-hidden min-h-0">
+      <div className="relative flex flex-1 overflow-hidden min-h-0">
         {/* Media viewer — reuses project components */}
         <div className="flex-1 flex flex-col bg-bg-primary overflow-hidden min-w-0">
           {asset.asset_type === 'video' && versionReady && VideoPlayer ? (
@@ -922,14 +941,14 @@ function ShareReviewInner({
 
         {/* Right sidebar — reuses project comment panel */}
         {sidebarOpen && (
-          <div className="w-[360px] flex flex-col border-l border-border bg-bg-secondary shrink-0">
+          <div className="absolute inset-y-0 right-0 z-30 flex w-full max-w-[360px] flex-col border-l border-border bg-bg-secondary shadow-2xl md:static md:z-auto md:shrink-0 md:shadow-none">
             <div className="px-4 pt-3 pb-2 shrink-0">
               <div className="flex items-center bg-bg-tertiary rounded-lg p-0.5">
                 <button onClick={() => setActiveTab('comments')} className={`flex-1 py-1.5 text-[13px] font-medium rounded-md transition-all ${activeTab === 'comments' ? 'bg-bg-hover text-text-primary shadow-sm' : 'text-text-tertiary'}`}>
-                  Comments
+                  {tr('Comments', 'Комментарии')}
                 </button>
                 <button onClick={() => setActiveTab('fields')} className={`flex-1 py-1.5 text-[13px] font-medium rounded-md transition-all ${activeTab === 'fields' ? 'bg-bg-hover text-text-primary shadow-sm' : 'text-text-tertiary'}`}>
-                  Fields
+                  {tr('Fields', 'Поля')}
                 </button>
               </div>
             </div>
@@ -938,29 +957,59 @@ function ShareReviewInner({
               <>
                 <CommentPanel
                   comments={comments}
-                  onResolve={() => {}}
-                  onDelete={() => {}}
-                  onAddReaction={() => {}}
-                  onRemoveReaction={() => {}}
                   onReply={() => {}}
-                  onSubmitReply={async () => {}}
+                  publicMode
+                  onSubmitReply={async (parentId: string, body: string) => {
+                    const hasAuth = !!localStorage.getItem('ff_access_token')
+                    const hasGuest = !!localStorage.getItem('ff_guest_identity')
+                    if (!hasAuth && !hasGuest) {
+                      pendingCommentRef.current = { body, parentId }
+                      setShowGuestPrompt(true)
+                      return
+                    }
+                    await submitComment(body, undefined, undefined, undefined, parentId)
+                  }}
                 />
                 {canComment && CommentInput && (
-                  <CommentInput
-                    assetId={asset.id}
-                    projectId=""
-                    assetType={asset.asset_type}
-                    onSubmit={async (body: string, timecodeStart?: number, timecodeEnd?: number, annotationData?: Record<string, unknown>) => {
-                      const hasAuth = !!localStorage.getItem('ff_access_token')
-                      const hasGuest = !!localStorage.getItem('ff_guest_identity')
-                      if (!hasAuth && !hasGuest) {
-                        pendingCommentRef.current = { body, timecodeStart, timecodeEnd, annotationData }
-                        setShowGuestPrompt(true)
-                        return
-                      }
-                      await submitComment(body, timecodeStart, timecodeEnd, annotationData)
-                    }}
-                  />
+                  <div>
+                    {!isLoggedIn && (
+                      <div className="mx-4 mb-2 flex items-center justify-between gap-3 rounded-lg border border-border bg-bg-tertiary px-3 py-2 text-xs">
+                        <div className="min-w-0">
+                          <span className="text-text-tertiary">{tr('Commenting as', 'Комментарий от')}</span>{' '}
+                          {guestIdentity ? (
+                            <span data-user-content="true" className="text-text-primary">
+                              {guestIdentity.name} ({guestIdentity.email})
+                            </span>
+                          ) : (
+                            <span className="text-status-warning">{tr('Name and email required', 'Укажите имя и email')}</span>
+                          )}
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => setShowGuestPrompt(true)}
+                          className="shrink-0 text-accent hover:text-accent-hover"
+                        >
+                          {tr('Change', 'Изменить')}
+                        </button>
+                      </div>
+                    )}
+                    <CommentInput
+                      assetId={asset.id}
+                      projectId=""
+                      assetType={asset.asset_type}
+                      fixedVisibility="public"
+                      onSubmit={async (body: string, timecodeStart?: number, timecodeEnd?: number, annotationData?: Record<string, unknown>) => {
+                        const hasAuth = !!localStorage.getItem('ff_access_token')
+                        const hasGuest = !!localStorage.getItem('ff_guest_identity')
+                        if (!hasAuth && !hasGuest) {
+                          pendingCommentRef.current = { body, timecodeStart, timecodeEnd, annotationData }
+                          setShowGuestPrompt(true)
+                          return
+                        }
+                        await submitComment(body, timecodeStart, timecodeEnd, annotationData)
+                      }}
+                    />
+                  </div>
                 )}
               </>
             )}
@@ -982,18 +1031,20 @@ function ShareReviewInner({
 // ─── Guest Identity Prompt ───────────────────────────────────────────────────
 
 function GuestIdentityPrompt({ onSave, onCancel }: { onSave: (name: string, email: string) => void; onCancel: () => void }) {
+  const { locale } = useI18n()
+  const tr = (en: string, ru: string) => locale === 'ru' ? ru : en
   const [name, setName] = React.useState('')
   const [email, setEmail] = React.useState('')
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm">
       <div className="w-full max-w-sm rounded-xl border border-border bg-bg-secondary p-5 shadow-xl">
-        <h3 className="text-sm font-semibold text-text-primary mb-1">Leave a comment</h3>
-        <p className="text-xs text-text-tertiary mb-4">Enter your name and email to comment on this shared asset.</p>
+        <h3 className="text-sm font-semibold text-text-primary mb-1">{tr('Leave a comment', 'Оставить комментарий')}</h3>
+        <p className="text-xs text-text-tertiary mb-4">{tr('Enter your name and email to comment on this shared asset.', 'Укажите имя и email, чтобы комментировать этот материал.')}</p>
         <div className="space-y-3">
           <input
             type="text"
-            placeholder="Your name"
+            placeholder={tr('Your name', 'Ваше имя')}
             value={name}
             onChange={(e) => setName(e.target.value)}
             className="w-full rounded-md border border-border bg-bg-tertiary px-3 py-2 text-sm text-text-primary placeholder:text-text-tertiary focus:outline-none focus:border-accent"
@@ -1001,7 +1052,7 @@ function GuestIdentityPrompt({ onSave, onCancel }: { onSave: (name: string, emai
           />
           <input
             type="email"
-            placeholder="Email address"
+            placeholder={tr('Email address', 'Электронная почта')}
             value={email}
             onChange={(e) => setEmail(e.target.value)}
             className="w-full rounded-md border border-border bg-bg-tertiary px-3 py-2 text-sm text-text-primary placeholder:text-text-tertiary focus:outline-none focus:border-accent"
@@ -1009,14 +1060,14 @@ function GuestIdentityPrompt({ onSave, onCancel }: { onSave: (name: string, emai
         </div>
         <div className="flex items-center justify-end gap-2 mt-4">
           <button onClick={onCancel} className="px-3 py-1.5 text-xs text-text-tertiary hover:text-text-primary transition-colors">
-            Cancel
+            {tr('Cancel', 'Отмена')}
           </button>
           <button
             disabled={!name.trim() || !email.trim()}
             onClick={() => onSave(name.trim(), email.trim())}
             className="px-4 py-1.5 rounded-md bg-accent text-xs font-medium text-white hover:bg-accent/90 disabled:opacity-50 transition-colors"
           >
-            Continue
+            {tr('Continue', 'Продолжить')}
           </button>
         </div>
       </div>
@@ -1041,6 +1092,7 @@ export function FolderShareViewer({
   branding,
   onAssetClick,
 }: FolderShareViewerProps) {
+  const { locale, formatCount } = useI18n()
   // Build share_session query param for all API calls
   const sessionParam = shareSession ? `&share_session=${encodeURIComponent(shareSession)}` : ''
   const [currentSubfolderId, setCurrentSubfolderId] = React.useState<string | null>(null)
@@ -1048,7 +1100,7 @@ export function FolderShareViewer({
   const [searchQuery, setSearchQuery] = React.useState('')
   const [foldersExpanded, setFoldersExpanded] = React.useState(true)
   const [assetsExpanded, setAssetsExpanded] = React.useState(true)
-  const [panelOpen, setPanelOpen] = React.useState(true)
+  const [panelOpen, setPanelOpen] = React.useState(false)
   const [viewingAsset, setViewingAsset] = React.useState<FolderShareAssetItem | null>(null)
 
   // Set page title
@@ -1065,6 +1117,10 @@ export function FolderShareViewer({
   const [loading, setLoading] = React.useState(true)
   const [loadingMore, setLoadingMore] = React.useState(false)
   const [error, setError] = React.useState<string | null>(null)
+
+  React.useEffect(() => {
+    setPanelOpen(window.matchMedia('(min-width: 768px)').matches)
+  }, [])
 
   const accentColor = appearance.accent_color ?? branding?.primary_color ?? '#6366f1'
   const isDark = appearance.theme !== 'light'
@@ -1124,13 +1180,13 @@ export function FolderShareViewer({
   }, [accentColor])
 
   // Whether clicking opens viewer
-  const openInViewer = appearance.open_in_viewer !== false
+  const openInViewer = appearance.comment_mode !== 'simple' || appearance.open_in_viewer !== false
 
   // Compute total size of assets
   const totalAssetSize = React.useMemo(() => {
     const sum = assets.reduce((acc, a) => acc + (a.file_size ?? 0), 0)
-    return sum > 0 ? formatFileSize(sum) : null
-  }, [assets])
+    return sum > 0 ? formatFileSize(sum, locale) : null
+  }, [assets, locale])
 
   // Compute total size of subfolders (approximate from asset sizes)
   const totalFolderSize = React.useMemo(() => {
@@ -1233,10 +1289,10 @@ export function FolderShareViewer({
   // Summary text
   const summaryParts: string[] = []
   if (subfolders.length > 0) {
-    summaryParts.push(`${subfolders.length} Folder${subfolders.length === 1 ? '' : 's'}`)
+    summaryParts.push(formatCount(subfolders.length, ['folder', 'folders', 'folders'], ['папка', 'папки', 'папок']))
   }
   if (assets.length > 0) {
-    summaryParts.push(`${assets.length} Asset${assets.length === 1 ? '' : 's'}`)
+    summaryParts.push(formatCount(assets.length, ['asset', 'assets', 'assets'], ['материал', 'материала', 'материалов']))
   }
   const summaryText = summaryParts.join(', ')
 
@@ -1324,24 +1380,25 @@ export function FolderShareViewer({
           )}
 
           {/* Breadcrumb */}
-          <span className="text-[13px] font-medium text-text-primary truncate">{currentTitle}</span>
+          <span data-user-content="true" className="text-[13px] font-medium text-text-primary truncate">{currentTitle}</span>
         </div>
 
         {/* Right: Download All + panel toggle */}
         <div className="flex items-center gap-2 shrink-0">
+          <PublicLocaleSwitcher />
           {allowDownload && (
             <button
               className="flex items-center gap-1.5 h-7 px-3 rounded-md text-xs font-medium text-white bg-accent hover:bg-accent-hover transition-colors"
               onClick={() => handleDownloadAll(token, currentSubfolderId ?? null, shareSession)}
             >
               <Download className="h-3 w-3" />
-              Download All
+              <span className="hidden sm:inline">{locale === 'ru' ? 'Скачать всё' : 'Download All'}</span>
             </button>
           )}
           <button
             onClick={() => setPanelOpen((v) => !v)}
             className="flex items-center justify-center h-7 w-7 rounded-md text-text-secondary hover:text-text-primary hover:bg-bg-hover transition-colors"
-            title={panelOpen ? 'Hide panel' : 'Show panel'}
+            title={panelOpen ? (locale === 'ru' ? 'Скрыть панель' : 'Hide panel') : (locale === 'ru' ? 'Показать панель' : 'Show panel')}
           >
             {panelOpen ? <PanelRightClose className="h-4 w-4" /> : <PanelRightOpen className="h-4 w-4" />}
           </button>
@@ -1349,16 +1406,16 @@ export function FolderShareViewer({
       </header>
 
       {/* ─── Content area ──────────────────────────────────────────────── */}
-      <div className="flex flex-1 overflow-hidden">
+      <div className="relative flex flex-1 overflow-hidden">
         {/* ─── Left: folder contents ─────────────────────────────────── */}
         <div className="flex-1 flex flex-col overflow-hidden">
           {/* Sub-header: title, summary, breadcrumb, search */}
           <div className="border-b border-border px-5 py-4">
-            <h1 className="text-lg font-bold text-text-primary leading-tight">{title || folderName}</h1>
+            <h1 data-user-content="true" className="text-lg font-bold text-text-primary leading-tight">{title || folderName}</h1>
             {!loading && (
               <p className="mt-0.5 text-sm text-text-tertiary">
-                {createdByName && <>Created by {createdByName} &middot; </>}
-                {summaryText || 'Empty folder'}
+                {createdByName && <>{locale === 'ru' ? 'Создал' : 'Created by'} {createdByName} &middot; </>}
+                {summaryText || (locale === 'ru' ? 'Пустая папка' : 'Empty folder')}
               </p>
             )}
 
@@ -1372,7 +1429,7 @@ export function FolderShareViewer({
                   )}
                   onClick={() => navigateToBreadcrumb(-1)}
                 >
-                  Root
+                  {locale === 'ru' ? 'Корень' : 'Root'}
                 </button>
                 {breadcrumbs.map((crumb, i) => (
                   <React.Fragment key={crumb.id}>
@@ -1400,7 +1457,7 @@ export function FolderShareViewer({
                   type="text"
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
-                  placeholder="Search assets…"
+                  placeholder={locale === 'ru' ? 'Поиск материалов…' : 'Search assets…'}
                   className="h-8 w-52 pl-8 pr-3 rounded-md text-sm border bg-bg-tertiary border-border text-text-primary placeholder:text-text-tertiary focus:outline-none focus:border-border-focus"
                 />
               </div>
@@ -1421,7 +1478,7 @@ export function FolderShareViewer({
               <div className="flex flex-col items-center justify-center py-24 gap-3">
                 <Folder className="h-12 w-12 text-text-tertiary" />
                 <p className="text-sm text-text-tertiary">
-                  {searchQuery.trim() ? 'No results found' : 'This folder is empty'}
+                  {searchQuery.trim() ? (locale === 'ru' ? 'Ничего не найдено' : 'No results found') : (locale === 'ru' ? 'Эта папка пуста' : 'This folder is empty')}
                 </p>
               </div>
             ) : (
@@ -1430,7 +1487,7 @@ export function FolderShareViewer({
                 {filteredSubfolders.length > 0 && (
                   <section className="mb-6">
                     <SectionHeader
-                      label={filteredSubfolders.length === 1 ? 'Folder' : 'Folders'}
+                      label={locale === 'ru' ? 'Папки' : (filteredSubfolders.length === 1 ? 'Folder' : 'Folders')}
                       count={filteredSubfolders.length}
                       totalSize={totalFolderSize}
                       expanded={foldersExpanded}
@@ -1454,7 +1511,7 @@ export function FolderShareViewer({
                 {filteredAssets.length > 0 && (
                   <section>
                     <SectionHeader
-                      label={filteredAssets.length === 1 ? 'Asset' : 'Assets'}
+                      label={locale === 'ru' ? 'Материалы' : (filteredAssets.length === 1 ? 'Asset' : 'Assets')}
                       count={filteredAssets.length}
                       totalSize={totalAssetSize}
                       expanded={assetsExpanded}
@@ -1486,9 +1543,9 @@ export function FolderShareViewer({
                             {/* Column headers */}
                             <div className="flex items-center gap-4 px-1 py-2 border-b border-border bg-bg-secondary/50 text-[10px] text-text-tertiary font-medium uppercase tracking-wider">
                               <div className="h-14 w-14 shrink-0" />
-                              <div className="flex-1 min-w-0">Name</div>
-                              <div className="hidden sm:block w-24 text-right shrink-0">Size</div>
-                              <div className="hidden sm:block w-28 shrink-0">Date</div>
+                              <div className="flex-1 min-w-0">{locale === 'ru' ? 'Название' : 'Name'}</div>
+                              <div className="hidden sm:block w-24 text-right shrink-0">{locale === 'ru' ? 'Размер' : 'Size'}</div>
+                              <div className="hidden sm:block w-28 shrink-0">{locale === 'ru' ? 'Дата' : 'Date'}</div>
                               {allowDownload && <div className="w-7 shrink-0" />}
                             </div>
                             {filteredAssets.map((asset, i) => {
@@ -1508,19 +1565,19 @@ export function FolderShareViewer({
                                   <ListRowThumb asset={asset} TypeIcon={TypeIcon} />
                                   {/* Name + meta */}
                                   <div className="flex-1 min-w-0">
-                                    <p className="text-sm font-medium text-text-primary truncate leading-snug">{asset.name}</p>
+                                    <p data-user-content="true" className="text-sm font-medium text-text-primary truncate leading-snug">{asset.name}</p>
                                     <p className="text-xs text-text-tertiary mt-0.5 truncate">
                                       {asset.created_by_name && <>{asset.created_by_name} &middot; </>}
-                                      {formatShortDate(asset.created_at)}
+                                      {formatShortDate(asset.created_at, locale)}
                                     </p>
                                   </div>
                                   {/* File size */}
                                   <span className="hidden sm:block w-24 text-right text-sm text-text-tertiary tabular-nums shrink-0">
-                                    {asset.file_size != null ? formatFileSize(asset.file_size) : '—'}
+                                    {asset.file_size != null ? formatFileSize(asset.file_size, locale) : '—'}
                                   </span>
                                   {/* Date */}
                                   <span className="hidden sm:block w-28 text-xs text-text-tertiary shrink-0">
-                                    {formatDate(asset.created_at)}
+                                    {formatDate(asset.created_at, locale)}
                                   </span>
                                   {/* Download */}
                                   {allowDownload && (
@@ -1547,7 +1604,7 @@ export function FolderShareViewer({
                               className="flex items-center gap-2 px-5 py-2 rounded-lg text-sm font-medium border border-border text-text-primary hover:bg-bg-tertiary hover:border-border-focus disabled:opacity-50 transition-colors"
                             >
                               {loadingMore && <Loader2 className="h-4 w-4 animate-spin" />}
-                              {loadingMore ? 'Loading…' : 'Load more'}
+                              {loadingMore ? (locale === 'ru' ? 'Загрузка…' : 'Loading…') : (locale === 'ru' ? 'Загрузить ещё' : 'Load more')}
                             </button>
                           </div>
                         )}
@@ -1569,7 +1626,7 @@ export function FolderShareViewer({
               )}
               {!loading && (
                 <p className="text-xs tabular-nums text-text-tertiary">
-                  {assets.length + subfolders.length} item{assets.length + subfolders.length === 1 ? '' : 's'}
+                  {formatCount(assets.length + subfolders.length, ['item', 'items', 'items'], ['элемент', 'элемента', 'элементов'])}
                 </p>
               )}
             </div>
@@ -1578,7 +1635,7 @@ export function FolderShareViewer({
 
         {/* ─── Right Panel ───────────────────────────────────────────── */}
         {panelOpen && (
-          <div className="w-[320px] shrink-0 border-l border-border bg-bg-secondary flex flex-col overflow-hidden">
+          <div className="absolute inset-y-0 right-0 z-30 flex w-full max-w-[320px] flex-col overflow-hidden border-l border-border bg-bg-secondary shadow-2xl md:static md:z-auto md:shrink-0 md:shadow-none">
             <RightPanel
               selectedAsset={selectedAsset}
               token={token}

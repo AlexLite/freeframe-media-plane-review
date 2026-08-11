@@ -1,5 +1,6 @@
 import { HardDrive } from 'lucide-react'
-import { cn, formatBytes, storageMeterState } from '@/lib/utils'
+import { cn, storageMeterState } from '@/lib/utils'
+import { useI18n } from '@/hooks/use-i18n'
 
 const FILL: Record<'ok' | 'warn' | 'critical', string> = {
   ok: 'bg-accent',
@@ -13,10 +14,16 @@ const RING_TEXT: Record<'ok' | 'warn' | 'critical', string> = {
   critical: 'text-status-error',
 }
 
-function usageTitle(used: number, limit: number, unlimited: boolean): string {
+function usageTitle(
+  used: number,
+  limit: number,
+  unlimited: boolean,
+  t: ReturnType<typeof useI18n>['t'],
+  formatBytes: ReturnType<typeof useI18n>['formatBytes'],
+): string {
   return unlimited
-    ? `Storage used ${formatBytes(used)}`
-    : `Storage ${formatBytes(used)} / ${formatBytes(limit)}`
+    ? `${t('storage.used')} ${formatBytes(used)}`
+    : `${t('storage.storage')} ${formatBytes(used)} / ${formatBytes(limit)}`
 }
 
 /** Full "used / limit" row + meter bar — for expanded surfaces (sidebar / admin panel). */
@@ -29,6 +36,7 @@ export function StorageUsage({
   limit: number
   variant?: 'sidebar' | 'panel'
 }) {
+  const { t, formatBytes } = useI18n()
   const { unlimited, pct, level } = storageMeterState(used, limit)
   const labelCls = variant === 'sidebar' ? 'text-[11px]' : 'text-sm'
   const valueCls = variant === 'sidebar' ? 'text-[10px]' : 'text-xs'
@@ -37,7 +45,7 @@ export function StorageUsage({
     <div className="flex flex-col gap-1">
       <div className="flex items-center justify-between">
         <span className={cn(labelCls, 'font-medium text-text-secondary')}>
-          {unlimited ? 'Storage used' : 'Storage'}
+          {unlimited ? t('storage.used') : t('storage.storage')}
         </span>
         <span className={cn(valueCls, 'tabular-nums text-text-tertiary')}>
           {unlimited ? formatBytes(used) : `${formatBytes(used)} / ${formatBytes(limit)}`}
@@ -61,8 +69,9 @@ export function StorageUsage({
 /** Compact circular gauge — for the collapsed sidebar rail. Ring colored by usage level
  *  when a cap is set; a plain disk icon when unlimited. Hover title shows used/limit. */
 export function StorageRing({ used, limit }: { used: number; limit: number }) {
+  const { t, formatBytes } = useI18n()
   const { unlimited, pct, level } = storageMeterState(used, limit)
-  const title = usageTitle(used, limit, unlimited)
+  const title = usageTitle(used, limit, unlimited, t, formatBytes)
 
   if (unlimited) {
     return (

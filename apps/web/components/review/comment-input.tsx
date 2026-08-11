@@ -45,6 +45,7 @@ interface CommentInputProps {
   ) => Promise<void>;
   onCancelReply?: () => void;
   onPauseVideo?: () => void;
+  fixedVisibility?: "public" | "internal";
   className?: string;
 }
 
@@ -183,6 +184,7 @@ export function CommentInput({
   onSubmit,
   onCancelReply,
   onPauseVideo,
+  fixedVisibility,
   className,
 }: CommentInputProps) {
   const {
@@ -362,7 +364,7 @@ export function CommentInput({
         undefined,
         finalAnnotation,
         replyToId ?? undefined,
-        commentVisibility,
+        fixedVisibility ?? commentVisibility,
         mentionUserIds.length > 0 ? mentionUserIds : undefined,
       );
 
@@ -581,7 +583,7 @@ export function CommentInput({
 
             <div className="flex items-center gap-2">
               {/* Visibility dropdown */}
-              <div className="relative" ref={visRef}>
+              {!fixedVisibility && <div className="relative" ref={visRef}>
                 <button
                   onClick={() => setVisDropdownOpen((p) => !p)}
                   className={cn(
@@ -633,7 +635,7 @@ export function CommentInput({
                     </button>
                   </div>
                 )}
-              </div>
+              </div>}
 
               {/* Submit */}
               <button

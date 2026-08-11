@@ -15,6 +15,7 @@ class ShareLinkAppearance(BaseModel):
     aspect_ratio: Literal["landscape", "square", "portrait"] = "landscape"
     thumbnail_scale: Literal["fit", "fill"] = "fill"
     show_card_info: bool = True
+    comment_mode: Literal["detailed", "simple"] = "detailed"
 
 
 class ShareLinkCreate(BaseModel):

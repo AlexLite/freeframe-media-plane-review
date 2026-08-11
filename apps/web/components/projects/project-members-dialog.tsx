@@ -5,6 +5,7 @@ import * as Dialog from '@radix-ui/react-dialog'
 import * as DropdownMenu from '@radix-ui/react-dropdown-menu'
 import { X, ChevronDown, ArrowLeft, Users, Crown, Loader2, Check } from 'lucide-react'
 import { cn } from '@/lib/utils'
+import { useI18n } from '@/hooks/use-i18n'
 import { Button } from '@/components/ui/button'
 import { Avatar } from '@/components/shared/avatar'
 import { api } from '@/lib/api'
@@ -106,6 +107,7 @@ function AddView({
   onSwitchToManage: () => void
   onMemberAdded: () => void
 }) {
+  const { t } = useI18n()
   const [query, setQuery] = React.useState('')
   const [role, setRole] = React.useState<ProjectRole>('editor')
   const [suggestions, setSuggestions] = React.useState<User[]>([])
@@ -188,7 +190,7 @@ function AddView({
           <Users className="h-4 w-4 text-accent" />
         </div>
         <Dialog.Title className="text-base font-semibold text-text-primary">
-          Add to {projectName}
+          {t('members.addTo', { project: projectName })}
         </Dialog.Title>
       </div>
 
@@ -203,17 +205,17 @@ function AddView({
               setSelectedUser(null)
               setError(null)
             }}
-            placeholder="Name or email"
+            placeholder={t('members.nameOrEmail')}
             className="flex-1 bg-transparent text-sm text-text-primary placeholder:text-text-tertiary outline-none"
           />
           <RoleDropdown value={role} onChange={setRole} />
         </div>
-        <p className="mt-1.5 text-xs text-text-tertiary">Add a new or existing Member</p>
+        <p className="mt-1.5 text-xs text-text-tertiary">{t('members.addExisting')}</p>
 
         {/* Suggestions dropdown */}
         {showSuggestions && suggestions.length > 0 && (
           <div className="mt-2">
-            <p className="text-xs font-medium text-text-tertiary mb-1.5">Suggested</p>
+            <p className="text-xs font-medium text-text-tertiary mb-1.5">{t('members.suggested')}</p>
             <div className="space-y-0.5">
               {suggestions.map((user) => (
                 <button
@@ -242,7 +244,7 @@ function AddView({
         <textarea
           value={message}
           onChange={(e) => setMessage(e.target.value)}
-          placeholder="Add a message (optional)"
+          placeholder={t('members.messageOptional')}
           rows={2}
           className="w-full rounded-lg border border-border bg-bg-tertiary px-3 py-2 text-sm text-text-primary placeholder:text-text-tertiary outline-none focus:border-border-focus resize-none"
         />
@@ -259,7 +261,7 @@ function AddView({
           loading={adding}
           onClick={handleAdd}
         >
-          Add
+          {t('members.add')}
         </Button>
       </div>
 
@@ -282,7 +284,7 @@ function AddView({
           onClick={onSwitchToManage}
           className="text-sm text-text-secondary hover:text-text-primary font-medium transition-colors"
         >
-          Manage
+          {t('members.manage')}
         </button>
       </div>
     </div>
