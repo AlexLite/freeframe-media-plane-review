@@ -128,34 +128,48 @@ def test_device_start_rate_limit_is_enforced(client, monkeypatch):
     assert response.status_code == 429
 
 
-def test_uxp_null_origin_preflight_is_allowed(client):
+@pytest.mark.parametrize(
+    "path",
+    ["/auth/device/start", "/auth/device/poll"],
+)
+@pytest.mark.parametrize(
+    "origin",
+    ["null", "uxp://uxp-internal", "uxp://com.alexlite.plane-freeframe-review"],
+)
+def test_uxp_origin_preflight_is_allowed(client, path, origin):
     response = client.options(
-        "/auth/device/start",
+        path,
         headers={
-            "Origin": "null",
+            "Origin": origin,
             "Access-Control-Request-Method": "POST",
             "Access-Control-Request-Headers": "content-type",
         },
     )
     assert response.status_code in (200, 204)
-    assert response.headers["access-control-allow-origin"] == "null"
-    assert response.headers["access-control-allow-methods"] == "POST"
+    assert response.headers["access-control-allow-origin"] == "*"
+    assert response.headers["access-control-allow-methods"] == "POST, OPTIONS"
     assert response.headers["access-control-allow-headers"] == "Content-Type"
+    assert "access-control-allow-credentials" not in response.headers
 
 
-def test_uxp_null_origin_post_includes_cors_header(client):
+@pytest.mark.parametrize(
+    "origin",
+    ["null", "uxp://uxp-internal", "uxp://com.alexlite.plane-freeframe-review"],
+)
+def test_uxp_origin_post_includes_non_credentialed_cors_header(client, origin):
     redis = FakeRedis()
     with patch("apps.api.services.redis_service.get_redis", return_value=redis):
         response = client.post(
             "/auth/device/start",
             json={"client_id": "premiere-uxp"},
-            headers={"Origin": "null"},
+            headers={"Origin": origin},
         )
     assert response.status_code == 200
-    assert response.headers["access-control-allow-origin"] == "null"
+    assert response.headers["access-control-allow-origin"] == "*"
+    assert "access-control-allow-credentials" not in response.headers
 
 
-def test_external_origin_is_not_allowed_for_device_flow(client):
+def test_device_flow_allows_wildcard_but_global_cors_stays_restricted(client):
     redis = FakeRedis()
     with patch("apps.api.services.redis_service.get_redis", return_value=redis):
         response = client.post(
@@ -164,7 +178,12 @@ def test_external_origin_is_not_allowed_for_device_flow(client):
             headers={"Origin": "https://untrusted.example"},
         )
     assert response.status_code == 200
-    assert "access-control-allow-origin" not in response.headers
+    assert response.headers["access-control-allow-origin"] == "*"
+    assert "access-control-allow-credentials" not in response.headers
+
+    unrelated = client.get("/health", headers={"Origin": "https://untrusted.example"})
+    assert unrelated.status_code == 200
+    assert "access-control-allow-origin" not in unrelated.headers
 
 
 def test_direct_device_flow_remains_separate_from_plane_mode(client, monkeypatch):
