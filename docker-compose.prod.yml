@@ -160,6 +160,15 @@ services:
       # Shared
       - traefik.http.middlewares.strip-api-prefix.stripprefix.prefixes=/api
       - traefik.http.services.api.loadbalancer.server.port=8000
+      # UXP uses the same public HTTPS origin as the web app. Keep /auth
+      # unprefixed for device-flow clients while the browser continues via /api.
+      - traefik.http.routers.auth.rule=PathPrefix(`/auth`)
+      - traefik.http.routers.auth.entrypoints=web
+      - traefik.http.routers.auth.service=api
+      - traefik.http.routers.auth-secure.rule=PathPrefix(`/auth`)
+      - traefik.http.routers.auth-secure.entrypoints=websecure
+      - traefik.http.routers.auth-secure.tls.certresolver=letsencrypt
+      - traefik.http.routers.auth-secure.service=api
     restart: unless-stopped
 
   worker:

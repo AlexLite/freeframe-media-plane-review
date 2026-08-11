@@ -1,4 +1,5 @@
 from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi.responses import JSONResponse
 from sqlalchemy.orm import Session
 import uuid
 import secrets
@@ -10,6 +11,7 @@ from ..schemas.auth import (
     SendMagicCodeRequest, SendMagicCodeResponse,
     VerifyMagicCodeRequest, SetPasswordRequest,
     AcceptInviteRequest, InviteInfoResponse,
+    DeviceStartRequest, DeviceStartResponse, DevicePollRequest, DeviceTokenResponse, DeviceApproveRequest,
 )
 from ..services.auth_service import (
     hash_password, verify_password,
@@ -19,16 +21,25 @@ from ..services.auth_service import (
 from ..services.redis_service import (
     generate_magic_code, store_magic_code, verify_magic_code as redis_verify_magic_code,
     MAGIC_CODE_EXPIRY_SECONDS,
+    create_device_authorization, approve_device_authorization, poll_device_authorization,
+    DEVICE_FLOW_EXPIRY_SECONDS, DEVICE_POLL_INTERVAL_SECONDS,
 )
 from ..tasks.email_tasks import send_magic_code_email, send_invite_email
 from ..tasks.celery_app import send_task_safe
 from ..models.user import User, UserStatus
 from ..middleware.auth import get_current_user
 from ..middleware.rate_limit import rate_limit
+from ..config import settings
 
 router = APIRouter(prefix="/auth", tags=["auth"])
 
 MAGIC_CODE_EXPIRY_MINUTES = MAGIC_CODE_EXPIRY_SECONDS // 60
+
+
+def _require_direct_freeframe_mode() -> None:
+    """Keep device login outside the Plane-scoped authentication boundary."""
+    if settings.media_plane_mode:
+        raise HTTPException(status_code=404, detail="Direct device login is unavailable in Plane mode")
 
 
 def _generate_invite_token() -> str:
@@ -226,6 +237,63 @@ def refresh_token(body: RefreshRequest, db: Session = Depends(get_db)):
         refresh_token=create_refresh_token(str(user.id)),
         needs_password=user.password_hash is None,
     )
+
+
+@router.post("/device/start", response_model=DeviceStartResponse, dependencies=[Depends(rate_limit("device_start", 10, 600))])
+def start_device_authorization(body: DeviceStartRequest):
+    """Start the Direct FreeFrame browser/device flow for Premiere UXP only."""
+    _require_direct_freeframe_mode()
+    try:
+        device_code, user_code = create_device_authorization(body.client_id)
+    except ValueError:
+        raise HTTPException(status_code=400, detail="Unsupported client_id")
+    except RuntimeError:
+        raise HTTPException(status_code=503, detail="Device authorization is temporarily unavailable")
+    verification_uri = f"{settings.frontend_url.rstrip('/')}/device"
+    return DeviceStartResponse(
+        device_code=device_code,
+        user_code=user_code,
+        verification_uri=verification_uri,
+        verification_uri_complete=f"{verification_uri}?user_code={user_code}",
+        expires_in=DEVICE_FLOW_EXPIRY_SECONDS,
+        interval=DEVICE_POLL_INTERVAL_SECONDS,
+    )
+
+
+@router.post("/device/poll", dependencies=[Depends(rate_limit("device_poll", 120, 600))])
+def poll_device_authorization_endpoint(body: DevicePollRequest, db: Session = Depends(get_db)):
+    """Poll a Direct FreeFrame device request; an approved request is one-use."""
+    _require_direct_freeframe_mode()
+    result, user_id = poll_device_authorization(body.client_id, body.device_code)
+    if result == "pending":
+        return JSONResponse(status_code=202, content={"error": "authorization_pending"})
+    if result == "slow_down":
+        return JSONResponse(status_code=400, content={"error": "slow_down"})
+    if result != "approved" or not user_id:
+        return JSONResponse(status_code=400, content={"error": "invalid_device_code"})
+
+    try:
+        user = get_user_by_id(db, uuid.UUID(user_id))
+    except (TypeError, ValueError):
+        user = None
+    if not user or user.status == UserStatus.deactivated:
+        return JSONResponse(status_code=400, content={"error": "invalid_device_code"})
+    return DeviceTokenResponse(
+        access_token=create_access_token(str(user.id)),
+        refresh_token=create_refresh_token(str(user.id)),
+    )
+
+
+@router.post("/device/approve", dependencies=[Depends(rate_limit("device_approve", 20, 600))])
+def approve_device_authorization_endpoint(
+    body: DeviceApproveRequest,
+    current_user: User = Depends(get_current_user),
+):
+    """Approve a browser-visible request for the current active FreeFrame user."""
+    _require_direct_freeframe_mode()
+    if not approve_device_authorization(body.user_code, str(current_user.id)):
+        raise HTTPException(status_code=400, detail="Invalid or expired device code")
+    return {"status": "approved"}
 
 
 @router.get("/me", response_model=UserResponse)

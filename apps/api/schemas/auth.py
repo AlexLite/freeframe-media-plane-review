@@ -20,6 +20,36 @@ class TokenResponse(BaseModel):
 class RefreshRequest(BaseModel):
     refresh_token: str
 
+
+# Direct FreeFrame device authorization. This is intentionally separate from
+# the scoped Plane session exchange used when MEDIA_PLANE_MODE is enabled.
+class DeviceStartRequest(BaseModel):
+    client_id: str
+
+
+class DeviceStartResponse(BaseModel):
+    device_code: str
+    user_code: str
+    verification_uri: str
+    verification_uri_complete: str
+    expires_in: int
+    interval: int
+
+
+class DevicePollRequest(BaseModel):
+    client_id: str
+    device_code: str
+
+
+class DeviceTokenResponse(BaseModel):
+    access_token: str
+    refresh_token: str
+    token_type: str = "bearer"
+
+
+class DeviceApproveRequest(BaseModel):
+    user_code: str
+
 class UserResponse(BaseModel):
     id: uuid.UUID
     email: str

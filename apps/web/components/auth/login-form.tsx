@@ -14,6 +14,8 @@ type Step = 'email' | 'code' | 'password' | 'classic'
 
 export function LoginForm() {
   const router = useRouter()
+  const from = typeof window === 'undefined' ? null : new URLSearchParams(window.location.search).get('from')
+  const redirectPath = from?.startsWith('/') && !from.startsWith('//') ? from : '/projects'
   const [step, setStep] = useState<Step>('email')
   const [email, setEmail] = useState('')
   const [emailError, setEmailError] = useState('')
@@ -126,7 +128,7 @@ export function LoginForm() {
         setTokens(res.access_token, res.refresh_token)
         await useAuthStore.getState().fetchUser()
         const user = useAuthStore.getState().user
-        router.replace('/projects')
+        router.replace(redirectPath)
       }
     } catch (err) {
       if (err instanceof ApiError) {
@@ -181,7 +183,7 @@ export function LoginForm() {
       setTokens(res.access_token, res.refresh_token)
       await useAuthStore.getState().fetchUser()
       const u = useAuthStore.getState().user
-      router.replace('/projects')
+      router.replace(redirectPath)
     } catch (err) {
       if (err instanceof ApiError) {
         setGeneralError(err.detail)
@@ -213,7 +215,7 @@ export function LoginForm() {
       setTokens(res.access_token, res.refresh_token)
       await useAuthStore.getState().fetchUser()
       const u = useAuthStore.getState().user
-      router.replace('/projects')
+      router.replace(redirectPath)
     } catch (err) {
       if (err instanceof ApiError) {
         setClassicError(err.detail)
