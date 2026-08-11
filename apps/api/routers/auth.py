@@ -29,6 +29,7 @@ from ..tasks.celery_app import send_task_safe
 from ..models.user import User, UserStatus
 from ..middleware.auth import get_current_user
 from ..middleware.rate_limit import rate_limit
+from ..config import settings
 
 router = APIRouter(prefix="/auth", tags=["auth"])
 
