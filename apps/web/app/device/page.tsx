@@ -2,7 +2,7 @@
 
 import { FormEvent, useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { api, ApiError } from '@/lib/api'
+import { api } from '@/lib/api'
 import { getAccessToken } from '@/lib/auth'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -37,8 +37,8 @@ export default function DeviceAuthorizationPage() {
     try {
       await api.post('/auth/device/approve', { user_code: userCode })
       setApproved(true)
-    } catch (err) {
-      setError(err instanceof ApiError ? t('device.invalid') : t('device.invalid'))
+    } catch {
+      setError(t('device.invalid'))
     } finally {
       setLoading(false)
     }
