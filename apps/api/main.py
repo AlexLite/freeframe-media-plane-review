@@ -10,6 +10,7 @@ from .services.s3_service import run_startup_bucket_setup
 from .services.email_service import mail_is_configured
 from .middleware.global_rate_limit import GlobalRateLimitMiddleware
 from .middleware.setup_guard import SetupGuardMiddleware
+from .middleware.device_cors import DeviceFlowCORSMiddleware
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -51,6 +52,8 @@ app.add_middleware(
 )
 app.add_middleware(GlobalRateLimitMiddleware)
 app.add_middleware(SetupGuardMiddleware)
+# Must be outermost so UXP preflight never reaches auth/setup route handling.
+app.add_middleware(DeviceFlowCORSMiddleware)
 
 app.include_router(auth.router)
 app.include_router(users.router)

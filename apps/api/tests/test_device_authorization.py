@@ -128,6 +128,45 @@ def test_device_start_rate_limit_is_enforced(client, monkeypatch):
     assert response.status_code == 429
 
 
+def test_uxp_null_origin_preflight_is_allowed(client):
+    response = client.options(
+        "/auth/device/start",
+        headers={
+            "Origin": "null",
+            "Access-Control-Request-Method": "POST",
+            "Access-Control-Request-Headers": "content-type",
+        },
+    )
+    assert response.status_code in (200, 204)
+    assert response.headers["access-control-allow-origin"] == "null"
+    assert response.headers["access-control-allow-methods"] == "POST"
+    assert response.headers["access-control-allow-headers"] == "Content-Type"
+
+
+def test_uxp_null_origin_post_includes_cors_header(client):
+    redis = FakeRedis()
+    with patch("apps.api.services.redis_service.get_redis", return_value=redis):
+        response = client.post(
+            "/auth/device/start",
+            json={"client_id": "premiere-uxp"},
+            headers={"Origin": "null"},
+        )
+    assert response.status_code == 200
+    assert response.headers["access-control-allow-origin"] == "null"
+
+
+def test_external_origin_is_not_allowed_for_device_flow(client):
+    redis = FakeRedis()
+    with patch("apps.api.services.redis_service.get_redis", return_value=redis):
+        response = client.post(
+            "/auth/device/start",
+            json={"client_id": "premiere-uxp"},
+            headers={"Origin": "https://untrusted.example"},
+        )
+    assert response.status_code == 200
+    assert "access-control-allow-origin" not in response.headers
+
+
 def test_direct_device_flow_remains_separate_from_plane_mode(client, monkeypatch):
     monkeypatch.setattr("apps.api.config.settings.media_plane_mode", True)
     redis = FakeRedis()
