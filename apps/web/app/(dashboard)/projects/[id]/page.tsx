@@ -62,7 +62,7 @@ import type {
 } from "@/types";
 
 export default function ProjectDetailPage() {
-  const { locale, t, formatRelativeTime, formatBytes } = useI18n();
+  const { locale, t, formatRelativeTime, formatBytes, formatCount } = useI18n();
   const params = useParams();
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -865,10 +865,10 @@ export default function ProjectDetailPage() {
                   <X className="h-4 w-4" />
                 </Dialog.Close>
                 <Dialog.Title className="text-base font-semibold text-text-primary">
-                  Upload asset
+                  {t("assets.uploadAsset")}
                 </Dialog.Title>
                 <Dialog.Description className="mt-1 text-sm text-text-secondary">
-                  Add new media to this project.
+                  {t("assets.addMedia")}
                 </Dialog.Description>
                 <div className="mt-4 space-y-4">
                   {pendingFiles.length === 0 ? (
@@ -877,7 +877,7 @@ export default function ProjectDetailPage() {
                     <>
                       <div className="rounded-lg border border-border bg-bg-tertiary">
                         <div className="px-3 py-2 text-xs font-medium text-text-tertiary border-b border-border">
-                          {pendingFiles.length} file{pendingFiles.length !== 1 ? "s" : ""} selected
+                          {formatCount(pendingFiles.length, ["file", "files", "files"], ["файл", "файла", "файлов"])} {t("assets.selected")}
                         </div>
                         <div className="max-h-40 overflow-y-auto divide-y divide-border">
                           {pendingFiles.map((f, i) => (
@@ -894,10 +894,10 @@ export default function ProjectDetailPage() {
                       </div>
                       {pendingFiles.length === 1 && (
                         <Input
-                          label="Asset name"
+                          label={t("assets.assetName")}
                           value={assetName}
                           onChange={(e) => setAssetName(e.target.value)}
-                          placeholder="e.g. Hero Video Final"
+                          placeholder={t("assets.assetNamePlaceholder")}
                         />
                       )}
                       <div className="flex justify-end gap-2">
@@ -907,10 +907,10 @@ export default function ProjectDetailPage() {
                           size="sm"
                           onClick={() => setPendingFiles([])}
                         >
-                          Change files
+                          {t("assets.changeFiles")}
                         </Button>
                         <Button size="sm" onClick={handleStartUpload}>
-                          Start upload
+                          {t("assets.startUpload")}
                         </Button>
                       </div>
                     </>
