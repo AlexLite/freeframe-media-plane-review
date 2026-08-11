@@ -55,6 +55,16 @@ interface ReviewProviderProps {
   children: React.ReactNode;
 }
 
+async function fetchShareStream(url: string, headers: Record<string, string>) {
+  for (let attempt = 0; attempt < 150; attempt += 1) {
+    const response = await fetch(url, { headers });
+    const data = await response.json().catch(() => null);
+    if (response.status !== 202) return response.ok ? data : null;
+    await new Promise((resolve) => setTimeout(resolve, Math.max(1, Number(data?.retry_after ?? 2)) * 1000));
+  }
+  return null;
+}
+
 export function ReviewProvider({
   assetId,
   shareToken,
@@ -101,11 +111,10 @@ export function ReviewProvider({
           const t = localStorage.getItem("ff_access_token");
           if (t) headers["Authorization"] = `Bearer ${t}`;
         } catch {}
-        const streamRes = await fetch(
+        const streamData = await fetchShareStream(
           `${API_URL}/share/${shareToken}/stream/${assetId}?_=1${shareSessionParam}`,
-          { headers },
+          headers,
         );
-        const streamData = streamRes.ok ? await streamRes.json() : null;
         // Build pseudo asset from available data
         data = {
           id: assetId,
@@ -234,7 +243,7 @@ export function ReviewProvider({
     } catch {
       // Comments failing silently — asset is still viewable
     }
-  }, [assetId, shareToken]);
+  }, [assetId, shareSessionParam, shareToken]);
 
   const refetchComments = useCallback(async () => {
     await fetchComments();
@@ -285,11 +294,10 @@ export function ReviewProvider({
       const t = localStorage.getItem("ff_access_token");
       if (t) headers["Authorization"] = `Bearer ${t}`;
     } catch {}
-    fetch(
+    fetchShareStream(
       `${API_URL}/share/${shareToken}/stream/${assetId}?version_id=${currentVersionId}${shareSessionParam}`,
-      { headers },
+      headers,
     )
-      .then((r) => (r.ok ? r.json() : null))
       .then((streamData) => {
         if (cancelled || !mountedRef.current || !streamData?.url) return;
         streamedVersionRef.current = currentVersionId;
@@ -344,7 +352,7 @@ export function ReviewProvider({
       }
       return comment;
     },
-    [assetId],
+    [assetId, shareSessionParam, shareToken],
   );
 
   const resolveComment = useCallback(

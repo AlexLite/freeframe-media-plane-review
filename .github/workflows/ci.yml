@@ -12,7 +12,8 @@ on:
       - ".github/FUNDING.yml"
       - ".github/dependabot.yml"
   pull_request:
-    branches: [develop, main]
+    # Run for stacked PRs as well as develop/main PRs. Limiting the base branch
+    # left feature-on-feature review heads without any reproducible checks.
     paths-ignore:
       - "*.md"
       - "docs/**"

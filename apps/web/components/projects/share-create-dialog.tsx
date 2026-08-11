@@ -22,11 +22,14 @@ import {
   Clock,
   Droplets,
   LayoutGrid,
+  Eye,
+  EyeOff,
 } from 'lucide-react'
 import * as Switch from '@radix-ui/react-switch'
 import { cn, copyToClipboard, endOfDayISO } from '@/lib/utils'
 import { Button } from '@/components/ui/button'
 import { api } from '@/lib/api'
+import { useI18n } from '@/hooks/use-i18n'
 import type { AssetResponse, Folder, ShareLink, ShareLinkAppearance } from '@/types'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -267,6 +270,7 @@ interface ShareConfig {
   expiresAt: string | null
   watermark: boolean
   visibility: 'public' | 'secure'
+  commentMode: 'detailed' | 'simple'
 }
 
 // ─── Configure Phase ──────────────────────────────────────────────────────────
@@ -288,6 +292,7 @@ function ConfigurePhase({ defaultTitle, onBack, onCreate, creating }: ConfigureP
   const [watermark, setWatermark] = React.useState(false)
   const [expiresAt, setExpiresAt] = React.useState('')
   const [visibility, setVisibility] = React.useState<'public' | 'secure'>('public')
+  const [commentMode, setCommentMode] = React.useState<'detailed' | 'simple'>('detailed')
 
   function handleCreate() {
     onCreate({
@@ -298,6 +303,7 @@ function ConfigurePhase({ defaultTitle, onBack, onCreate, creating }: ConfigureP
       expiresAt: expiresAt || null,
       watermark,
       visibility,
+      commentMode,
     })
   }
 
@@ -363,6 +369,23 @@ function ConfigurePhase({ defaultTitle, onBack, onCreate, creating }: ConfigureP
             </Switch.Root>
           </div>
 
+          <div className={cn('flex items-center justify-between py-2.5 pl-6', !allowComments && 'opacity-50')}>
+            <div>
+              <p className="text-sm text-text-primary">Detailed comments</p>
+              <p className="text-xs text-text-tertiary mt-0.5">
+                Attach timecodes and draw annotations
+              </p>
+            </div>
+            <Switch.Root
+              checked={commentMode === 'detailed'}
+              disabled={!allowComments}
+              onCheckedChange={(checked) => setCommentMode(checked ? 'detailed' : 'simple')}
+              className="w-9 h-5 rounded-full relative bg-bg-tertiary border border-border data-[state=checked]:bg-accent transition-colors disabled:cursor-not-allowed"
+            >
+              <Switch.Thumb className="block w-4 h-4 rounded-full bg-white shadow transition-transform translate-x-0.5 data-[state=checked]:translate-x-[18px]" />
+            </Switch.Root>
+          </div>
+
           {/* Allow downloads */}
           <div className="flex items-center justify-between py-2.5">
             <div className="flex items-center gap-2.5">
@@ -409,9 +432,11 @@ function ConfigurePhase({ defaultTitle, onBack, onCreate, creating }: ConfigureP
                 <button
                   type="button"
                   onClick={() => setShowPassphraseInput(!showPassphraseInput)}
-                  className="absolute right-2 top-1/2 -translate-y-1/2 text-2xs text-text-tertiary hover:text-text-primary transition-colors px-1 py-0.5"
+                  title={showPassphraseInput ? 'Hide password' : 'Show password'}
+                  aria-label={showPassphraseInput ? 'Hide password' : 'Show password'}
+                  className="absolute right-2 top-1/2 -translate-y-1/2 text-text-tertiary hover:text-text-primary transition-colors p-1"
                 >
-                  {showPassphraseInput ? 'Hide' : 'Show'}
+                  {showPassphraseInput ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                 </button>
               </div>
             )}
@@ -489,6 +514,7 @@ function SelectionPhase({
   onCancel,
   onCreate,
 }: SelectionPhaseProps) {
+  const { formatCount } = useI18n()
   const hasItems = folders.length > 0 || assets.length > 0
   const totalItems = folders.length + assets.length
   const folderCount = folders.length
@@ -528,13 +554,13 @@ function SelectionPhase({
             {folderCount > 0 && (
               <span className="flex items-center gap-1">
                 <FolderIcon className="h-3.5 w-3.5 text-text-tertiary" />
-                {folderCount} folder{folderCount !== 1 ? 's' : ''}
+                {formatCount(folderCount, ['folder', 'folders', 'folders'], ['папка', 'папки', 'папок'])}
               </span>
             )}
             {assetCount > 0 && (
               <span className="flex items-center gap-1">
                 <Image className="h-3.5 w-3.5 text-text-tertiary" />
-                {assetCount} asset{assetCount !== 1 ? 's' : ''}
+                {formatCount(assetCount, ['asset', 'assets', 'assets'], ['материал', 'материала', 'материалов'])}
               </span>
             )}
             {totalItems === 0 && <span>Empty — no items to share</span>}
@@ -581,6 +607,7 @@ function LinkCreatedPhase({ result, allResults, onSelectResult, onDone, onAdvanc
   const [passphraseValue, setPassphraseValue] = React.useState('')
   const [showPassphraseInput, setShowPassphraseInput] = React.useState(false)
   const [watermark, setWatermark] = React.useState(false)
+  const [commentMode, setCommentMode] = React.useState<'detailed' | 'simple'>('detailed')
   const [expiresAt, setExpiresAt] = React.useState<string>('')
 
   // Sync title when switching between results
@@ -604,6 +631,7 @@ function LinkCreatedPhase({ result, allResults, onSelectResult, onDone, onAdvanc
       setWatermark(data.show_watermark)
       setExpiresAt(data.expires_at ? new Date(data.expires_at).toISOString().split('T')[0] : '')
       setLayout((data.appearance as ShareLinkAppearance | null)?.layout || 'grid')
+      setCommentMode((data.appearance as ShareLinkAppearance | null)?.comment_mode || 'detailed')
       setVisibility(data.visibility === 'secure' ? 'secure' : 'public')
     }).catch(() => {})
   }, [result.token])
@@ -821,7 +849,7 @@ function LinkCreatedPhase({ result, allResults, onSelectResult, onDone, onAdvanc
                   {(['grid', 'list'] as const).map((l) => (
                     <button
                       key={l}
-                      onClick={() => { setLayout(l); patchLink({ appearance: { layout: l, theme: 'dark', accent_color: null, open_in_viewer: true, sort_by: 'created_at' } }) }}
+                      onClick={() => { setLayout(l); patchLink({ appearance: { layout: l, theme: 'dark', accent_color: null, open_in_viewer: true, sort_by: 'created_at', comment_mode: commentMode } }) }}
                       className={cn('rounded-md px-3 py-1 text-2xs font-medium capitalize', layout === l ? 'bg-accent text-white' : 'text-text-tertiary hover:text-text-primary')}
                     >{l}</button>
                   ))}
@@ -838,6 +866,25 @@ function LinkCreatedPhase({ result, allResults, onSelectResult, onDone, onAdvanc
                   checked={allowComments}
                   onCheckedChange={(v) => { setAllowComments(v); patchLink({ permission: v ? 'comment' : 'view' }) }}
                   className="w-9 h-5 rounded-full relative bg-bg-tertiary border border-border data-[state=checked]:bg-accent transition-colors"
+                >
+                  <Switch.Thumb className="block w-4 h-4 rounded-full bg-white shadow transition-transform translate-x-0.5 data-[state=checked]:translate-x-[18px]" />
+                </Switch.Root>
+              </div>
+
+              <div className={cn('flex items-center justify-between py-2.5 pl-6', !allowComments && 'opacity-50')}>
+                <div>
+                  <p className="text-sm text-text-primary">Detailed comments</p>
+                  <p className="text-xs text-text-tertiary mt-0.5">Attach timecodes and draw annotations</p>
+                </div>
+                <Switch.Root
+                  checked={commentMode === 'detailed'}
+                  disabled={!allowComments}
+                  onCheckedChange={(checked) => {
+                    const mode = checked ? 'detailed' : 'simple'
+                    setCommentMode(mode)
+                    patchLink({ appearance: { layout, theme: 'dark', accent_color: null, open_in_viewer: true, sort_by: 'created_at', comment_mode: mode } })
+                  }}
+                  className="w-9 h-5 rounded-full relative bg-bg-tertiary border border-border data-[state=checked]:bg-accent transition-colors disabled:cursor-not-allowed"
                 >
                   <Switch.Thumb className="block w-4 h-4 rounded-full bg-white shadow transition-transform translate-x-0.5 data-[state=checked]:translate-x-[18px]" />
                 </Switch.Root>
@@ -889,9 +936,11 @@ function LinkCreatedPhase({ result, allResults, onSelectResult, onDone, onAdvanc
                     <button
                       type="button"
                       onClick={() => setShowPassphraseInput(!showPassphraseInput)}
-                      className="absolute right-2 top-1/2 -translate-y-1/2 text-2xs text-text-tertiary hover:text-text-primary transition-colors px-1 py-0.5"
+                      title={showPassphraseInput ? 'Hide password' : 'Show password'}
+                      aria-label={showPassphraseInput ? 'Hide password' : 'Show password'}
+                      className="absolute right-2 top-1/2 -translate-y-1/2 text-text-tertiary hover:text-text-primary transition-colors p-1"
                     >
-                      {showPassphraseInput ? 'Hide' : 'Show'}
+                      {showPassphraseInput ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                     </button>
                   </div>
                 )}
@@ -1085,6 +1134,7 @@ export function ShareCreateDialog({
           visibility: config.visibility,
           allow_download: config.allowDownloads,
           show_watermark: config.watermark,
+          appearance: { comment_mode: config.commentMode },
         }
         if (config.passphrase) body.password = config.passphrase
         if (config.expiresAt) body.expires_at = endOfDayISO(config.expiresAt)
@@ -1120,6 +1170,7 @@ export function ShareCreateDialog({
           permission: config.allowComments ? 'comment' : 'view',
           allow_download: config.allowDownloads,
           show_watermark: config.watermark,
+          appearance: { comment_mode: config.commentMode },
         }
         if (config.passphrase) patches.password = config.passphrase
         if (config.expiresAt) patches.expires_at = new Date(config.expiresAt).toISOString()
