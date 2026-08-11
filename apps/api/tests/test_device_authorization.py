@@ -38,7 +38,28 @@ class FakeRedis:
             self.values.pop(key, None)
             self.expiries.pop(key, None)
 
-    def eval(self, _script, _numkeys, key):
+    def eval(self, script, _numkeys, key, *args):
+        if "device_code_hash =" in script:
+            device_code_hash = self.values.get(key)
+            if not device_code_hash:
+                return False
+            record_key = f"device_flow:{device_code_hash}"
+            raw = self.values.get(record_key)
+            if not raw:
+                return False
+            record = json.loads(raw)
+            action = args[1]
+            if record.get("used") or record.get("approved_user_id") or record.get("denied"):
+                return False
+            if action == "approve":
+                record["approved_user_id"] = args[2]
+            elif action == "deny":
+                record["denied"] = True
+            else:
+                return False
+            self.values[record_key] = json.dumps(record)
+            return True
+
         raw = self.values.get(key)
         if not raw:
             return False
@@ -124,6 +145,23 @@ def test_deactivated_user_cannot_approve(client, mock_db, test_user):
     assert response.status_code == 401
 
 
+def test_denied_device_code_is_reported_and_cannot_be_reapproved(client, mock_db, auth_headers, test_user):
+    redis = FakeRedis()
+    mock_db.first.return_value = test_user
+    with patch("apps.api.services.redis_service.get_redis", return_value=redis):
+        body = _start(client)
+        denied = client.post("/auth/device/deny", json={"user_code": body["user_code"]}, headers=auth_headers)
+        assert denied.status_code == 200
+        poll = client.post(
+            "/auth/device/poll",
+            json={"client_id": "premiere-uxp", "device_code": body["device_code"]},
+        )
+        assert poll.status_code == 400
+        assert poll.json() == {"error": "access_denied"}
+        approve = client.post("/auth/device/approve", json={"user_code": body["user_code"]}, headers=auth_headers)
+        assert approve.status_code == 400
+
+
 def test_device_start_rate_limit_is_enforced(client, monkeypatch):
     monkeypatch.setattr("apps.api.middleware.rate_limit.check_rate_limit", lambda *_args: (False, 12))
     response = client.post("/auth/device/start", json={"client_id": "premiere-uxp"})
@@ -186,6 +224,16 @@ def test_device_flow_allows_wildcard_but_global_cors_stays_restricted(client):
     unrelated = client.get("/health", headers={"Origin": "https://untrusted.example"})
     assert unrelated.status_code == 200
     assert "access-control-allow-origin" not in unrelated.headers
+
+    unrelated_preflight = client.options(
+        "/auth/login",
+        headers={
+            "Origin": "https://untrusted.example",
+            "Access-Control-Request-Method": "POST",
+            "Access-Control-Request-Headers": "content-type",
+        },
+    )
+    assert "access-control-allow-origin" not in unrelated_preflight.headers
 
 
 def test_direct_device_flow_remains_separate_from_plane_mode(client, monkeypatch):

@@ -209,6 +209,7 @@ def create_device_authorization(client_id: str) -> tuple[str, str]:
             "client_id": client_id,
             "user_code": user_code_raw,
             "approved_user_id": None,
+            "denied": False,
             "used": False,
             "next_poll_at": 0,
         }
@@ -218,31 +219,52 @@ def create_device_authorization(client_id: str) -> tuple[str, str]:
     raise RuntimeError("Unable to allocate device authorization")
 
 
-def approve_device_authorization(user_code: str, user_id: str) -> bool:
-    """Bind a non-expired device request to the authenticated active user."""
+def _transition_device_authorization(user_code: str, action: str, user_id: str | None = None) -> bool:
+    """Atomically approve or deny a non-expired, still-pending request."""
     normalized = _normalize_user_code(user_code)
     if len(normalized) != 8:
         return False
     r = get_redis()
-    device_code_hash = r.get(f"{DEVICE_USER_CODE_PREFIX}{normalized}")
-    if not device_code_hash:
-        return False
-    key = _device_flow_key(device_code_hash)
-    raw = r.get(key)
-    if not raw:
-        return False
-    try:
-        record = json.loads(raw)
-    except (TypeError, json.JSONDecodeError):
-        return False
-    if record.get("used") or record.get("approved_user_id"):
-        return False
-    record["approved_user_id"] = str(user_id)
-    ttl = r.ttl(key)
-    if ttl <= 0:
-        return False
-    r.setex(key, ttl, json.dumps(record))
-    return True
+    transition_script = """
+local device_code_hash = redis.call('GET', KEYS[1])
+if not device_code_hash then return false end
+local key = ARGV[1] .. device_code_hash
+local raw = redis.call('GET', key)
+if not raw then return false end
+local record = cjson.decode(raw)
+if record['used'] or record['approved_user_id'] or record['denied'] then return false end
+local action = ARGV[2]
+if action == 'approve' then
+  record['approved_user_id'] = ARGV[3]
+elseif action == 'deny' then
+  record['denied'] = true
+else
+  return false
+end
+local ttl = redis.call('TTL', key)
+if ttl <= 0 then return false end
+redis.call('SETEX', key, ttl, cjson.encode(record))
+return true
+"""
+    result = r.eval(
+        transition_script,
+        1,
+        f"{DEVICE_USER_CODE_PREFIX}{normalized}",
+        DEVICE_FLOW_PREFIX,
+        action,
+        str(user_id or ""),
+    )
+    return bool(result)
+
+
+def approve_device_authorization(user_code: str, user_id: str) -> bool:
+    """Atomically bind a pending request to the authenticated active user."""
+    return _transition_device_authorization(user_code, "approve", user_id)
+
+
+def deny_device_authorization(user_code: str) -> bool:
+    """Atomically mark a pending request as denied by the authenticated user."""
+    return _transition_device_authorization(user_code, "deny")
 
 
 def poll_device_authorization(client_id: str, device_code: str) -> tuple[str, str | None]:
@@ -262,6 +284,8 @@ def poll_device_authorization(client_id: str, device_code: str) -> tuple[str, st
     now = int(time.time())
     if record.get("client_id") != client_id or record.get("used"):
         return "invalid", None
+    if record.get("denied"):
+        return "denied", None
     if now < int(record.get("next_poll_at", 0)):
         return "slow_down", None
     if not record.get("approved_user_id"):

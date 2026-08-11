@@ -21,7 +21,7 @@ from ..services.auth_service import (
 from ..services.redis_service import (
     generate_magic_code, store_magic_code, verify_magic_code as redis_verify_magic_code,
     MAGIC_CODE_EXPIRY_SECONDS,
-    create_device_authorization, approve_device_authorization, poll_device_authorization,
+    create_device_authorization, approve_device_authorization, deny_device_authorization, poll_device_authorization,
     DEVICE_FLOW_EXPIRY_SECONDS, DEVICE_POLL_INTERVAL_SECONDS,
 )
 from ..tasks.email_tasks import send_magic_code_email, send_invite_email
@@ -261,6 +261,8 @@ def poll_device_authorization_endpoint(body: DevicePollRequest, db: Session = De
         return JSONResponse(status_code=202, content={"error": "authorization_pending"})
     if result == "slow_down":
         return JSONResponse(status_code=400, content={"error": "slow_down"})
+    if result == "denied":
+        return JSONResponse(status_code=400, content={"error": "access_denied"})
     if result != "approved" or not user_id:
         return JSONResponse(status_code=400, content={"error": "invalid_device_code"})
 
@@ -285,6 +287,17 @@ def approve_device_authorization_endpoint(
     if not approve_device_authorization(body.user_code, str(current_user.id)):
         raise HTTPException(status_code=400, detail="Invalid or expired device code")
     return {"status": "approved"}
+
+
+@router.post("/device/deny", dependencies=[Depends(rate_limit("device_deny", 20, 600))])
+def deny_device_authorization_endpoint(
+    body: DeviceApproveRequest,
+    _current_user: User = Depends(get_current_user),
+):
+    """Deny a browser-visible request for the current active FreeFrame user."""
+    if not deny_device_authorization(body.user_code):
+        raise HTTPException(status_code=400, detail="Invalid or expired device code")
+    return {"status": "denied"}
 
 
 @router.get("/me", response_model=UserResponse)
