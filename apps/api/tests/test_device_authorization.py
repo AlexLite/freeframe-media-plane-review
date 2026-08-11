@@ -128,7 +128,9 @@ def test_device_start_rate_limit_is_enforced(client, monkeypatch):
     assert response.status_code == 429
 
 
-def test_device_flow_is_not_available_in_plane_mode(client, monkeypatch):
-    monkeypatch.setattr("apps.api.routers.auth.settings.media_plane_mode", True)
-    response = client.post("/auth/device/start", json={"client_id": "premiere-uxp"})
-    assert response.status_code == 404
+def test_direct_device_flow_remains_separate_from_plane_mode(client, monkeypatch):
+    monkeypatch.setattr("apps.api.config.settings.media_plane_mode", True)
+    redis = FakeRedis()
+    with patch("apps.api.services.redis_service.get_redis", return_value=redis):
+        response = client.post("/auth/device/start", json={"client_id": "premiere-uxp"})
+    assert response.status_code == 200

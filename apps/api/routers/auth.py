@@ -29,17 +29,10 @@ from ..tasks.celery_app import send_task_safe
 from ..models.user import User, UserStatus
 from ..middleware.auth import get_current_user
 from ..middleware.rate_limit import rate_limit
-from ..config import settings
 
 router = APIRouter(prefix="/auth", tags=["auth"])
 
 MAGIC_CODE_EXPIRY_MINUTES = MAGIC_CODE_EXPIRY_SECONDS // 60
-
-
-def _require_direct_freeframe_mode() -> None:
-    """Keep device login outside the Plane-scoped authentication boundary."""
-    if settings.media_plane_mode:
-        raise HTTPException(status_code=404, detail="Direct device login is unavailable in Plane mode")
 
 
 def _generate_invite_token() -> str:
@@ -242,7 +235,6 @@ def refresh_token(body: RefreshRequest, db: Session = Depends(get_db)):
 @router.post("/device/start", response_model=DeviceStartResponse, dependencies=[Depends(rate_limit("device_start", 10, 600))])
 def start_device_authorization(body: DeviceStartRequest):
     """Start the Direct FreeFrame browser/device flow for Premiere UXP only."""
-    _require_direct_freeframe_mode()
     try:
         device_code, user_code = create_device_authorization(body.client_id)
     except ValueError:
@@ -263,7 +255,6 @@ def start_device_authorization(body: DeviceStartRequest):
 @router.post("/device/poll", dependencies=[Depends(rate_limit("device_poll", 120, 600))])
 def poll_device_authorization_endpoint(body: DevicePollRequest, db: Session = Depends(get_db)):
     """Poll a Direct FreeFrame device request; an approved request is one-use."""
-    _require_direct_freeframe_mode()
     result, user_id = poll_device_authorization(body.client_id, body.device_code)
     if result == "pending":
         return JSONResponse(status_code=202, content={"error": "authorization_pending"})
@@ -290,7 +281,6 @@ def approve_device_authorization_endpoint(
     current_user: User = Depends(get_current_user),
 ):
     """Approve a browser-visible request for the current active FreeFrame user."""
-    _require_direct_freeframe_mode()
     if not approve_device_authorization(body.user_code, str(current_user.id)):
         raise HTTPException(status_code=400, detail="Invalid or expired device code")
     return {"status": "approved"}
