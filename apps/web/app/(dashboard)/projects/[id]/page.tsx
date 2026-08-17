@@ -630,7 +630,7 @@ export default function ProjectDetailPage() {
               </h2>
               {trash.folders.length === 0 && trash.assets.length === 0 ? (
                 <p className="text-xs text-text-tertiary">
-                  {locale === "ru" ? "Удалённых материалов нет" : "No deleted items"}
+                  {t("assets.noDeleted")}
                 </p>
               ) : (
                 <div className="space-y-1">
@@ -645,7 +645,7 @@ export default function ProjectDetailPage() {
                           {item.name}
                         </span>
                         <span className="text-xs text-text-tertiary">
-                          Folder
+                          {t("projects.folder")}
                         </span>
                       </div>
                       <button
@@ -657,7 +657,7 @@ export default function ProjectDetailPage() {
                           mutateSubfolders();
                         }}
                       >
-                        Restore
+                        {t("assets.restore")}
                       </button>
                     </div>
                   ))}
@@ -671,7 +671,15 @@ export default function ProjectDetailPage() {
                           {item.name}
                         </span>
                         <span className="text-xs text-text-tertiary capitalize">
-                          {item.type}
+                          {item.type === "video"
+                            ? t("assets.video")
+                            : item.type === "audio"
+                              ? t("assets.audio")
+                              : item.type === "image"
+                                ? t("assets.image")
+                                : item.type === "document"
+                                  ? t("assets.document")
+                                  : item.type}
                         </span>
                       </div>
                       <button
@@ -683,7 +691,7 @@ export default function ProjectDetailPage() {
                           mutateSubfolders();
                         }}
                       >
-                        Restore
+                        {t("assets.restore")}
                       </button>
                     </div>
                   ))}
