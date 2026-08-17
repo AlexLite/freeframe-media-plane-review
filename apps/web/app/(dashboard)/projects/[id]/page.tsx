@@ -1217,9 +1217,10 @@ export default function ProjectDetailPage() {
         onOpenChange={(open) => {
           if (!open) setPendingBulkDelete(null);
         }}
-        title={`Delete ${(pendingBulkDelete?.assetIds.length ?? 0) + (pendingBulkDelete?.folderIds.length ?? 0)} item${(pendingBulkDelete?.assetIds.length ?? 0) + (pendingBulkDelete?.folderIds.length ?? 0) !== 1 ? "s" : ""}?`}
-        description="This will move the selected items to the trash. You can restore them later from Recently Deleted."
-        confirmLabel="Delete"
+        title={t("assets.deleteItemsTitle", { count: (pendingBulkDelete?.assetIds.length ?? 0) + (pendingBulkDelete?.folderIds.length ?? 0) })}
+        description={t("assets.deleteItemsDescription")}
+        confirmLabel={t("common.delete")}
+        cancelLabel={t("common.cancel")}
         variant="danger"
         onConfirm={async () => {
           if (!pendingBulkDelete) return;
@@ -1255,9 +1256,10 @@ export default function ProjectDetailPage() {
       <ConfirmDialog
         open={assetToDelete !== null}
         onOpenChange={(open) => { if (!open) setAssetToDelete(null); }}
-        title={`Delete "${assetToDelete?.name}"?`}
-        description="This will move the asset to the trash. You can restore it later from Recently Deleted."
-        confirmLabel="Delete"
+        title={t("assets.deleteConfirmTitle", { name: assetToDelete?.name ?? "" })}
+        description={t("assets.deleteConfirmDescription")}
+        confirmLabel={t("common.delete")}
+        cancelLabel={t("common.cancel")}
         variant="danger"
         onConfirm={async () => {
           if (!assetToDelete) return;
