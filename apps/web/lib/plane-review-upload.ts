@@ -1,10 +1,10 @@
 import { planeReviewRequest } from './plane-review-client'
+import { uploadMultipartParts } from './multipart-upload'
 import type {
   PlaneReviewAssetSummary,
   PlaneReviewContext,
   PlaneReviewUploadCompletion,
   PlaneReviewUploadInitiation,
-  PlaneReviewUploadPart,
 } from './plane-review-types'
 
 export const PLANE_REVIEW_UPLOAD_CHUNK_SIZE = 10 * 1024 * 1024
@@ -133,46 +133,27 @@ export async function uploadPlaneReviewVersion({
       throw new Error('FreeFrame returned an unexpected upload context.')
     }
 
-    const totalParts = Math.ceil(file.size / PLANE_REVIEW_UPLOAD_CHUNK_SIZE)
-    const parts: PlaneReviewUploadPart[] = []
-
-    for (let partNumber = 1; partNumber <= totalParts; partNumber += 1) {
-      assertNotAborted(signal)
-      const start = (partNumber - 1) * PLANE_REVIEW_UPLOAD_CHUNK_SIZE
-      const chunk = file.slice(
-        start,
-        Math.min(start + PLANE_REVIEW_UPLOAD_CHUNK_SIZE, file.size),
-      )
-
-      const presign = await jsonRequest<PresignPartResponse>(
-        `${assetPath}/versions/${encodeURIComponent(initiation.version_id)}/upload/presign-part`,
-        {
-          s3_key: initiation.s3_key,
-          upload_id: initiation.upload_id,
-          part_number: partNumber,
-        },
-        signal,
-      )
-      if (presign.part_number !== partNumber || !presign.presigned_url) {
-        throw new Error(`FreeFrame returned an invalid URL for part ${partNumber}.`)
-      }
-
-      const uploadResponse = await fetch(presign.presigned_url, {
-        method: 'PUT',
-        body: chunk,
-        signal,
-      })
-      if (!uploadResponse.ok) {
-        throw new Error(`Upload part ${partNumber} failed with status ${uploadResponse.status}.`)
-      }
-
-      const etag = uploadResponse.headers.get('ETag')?.trim()
-      if (!etag) {
-        throw new Error('The object store did not expose an ETag for the uploaded part.')
-      }
-      parts.push({ PartNumber: partNumber, ETag: etag })
-      onProgress?.(Math.round((partNumber / totalParts) * 95))
-    }
+    const parts = await uploadMultipartParts({
+      file,
+      chunkSize: PLANE_REVIEW_UPLOAD_CHUNK_SIZE,
+      signal,
+      getPresignedUrl: async (partNumber, partSignal) => {
+        const presign = await jsonRequest<PresignPartResponse>(
+          `${assetPath}/versions/${encodeURIComponent(initiation!.version_id)}/upload/presign-part`,
+          {
+            s3_key: initiation!.s3_key,
+            upload_id: initiation!.upload_id,
+            part_number: partNumber,
+          },
+          partSignal,
+        )
+        if (presign.part_number !== partNumber || !presign.presigned_url) {
+          throw new Error(`FreeFrame returned an invalid URL for part ${partNumber}.`)
+        }
+        return presign.presigned_url
+      },
+      onProgress: (completedParts, totalParts) => onProgress?.(Math.round((completedParts / totalParts) * 95)),
+    })
 
     const completion = await jsonRequest<PlaneReviewUploadCompletion>(
       `${assetPath}/versions/${encodeURIComponent(initiation.version_id)}/upload/complete`,

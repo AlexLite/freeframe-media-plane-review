@@ -80,11 +80,16 @@ describe('Plane review upload client', () => {
         version_id: 'version-1',
       })
       .mockResolvedValueOnce({ presigned_url: 'https://storage.example/part-1', part_number: 1 })
+      .mockResolvedValueOnce({ presigned_url: 'https://storage.example/part-1', part_number: 1 })
+      .mockResolvedValueOnce({ presigned_url: 'https://storage.example/part-1', part_number: 1 })
       .mockResolvedValueOnce(undefined)
-    vi.spyOn(globalThis, 'fetch').mockResolvedValueOnce(new Response(null, { status: 500 }))
+    vi.spyOn(globalThis, 'fetch')
+      .mockResolvedValueOnce(new Response(null, { status: 500 }))
+      .mockResolvedValueOnce(new Response(null, { status: 500 }))
+      .mockResolvedValueOnce(new Response(null, { status: 500 }))
 
     await expect(uploadPlaneReviewVersion({ asset, context, file })).rejects.toThrow(
-      'Upload part 1 failed',
+      'Part 1 failed',
     )
 
     expect(planeReviewRequest).toHaveBeenLastCalledWith(

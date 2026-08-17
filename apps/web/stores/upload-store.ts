@@ -1,6 +1,7 @@
 import { create, type StateCreator } from 'zustand'
 import { persist } from 'zustand/middleware'
 import { api } from '@/lib/api'
+import { uploadMultipartParts } from '@/lib/multipart-upload'
 import type { AssetResponse } from '@/types'
 
 const CHUNK_SIZE = 10 * 1024 * 1024 // 10 MB
@@ -179,39 +180,22 @@ const storeCreator: StateCreator<UploadStore, [['zustand/persist', unknown]]> = 
 
         updateFile(id, { uploadId: upload_id, assetId: asset_id, versionId: version_id })
 
-        const totalChunks = Math.ceil(file.size / CHUNK_SIZE)
-        const parts: Array<{ PartNumber: number; ETag: string }> = []
-
-        for (let partNumber = 1; partNumber <= totalChunks; partNumber++) {
-          if (controller.signal.aborted) {
-            throw new DOMException('Upload cancelled', 'AbortError')
-          }
-
-          const start = (partNumber - 1) * CHUNK_SIZE
-          const end = Math.min(start + CHUNK_SIZE, file.size)
-          const chunk = file.slice(start, end)
-
-          const { presigned_url } = await api.post<{ presigned_url: string }>('/upload/presign-part', {
-            s3_key,
-            upload_id,
-            part_number: partNumber,
-          })
-
-          const putResponse = await fetch(presigned_url, {
-            method: 'PUT',
-            body: chunk,
-            signal: controller.signal,
-          })
-
-          if (!putResponse.ok) {
-            throw new Error(`Part ${partNumber} failed: ${putResponse.statusText}`)
-          }
-
-          const etag = putResponse.headers.get('ETag') ?? ''
-          parts.push({ PartNumber: partNumber, ETag: etag })
-
-          updateFile(id, { progress: Math.round((partNumber / totalChunks) * 95) })
-        }
+        const parts = await uploadMultipartParts({
+          file,
+          chunkSize: CHUNK_SIZE,
+          signal: controller.signal,
+          getPresignedUrl: async (partNumber) => {
+            const { presigned_url } = await api.post<{ presigned_url: string }>('/upload/presign-part', {
+              s3_key,
+              upload_id,
+              part_number: partNumber,
+            })
+            return presigned_url
+          },
+          onProgress: (completedParts, totalParts) => {
+            updateFile(id, { progress: Math.round((completedParts / totalParts) * 95) })
+          },
+        })
 
         await api.post('/upload/complete', {
           s3_key,
@@ -293,20 +277,20 @@ const storeCreator: StateCreator<UploadStore, [['zustand/persist', unknown]]> = 
         version_id = initRes.version_id
         updateFile(id, { uploadId: upload_id, versionId: version_id })
 
-        const totalChunks = Math.ceil(file.size / CHUNK_SIZE)
-        const parts: Array<{ PartNumber: number; ETag: string }> = []
-        for (let partNumber = 1; partNumber <= totalChunks; partNumber++) {
-          if (controller.signal.aborted) throw new DOMException('Upload cancelled', 'AbortError')
-          const start = (partNumber - 1) * CHUNK_SIZE
-          const chunk = file.slice(start, Math.min(start + CHUNK_SIZE, file.size))
-          const { presigned_url } = await api.post<{ presigned_url: string }>('/upload/presign-part', {
-            s3_key, upload_id, part_number: partNumber,
-          })
-          const putResponse = await fetch(presigned_url, { method: 'PUT', body: chunk, signal: controller.signal })
-          if (!putResponse.ok) throw new Error(`Part ${partNumber} failed: ${putResponse.statusText}`)
-          parts.push({ PartNumber: partNumber, ETag: putResponse.headers.get('ETag') ?? '' })
-          updateFile(id, { progress: Math.round((partNumber / totalChunks) * 95) })
-        }
+        const parts = await uploadMultipartParts({
+          file,
+          chunkSize: CHUNK_SIZE,
+          signal: controller.signal,
+          getPresignedUrl: async (partNumber) => {
+            const { presigned_url } = await api.post<{ presigned_url: string }>('/upload/presign-part', {
+              s3_key, upload_id, part_number: partNumber,
+            })
+            return presigned_url
+          },
+          onProgress: (completedParts, totalParts) => {
+            updateFile(id, { progress: Math.round((completedParts / totalParts) * 95) })
+          },
+        })
 
         await api.post('/upload/complete', { s3_key, upload_id, asset_id: assetId, version_id, parts })
         const isMedia = file.type.startsWith('video/') || file.type.startsWith('audio/') || file.type.startsWith('image/')
