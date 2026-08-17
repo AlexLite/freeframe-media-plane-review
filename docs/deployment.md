@@ -280,6 +280,29 @@ Video transcoding is CPU-intensive. Adjust `TRANSCODING_CONCURRENCY` based on yo
 | 4 cores | 2-3 |
 | 8+ cores | 4-6 |
 
+#### NVIDIA NVENC (optional)
+
+On a host with the NVIDIA Container Toolkit, the transcoding worker can use
+NVENC while retaining the existing CPU fallback. Start the production stack
+with the GPU override:
+
+```bash
+docker compose --env-file .env.prod \
+  -f docker-compose.prod.yml -f docker-compose.gpu.yml \
+  up -d --build worker
+```
+
+The override exposes all GPUs only to the `worker` service and enables the
+`video` driver capability required by NVENC. The base production compose file
+remains CPU-only and is suitable for hosts without NVIDIA runtime support.
+Verify the worker can see the device before processing media:
+
+```bash
+docker compose --env-file .env.prod \
+  -f docker-compose.prod.yml -f docker-compose.gpu.yml \
+  exec worker sh -lc 'test -e /dev/nvidia0 && ffmpeg -hide_banner -encoders | grep -E "h264_nvenc|hevc_nvenc"'
+```
+
 ### Email Workers
 
 Email sending is I/O-bound and lightweight. The default of `2` is sufficient for most deployments.
