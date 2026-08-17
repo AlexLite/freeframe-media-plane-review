@@ -22,6 +22,12 @@ class FFmpegTranscoder(BaseTranscoder):
         """Prefer NVENC when the worker has a GPU, while allowing CPU override."""
         mode = os.getenv("FFMPEG_ACCELERATION", "auto").strip().lower()
         return mode == "nvenc" or (mode == "auto" and os.path.exists("/dev/nvidia0"))
+
+    @staticmethod
+    def _use_cuda_filters(nvenc: bool) -> bool:
+        """Use CUDA decode/scaling with NVENC unless explicitly disabled."""
+        mode = os.getenv("FFMPEG_CUDA_FILTERS", "auto").strip().lower()
+        return nvenc and mode not in {"0", "false", "no", "off"}
     
     def _get_presigned_url(self, s3_key: str, expires_in: int = 7200) -> str:
         """Generate a presigned URL for streaming input to FFmpeg."""
@@ -130,22 +136,35 @@ class FFmpegTranscoder(BaseTranscoder):
             hls_dir = work_dir / "hls"
             hls_dir.mkdir()
 
-            # Build filter_complex and map args
-            # Use force_original_aspect_ratio=decrease to preserve aspect ratio,
-            # then pad to even dimensions required by libx264
+            # Build filter_complex and map args. CUDA scaling keeps the source
+            # aspect ratio and makes dimensions divisible by two for NVENC.
             split_outputs = "".join(f"[v{i}]" for i in range(len(qualities)))
+            cpu_filter_complex = f"[v:0]split={len(qualities)}{split_outputs};"
+            cpu_filter_complex += ";".join(
+                f"[v{i}]scale={QUALITY_MAP[q][0]}:force_original_aspect_ratio=decrease,pad=ceil(iw/2)*2:ceil(ih/2)*2[{q}]"
+                for i, q in enumerate(qualities)
+            )
+
+            nvenc = self._use_nvenc()
+            cuda_filters = self._use_cuda_filters(nvenc)
             filter_complex = f"[v:0]split={len(qualities)}{split_outputs};"
             filter_complex += ";".join(
+                f"[v{i}]scale_cuda={QUALITY_MAP[q][0]}:force_original_aspect_ratio=decrease:force_divisible_by=2[{q}]"
+                if cuda_filters else
                 f"[v{i}]scale={QUALITY_MAP[q][0]}:force_original_aspect_ratio=decrease,pad=ceil(iw/2)*2:ceil(ih/2)*2[{q}]"
                 for i, q in enumerate(qualities)
             )
 
             ffmpeg_cmd = [
-                "ffmpeg", "-y", "-i", input_url,
+                "ffmpeg", "-y",
+            ]
+            if cuda_filters:
+                ffmpeg_cmd += ["-hwaccel", "cuda", "-hwaccel_output_format", "cuda"]
+            ffmpeg_cmd += [
+                "-i", input_url,
                 "-filter_complex", filter_complex,
             ]
 
-            nvenc = self._use_nvenc()
             for i, quality in enumerate(qualities):
                 scale, crf = QUALITY_MAP[quality]
                 ffmpeg_cmd += ["-map", f"[{quality}]"]
@@ -187,6 +206,12 @@ class FFmpegTranscoder(BaseTranscoder):
                     raise
                 # GPU failure must not strand a transcode: retry the same job on CPU.
                 cpu_cmd = list(ffmpeg_cmd)
+                filter_pos = cpu_cmd.index("-filter_complex") + 1
+                cpu_cmd[filter_pos] = cpu_filter_complex
+                for option in ("-hwaccel", "-hwaccel_output_format"):
+                    while option in cpu_cmd:
+                        pos = cpu_cmd.index(option)
+                        del cpu_cmd[pos:pos + 2]
                 for i in range(len(qualities)):
                     encoder_pos = cpu_cmd.index(f"-c:v:{i}") + 1
                     cpu_cmd[encoder_pos] = "libx264"

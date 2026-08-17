@@ -18,6 +18,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Direct Premiere device authorization now atomically records browser approval or denial, reports `access_denied` to the UXP poller, and keeps its narrow non-credentialed CORS policy isolated from other API routes.
 - Added an optional NVIDIA Compose override for the transcoding worker; CPU-only deployments remain unchanged and NVENC keeps the existing CPU fallback.
 - Browser multipart uploads now transfer up to four parts concurrently and retry transient part failures, while preserving ordered completion.
+- NVIDIA workers now use CUDA decode/scaling before NVENC encoding, with an automatic full CPU fallback if the GPU pipeline fails.
 
 ## [1.4.1] - 2026-07-09
 
