@@ -43,13 +43,12 @@ def _verify_hls_token(token: str) -> str:
         raise HTTPException(status_code=401, detail="Invalid or expired token")
 
 
-def _rewrite_manifest(content: str, s3_prefix: str, manifest_path: str, token: str) -> str:
+def _rewrite_manifest(content: str, _s3_prefix: str, _manifest_path: str, token: str) -> str:
     """Rewrite URLs in an m3u8 manifest.
 
     - .m3u8 references -> proxy URLs with token (appended as query param)
     - .ts references -> same-origin proxy URLs with token auth
     """
-    manifest_dir = posixpath.dirname(manifest_path)
     lines = content.split("\n")
     result = []
 
@@ -61,20 +60,14 @@ def _rewrite_manifest(content: str, s3_prefix: str, manifest_path: str, token: s
             result.append(line)
             continue
 
-        # Resolve segment/playlist path relative to current manifest directory
-        if manifest_dir:
-            relative_key = f"{manifest_dir}/{stripped}"
-        else:
-            relative_key = stripped
-
         if stripped.endswith(".m3u8"):
             # Variant playlist -> proxy URL with token
-            result.append(f"{relative_key}?token={token}")
+            result.append(f"{stripped}?token={token}")
         elif stripped.endswith(".ts"):
             # Keep segment downloads on the same origin as the player.  Safari
             # is stricter than desktop browsers about a playlist that switches
             # to a separate object-storage origin, especially on cellular.
-            result.append(f"{relative_key}?token={token}")
+            result.append(f"{stripped}?token={token}")
         else:
             result.append(line)
 

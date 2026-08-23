@@ -59,7 +59,7 @@ class TestRewriteManifest:
         content = "#EXTM3U\n#EXT-X-VERSION:3\n#EXTINF:2.000,\nsegment0.ts\n#EXT-X-ENDLIST"
         result = _rewrite_manifest(content, "hls/proj/ver", "720p/index.m3u8", "tok123")
 
-        assert "720p/segment0.ts?token=tok123" in result
+        assert "segment0.ts?token=tok123" in result
         assert "s3.example.com" not in result
 
     def test_rewrites_m3u8_to_proxy_url(self):
