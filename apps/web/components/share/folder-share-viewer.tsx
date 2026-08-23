@@ -873,7 +873,7 @@ function ShareReviewInner({
   }
 
   return (
-    <div className="flex flex-col h-screen bg-bg-primary text-text-primary">
+    <div className="flex flex-col h-screen h-[100dvh] bg-bg-primary text-text-primary md:h-screen">
       {/* Top bar — same style as project review */}
       <div className="flex items-center justify-between border-b border-border px-3 h-12 bg-bg-secondary shrink-0">
         <div className="flex items-center gap-1 min-w-0 flex-1">
