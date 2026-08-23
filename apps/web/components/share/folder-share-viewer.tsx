@@ -1218,6 +1218,11 @@ export function FolderShareViewer({
         setSubfolders(data.subfolders ?? [])
         setTotal(data.total ?? 0)
         setPage(1)
+        // A project share containing one visible asset should behave like a
+        // direct review link. Keep multi-asset shares as a browse surface.
+        if (openInViewer && !currentSubfolderId && (data.assets ?? []).length === 1) {
+          setViewingAsset(data.assets[0])
+        }
       })
       .catch(() => {
         if (!cancelled) setError('Failed to load contents')
