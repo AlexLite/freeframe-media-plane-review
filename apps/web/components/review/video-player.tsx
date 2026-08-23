@@ -11,6 +11,8 @@ import {
   ChevronUp,
   Check,
   Repeat,
+  RotateCcw,
+  RotateCw,
 } from "lucide-react";
 import { cn, formatTime, formatTimecode, formatFrames } from "@/lib/utils";
 import { api } from "@/lib/api";
@@ -373,7 +375,7 @@ export function VideoPlayer({
         {/* Keep touch controls inside the video frame.  Embedded WebViews can
             cover normal bottom bars with their own navigation chrome. */}
         <div
-          className="absolute inset-x-0 bottom-0 z-20 bg-gradient-to-t from-black/90 via-black/45 to-transparent px-3 pb-3 pt-8 sm:hidden"
+          className="absolute inset-x-0 bottom-0 z-20 bg-gradient-to-t from-black/95 via-black/60 to-transparent px-3 pb-3 pt-10 sm:hidden"
           onClick={(event) => event.stopPropagation()}
         >
           <input
@@ -388,9 +390,85 @@ export function VideoPlayer({
             aria-label="Video timeline"
             className="block h-5 w-full cursor-pointer accent-accent disabled:cursor-default disabled:opacity-40"
           />
-          <div className="mt-0.5 flex justify-between font-mono text-[11px] tabular-nums text-white/90">
-            <span>{displayTime(currentTime)}</span>
-            <span>{displayTime(duration)}</span>
+          <div className="mt-1 text-white">
+            <div className="flex items-center justify-between gap-1">
+            <div className="flex items-center gap-0.5">
+              <button
+                type="button"
+                onClick={togglePlay}
+                className="flex h-8 w-8 items-center justify-center rounded-full active:bg-white/20"
+                aria-label={isPlaying ? "Pause" : "Play"}
+              >
+                {isPlaying ? <Pause className="h-4 w-4" /> : <Play className="ml-0.5 h-4 w-4" />}
+              </button>
+              <button
+                type="button"
+                onClick={() => seek(currentTime - 5)}
+                className="flex h-8 w-8 items-center justify-center rounded-full active:bg-white/20"
+                aria-label="Back 5 seconds"
+              >
+                <RotateCcw className="h-4 w-4" />
+              </button>
+              <button
+                type="button"
+                onClick={() => seek(currentTime + 5)}
+                className="flex h-8 w-8 items-center justify-center rounded-full active:bg-white/20"
+                aria-label="Forward 5 seconds"
+              >
+                <RotateCw className="h-4 w-4" />
+              </button>
+              <button
+                type="button"
+                onClick={() => setLoop((value) => !value)}
+                className={cn("flex h-8 w-8 items-center justify-center rounded-full active:bg-white/20", loop && "bg-accent/80")}
+                aria-label="Loop"
+              >
+                <Repeat className="h-4 w-4" />
+              </button>
+              <button
+                type="button"
+                onClick={handleSpeedCycle}
+                className="flex h-8 min-w-8 items-center justify-center rounded-full px-1 text-[11px] font-semibold tabular-nums active:bg-white/20"
+                aria-label="Playback speed"
+              >
+                {playbackRate}x
+              </button>
+              <button
+                type="button"
+                onClick={toggleMute}
+                className="flex h-8 w-8 items-center justify-center rounded-full active:bg-white/20"
+                aria-label={isMuted ? "Unmute" : "Mute"}
+              >
+                {isMuted || volume === 0 ? <VolumeX className="h-4 w-4" /> : <Volume2 className="h-4 w-4" />}
+              </button>
+            </div>
+            <div className="flex shrink-0 items-center gap-1">
+              {qualityLevels.length > 0 && (
+                <select
+                  value={currentQuality}
+                  onChange={(event) => setQuality(parseInt(event.target.value, 10))}
+                  className="h-7 max-w-14 rounded border border-white/30 bg-black/40 px-1 text-[10px] text-white"
+                  aria-label="Quality"
+                >
+                  <option value={-1}>Auto</option>
+                  {qualityLevels.map((level) => (
+                    <option key={level.index} value={level.index}>{level.label}</option>
+                  ))}
+                </select>
+              )}
+              <button
+                type="button"
+                onClick={handleFullscreen}
+                className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full active:bg-white/20"
+                aria-label={isFullscreen ? "Exit fullscreen" : "Enter fullscreen"}
+              >
+                {isFullscreen ? <Minimize className="h-4 w-4" /> : <Maximize className="h-4 w-4" />}
+              </button>
+            </div>
+            </div>
+            <div className="mt-0.5 text-center font-mono text-[10px] tabular-nums text-white/90">
+              {displayTime(currentTime)} / {displayTime(duration)}
+            </div>
           </div>
         </div>
       </div>
@@ -408,7 +486,7 @@ export function VideoPlayer({
       </div>
 
       {/* Bottom transport bar (matches audio player style) */}
-      <div className="flex items-center justify-between h-12 px-3 sm:px-4 bg-bg-secondary/80 border-t border-border shrink-0">
+      <div className="hidden sm:flex items-center justify-between h-12 px-3 sm:px-4 bg-bg-secondary/80 border-t border-border shrink-0">
         {/* Left: Play, Loop, Speed, Volume */}
         <div className="flex items-center gap-2">
           <button
