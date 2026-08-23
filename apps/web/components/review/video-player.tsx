@@ -11,8 +11,6 @@ import {
   ChevronUp,
   Check,
   Repeat,
-  RotateCcw,
-  RotateCw,
 } from "lucide-react";
 import { cn, formatTime, formatTimecode, formatFrames } from "@/lib/utils";
 import { api } from "@/lib/api";
@@ -400,22 +398,6 @@ export function VideoPlayer({
                 aria-label={isPlaying ? "Pause" : "Play"}
               >
                 {isPlaying ? <Pause className="h-4 w-4" /> : <Play className="ml-0.5 h-4 w-4" />}
-              </button>
-              <button
-                type="button"
-                onClick={() => seek(currentTime - 5)}
-                className="flex h-8 w-8 items-center justify-center rounded-full active:bg-white/20"
-                aria-label="Back 5 seconds"
-              >
-                <RotateCcw className="h-4 w-4" />
-              </button>
-              <button
-                type="button"
-                onClick={() => seek(currentTime + 5)}
-                className="flex h-8 w-8 items-center justify-center rounded-full active:bg-white/20"
-                aria-label="Forward 5 seconds"
-              >
-                <RotateCw className="h-4 w-4" />
               </button>
               <button
                 type="button"
