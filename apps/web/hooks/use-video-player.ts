@@ -302,6 +302,21 @@ export function useVideoPlayer(src: string | null): UseVideoPlayerReturn {
   }, [])
 
   const toggleFullscreen = useCallback((containerEl: HTMLElement) => {
+    // iOS WebKit exposes video fullscreen on the media element rather than via
+    // the document Fullscreen API.  This also covers embedded WebViews that
+    // permit video fullscreen while not exposing requestFullscreen().
+    const webkitVideo = videoRef.current as (HTMLVideoElement & {
+      webkitEnterFullscreen?: () => void
+      webkitSupportsFullscreen?: boolean
+    }) | null
+    if (!document.fullscreenElement && webkitVideo?.webkitSupportsFullscreen) {
+      try {
+        webkitVideo.webkitEnterFullscreen?.()
+        return
+      } catch {
+        // Fall through to the standards-based API if the host declined it.
+      }
+    }
     if (!document.fullscreenElement) {
       containerEl.requestFullscreen().catch(() => {})
     } else {
