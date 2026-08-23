@@ -6,6 +6,7 @@ import { AlertCircle, Loader2, CheckCircle2, ChevronDown, Trash2 } from 'lucide-
 import { cn } from '@/lib/utils'
 import { useReviewStore } from '@/stores/review-store'
 import { useI18n } from '@/hooks/use-i18n'
+import { ConfirmDialog } from '@/components/ui/confirm-dialog'
 import type { AssetVersion, AssetVersionStatus } from '@/types'
 
 const versionStatusConfig: Record<
@@ -41,9 +42,10 @@ interface VersionSwitcherProps {
 }
 
 export function VersionSwitcher({ versions, className, onDeleteVersion }: VersionSwitcherProps) {
-  const { locale } = useI18n()
+  const { locale, t } = useI18n()
   const currentVersion = useReviewStore((s) => s.currentVersion)
   const setCurrentVersion = useReviewStore((s) => s.setCurrentVersion)
+  const [versionToDelete, setVersionToDelete] = React.useState<AssetVersion | null>(null)
 
   const sorted = React.useMemo(
     () => [...versions].sort((a, b) => a.version_number - b.version_number),
@@ -121,11 +123,7 @@ export function VersionSwitcher({ versions, className, onDeleteVersion }: Versio
                       <DropdownMenu.Item
                         onSelect={async (event) => {
                           event.preventDefault()
-                          const message = locale === 'ru'
-                            ? `Удалить версию v${version.version_number}?`
-                            : `Delete version v${version.version_number}?`
-                          if (!window.confirm(message)) return
-                          await onDeleteVersion(version.id)
+                          setVersionToDelete(version)
                         }}
                         className="flex items-center gap-2 mx-1 px-2.5 py-1.5 rounded-lg text-xs text-status-error cursor-pointer outline-none hover:bg-status-error/10"
                       >
@@ -140,6 +138,22 @@ export function VersionSwitcher({ versions, className, onDeleteVersion }: Versio
           </DropdownMenu.Portal>
         )}
       </DropdownMenu.Root>
+      <ConfirmDialog
+        open={versionToDelete !== null}
+        onOpenChange={(open) => {
+          if (!open) setVersionToDelete(null)
+        }}
+        title={t('review.deleteVersionTitle', { version: versionToDelete?.version_number ?? '' })}
+        description={t('review.deleteVersionDescription')}
+        cancelLabel={t('common.cancel')}
+        confirmLabel={t('review.deleteVersion')}
+        variant="danger"
+        onConfirm={async () => {
+          if (versionToDelete && onDeleteVersion) {
+            await onDeleteVersion(versionToDelete.id)
+          }
+        }}
+      />
     </div>
   )
 }

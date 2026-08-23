@@ -319,6 +319,13 @@ export const extraMessages = {
   'review.next': ['Next', 'Следующий'],
   'review.fullscreen': ['Fullscreen', 'На весь экран'],
   'review.exitFullscreen': ['Exit fullscreen', 'Выйти из полноэкранного режима'],
+  'review.timeFormat': ['Time Format', 'Формат времени'],
+  'review.frames': ['Frames', 'Кадры'],
+  'review.standard': ['Standard', 'Стандартный'],
+  'review.timecode': ['Timecode', 'Таймкод'],
+  'review.deleteVersion': ['Delete version', 'Удалить версию'],
+  'review.deleteVersionTitle': ['Delete version v{version}?', 'Удалить версию v{version}?'],
+  'review.deleteVersionDescription': ['This permanently removes this older version. The latest and active versions cannot be deleted.', 'Эта старая версия будет удалена без возможности восстановления. Последнюю и активную версии удалить нельзя.'],
 
   'approval.title': ['Approval', 'Согласование'],
   'approval.approve': ['Approve', 'Согласовать'],

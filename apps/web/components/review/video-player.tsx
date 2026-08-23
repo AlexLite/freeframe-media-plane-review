@@ -18,6 +18,7 @@ import { useReviewStore, type TimeFormat } from "@/stores/review-store";
 import { useVideoPlayer } from "@/hooks/use-video-player";
 import { useReview } from "./review-provider";
 import { ProgressBar } from "./progress-bar";
+import { useI18n } from "@/hooks/use-i18n";
 import type { Comment } from "@/types";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -130,6 +131,7 @@ export function VideoPlayer({
   className,
   initialStreamUrl,
 }: VideoPlayerProps) {
+  const { t } = useI18n();
   const containerRef = useRef<HTMLDivElement>(null);
   const [streamUrl, setStreamUrl] = useState<string | null>(null);
   const [loop, setLoop] = useState(false);
@@ -544,13 +546,13 @@ export function VideoPlayer({
           {timeFormatOpen && (
             <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 z-50 w-48 rounded-xl border border-white/10 bg-[#2a2a30] shadow-2xl py-1.5 animate-in fade-in zoom-in-95 duration-100">
               <div className="px-3 py-2 text-[11px] text-text-tertiary uppercase tracking-wider font-medium">
-                Time Format
+                {t("review.timeFormat")}
               </div>
               {(
                 [
-                  { id: "frames" as TimeFormat, label: "Frames" },
-                  { id: "standard" as TimeFormat, label: "Standard" },
-                  { id: "timecode" as TimeFormat, label: "Timecode" },
+                  { id: "frames" as TimeFormat, label: t("review.frames") },
+                  { id: "standard" as TimeFormat, label: t("review.standard") },
+                  { id: "timecode" as TimeFormat, label: t("review.timecode") },
                 ] as const
               ).map((item) => (
                 <button
