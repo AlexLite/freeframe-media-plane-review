@@ -15,7 +15,7 @@ from ..models.activity import Mention, Notification, NotificationType
 from ..schemas.asset import AssetResponse, AssetVersionResponse, AssetUpdate, StreamUrlResponse, MediaFileResponse
 from ..schemas.notification import AssignmentUpdate
 from ..services.permissions import require_project_role, require_asset_access, can_access_asset, is_public_project, get_project_member
-from ..services.s3_service import generate_presigned_get_url, build_download_filename
+from ..services.s3_service import generate_presigned_get_url, build_download_filename, delete_object, delete_prefix
 from .hls_proxy import create_hls_token
 from ..schemas.upload import InitiateUploadRequest, InitiateUploadResponse, ALLOWED_MIME_TYPES, mime_to_asset_type
 from ..services.storage import upload_guard_error
@@ -227,6 +227,58 @@ def list_asset_versions(
         vr.files = [MediaFileResponse.model_validate(f) for f in files_by_version.get(v.id, [])]
         result.append(vr)
     return result
+
+
+@router.delete("/assets/{asset_id}/versions/{version_id}", status_code=status.HTTP_204_NO_CONTENT)
+def delete_asset_version(
+    asset_id: uuid.UUID,
+    version_id: uuid.UUID,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """Soft-delete an old version and reclaim its media objects.
+
+    The newest non-deleted version is protected so an asset always retains a
+    current version.  Comments and approvals remain associated with the soft-
+    deleted version until the normal retention purge runs.
+    """
+    asset = db.query(Asset).filter(Asset.id == asset_id, Asset.deleted_at.is_(None)).first()
+    if not asset:
+        raise HTTPException(status_code=404, detail="Asset not found")
+    require_project_role(db, asset.project_id, current_user, ProjectRole.editor)
+
+    version = db.query(AssetVersion).filter(
+        AssetVersion.id == version_id,
+        AssetVersion.asset_id == asset_id,
+        AssetVersion.deleted_at.is_(None),
+    ).first()
+    if not version:
+        raise HTTPException(status_code=404, detail="Version not found")
+
+    latest = db.query(AssetVersion).filter(
+        AssetVersion.asset_id == asset_id,
+        AssetVersion.deleted_at.is_(None),
+    ).order_by(AssetVersion.version_number.desc()).first()
+    if latest and latest.id == version.id:
+        raise HTTPException(status_code=409, detail="The current version cannot be deleted")
+
+    media_files = db.query(MediaFile).filter(MediaFile.version_id == version.id).all()
+    for media_file in media_files:
+        # Storage cleanup is best-effort; the retention purge can retry it.
+        for key in (media_file.s3_key_raw, media_file.s3_key_thumbnail):
+            if key:
+                try:
+                    delete_object(key)
+                except Exception:
+                    pass
+        if media_file.s3_key_processed:
+            try:
+                delete_prefix(media_file.s3_key_processed)
+            except Exception:
+                pass
+
+    version.deleted_at = datetime.now(timezone.utc)
+    db.commit()
 
 
 @router.get("/assets/{asset_id}/stream", response_model=StreamUrlResponse)

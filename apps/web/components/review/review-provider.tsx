@@ -38,6 +38,7 @@ interface ReviewContextValue {
   seekTo: (time: number) => void;
   refetchComments: () => Promise<void>;
   refetchVersions: () => Promise<void>;
+  deleteVersion: (versionId: string) => Promise<void>;
   pauseVideo: () => void;
   registerPauseHandler: (handler: () => void) => void;
 }
@@ -260,6 +261,12 @@ export function ReviewProvider({
     }
   }, [assetId, shareToken]);
 
+  const deleteVersion = useCallback(async (versionId: string) => {
+    if (shareToken) throw new Error('Versions cannot be deleted from a share link')
+    await api.delete(`/assets/${assetId}/versions/${encodeURIComponent(versionId)}`)
+    await refetchVersions()
+  }, [assetId, refetchVersions, shareToken]);
+
   useEffect(() => {
     setIsLoading(true);
     setError(null);
@@ -399,6 +406,7 @@ export function ReviewProvider({
       seekTo,
       refetchComments,
       refetchVersions,
+      deleteVersion,
       pauseVideo,
       registerPauseHandler,
     }),
@@ -414,6 +422,7 @@ export function ReviewProvider({
       seekTo,
       refetchComments,
       refetchVersions,
+      deleteVersion,
       pauseVideo,
       registerPauseHandler,
     ],

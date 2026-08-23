@@ -48,7 +48,7 @@ function ReviewScreenInner({ projectId }: { projectId: string }) {
   const tr = (en: string, ru: string) => locale === 'ru' ? ru : en
   const router = useRouter()
   const searchParams = useSearchParams()
-  const { asset, versions, isLoading, refetchComments, refetchVersions } = useReview()
+  const { asset, versions, isLoading, refetchComments, refetchVersions, deleteVersion } = useReview()
   const { currentVersion, isDrawingMode, focusedCommentId, seekTo, setFocusedCommentId, setActiveAnnotation } = useReviewStore()
   const { user } = useAuthStore()
   const startVersionUpload = useUploadStore((s) => s.startVersionUpload)
@@ -396,7 +396,7 @@ function ReviewScreenInner({ projectId }: { projectId: string }) {
               setTimeout(() => refetchVersions(), 2500)
             }}
           />
-          <VersionSwitcher versions={versions} />
+          <VersionSwitcher versions={versions} onDeleteVersion={deleteVersion} />
           <button
             onClick={() => versionFileInputRef.current?.click()}
             className="hidden md:inline-flex items-center gap-1.5 rounded-md px-2.5 h-8 text-xs font-medium border border-border text-text-secondary hover:text-text-primary hover:bg-bg-hover transition-colors"

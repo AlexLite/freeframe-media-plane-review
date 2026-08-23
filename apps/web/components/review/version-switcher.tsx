@@ -2,9 +2,10 @@
 
 import * as React from 'react'
 import * as DropdownMenu from '@radix-ui/react-dropdown-menu'
-import { AlertCircle, Loader2, CheckCircle2, ChevronDown } from 'lucide-react'
+import { AlertCircle, Loader2, CheckCircle2, ChevronDown, Trash2 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { useReviewStore } from '@/stores/review-store'
+import { useI18n } from '@/hooks/use-i18n'
 import type { AssetVersion, AssetVersionStatus } from '@/types'
 
 const versionStatusConfig: Record<
@@ -36,9 +37,11 @@ const versionStatusConfig: Record<
 interface VersionSwitcherProps {
   versions: AssetVersion[]
   className?: string
+  onDeleteVersion?: (versionId: string) => Promise<void>
 }
 
-export function VersionSwitcher({ versions, className }: VersionSwitcherProps) {
+export function VersionSwitcher({ versions, className, onDeleteVersion }: VersionSwitcherProps) {
+  const { locale } = useI18n()
   const currentVersion = useReviewStore((s) => s.currentVersion)
   const setCurrentVersion = useReviewStore((s) => s.setCurrentVersion)
 
@@ -87,32 +90,50 @@ export function VersionSwitcher({ versions, className }: VersionSwitcherProps) {
             >
               {sorted.map((version) => {
                 const isActive = currentVersion?.id === version.id
+                const isLatest = version.id === latest.id
                 const statusCfg = versionStatusConfig[version.processing_status]
                 const isDisabled =
                   version.processing_status === 'uploading' ||
                   version.processing_status === 'processing'
                 return (
-                  <DropdownMenu.Item
-                    key={version.id}
-                    disabled={isDisabled}
-                    onSelect={() => setCurrentVersion(version)}
-                    className={cn(
-                      'flex items-center justify-between gap-3 mx-1 px-2.5 py-2 rounded-lg text-sm cursor-pointer outline-none transition-colors',
-                      isActive
-                        ? 'bg-accent/10 text-accent font-medium'
-                        : 'text-text-secondary hover:bg-bg-hover hover:text-text-primary',
-                      isDisabled && 'opacity-50 cursor-not-allowed',
-                    )}
-                  >
-                    <span>v{version.version_number}</span>
-                    <span
-                      className={cn('inline-flex items-center gap-1 text-[11px]', statusCfg.className)}
-                      title={statusCfg.label}
+                  <React.Fragment key={version.id}>
+                    <DropdownMenu.Item
+                      disabled={isDisabled}
+                      onSelect={() => setCurrentVersion(version)}
+                      className={cn(
+                        'flex items-center justify-between gap-3 mx-1 px-2.5 py-2 rounded-lg text-sm cursor-pointer outline-none transition-colors',
+                        isActive
+                          ? 'bg-accent/10 text-accent font-medium'
+                          : 'text-text-secondary hover:bg-bg-hover hover:text-text-primary',
+                        isDisabled && 'opacity-50 cursor-not-allowed',
+                      )}
                     >
-                      {statusCfg.icon}
-                      {statusCfg.label}
-                    </span>
-                  </DropdownMenu.Item>
+                      <span>v{version.version_number}</span>
+                      <span
+                        className={cn('inline-flex items-center gap-1 text-[11px]', statusCfg.className)}
+                        title={statusCfg.label}
+                      >
+                        {statusCfg.icon}
+                        {statusCfg.label}
+                      </span>
+                    </DropdownMenu.Item>
+                    {onDeleteVersion && !isActive && !isLatest && (
+                      <DropdownMenu.Item
+                        onSelect={async (event) => {
+                          event.preventDefault()
+                          const message = locale === 'ru'
+                            ? `Удалить версию v${version.version_number}?`
+                            : `Delete version v${version.version_number}?`
+                          if (!window.confirm(message)) return
+                          await onDeleteVersion(version.id)
+                        }}
+                        className="flex items-center gap-2 mx-1 px-2.5 py-1.5 rounded-lg text-xs text-status-error cursor-pointer outline-none hover:bg-status-error/10"
+                      >
+                        <Trash2 className="h-3 w-3" />
+                        {locale === 'ru' ? 'Удалить' : 'Delete'} v{version.version_number}
+                      </DropdownMenu.Item>
+                    )}
+                  </React.Fragment>
                 )
               })}
             </DropdownMenu.Content>
