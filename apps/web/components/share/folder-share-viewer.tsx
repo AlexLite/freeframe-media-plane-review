@@ -953,7 +953,7 @@ function ShareReviewInner({
               aria-label={tr('Close comments', 'Закрыть комментарии')}
               className="absolute inset-0 z-30 bg-black/50 md:hidden"
             />
-            <div className="absolute inset-x-0 bottom-0 z-40 flex h-[min(72dvh,620px)] w-full flex-col rounded-t-2xl border-t border-border bg-bg-secondary shadow-2xl md:inset-y-0 md:right-0 md:h-auto md:max-w-[360px] md:rounded-none md:border-l md:border-t-0 md:shadow-none">
+            <div className="absolute inset-y-0 right-0 z-40 flex w-full max-w-[360px] flex-col border-l border-border bg-bg-secondary shadow-2xl max-md:inset-x-0 max-md:bottom-0 max-md:h-[min(72dvh,620px)] max-md:max-w-none max-md:rounded-t-2xl max-md:border-x-0 max-md:border-t md:static md:z-auto md:shrink-0 md:shadow-none">
               <div className="mx-auto mt-2 h-1 w-10 rounded-full bg-text-tertiary/40 md:hidden" />
             <div className="px-4 pt-3 pb-2 shrink-0">
               <div className="flex items-center bg-bg-tertiary rounded-lg p-0.5">
