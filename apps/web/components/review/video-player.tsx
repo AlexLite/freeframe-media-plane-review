@@ -133,23 +133,12 @@ export function VideoPlayer({
   const containerRef = useRef<HTMLDivElement>(null);
   const [streamUrl, setStreamUrl] = useState<string | null>(null);
   const [loop, setLoop] = useState(false);
-  const [isMobile, setIsMobile] = useState(false);
 
   const { isDrawingMode, timeFormat, setTimeFormat, setPlayheadTime, currentVersion } =
     useReviewStore();
   const { registerPauseHandler } = useReview();
   const [timeFormatOpen, setTimeFormatOpen] = useState(false);
   const timeFormatRef = useRef<HTMLDivElement>(null);
-
-  // iOS browsers share WebKit and provide the most reliable seek/fullscreen
-  // experience through the native video controls on narrow screens.
-  useEffect(() => {
-    const media = window.matchMedia("(max-width: 767px)");
-    const update = () => setIsMobile(media.matches);
-    update();
-    media.addEventListener("change", update);
-    return () => media.removeEventListener("change", update);
-  }, []);
 
   // Close time format dropdown on outside click
   useEffect(() => {
@@ -331,7 +320,7 @@ export function VideoPlayer({
       {/* Video area — fills available space, object-contain preserves aspect ratio with letterbox */}
       <div
         className="flex-1 relative min-h-0 bg-black overflow-hidden cursor-pointer"
-        onClick={isMobile ? undefined : handleContainerClick}
+        onClick={handleContainerClick}
       >
         <video
           ref={videoRef}
@@ -340,9 +329,25 @@ export function VideoPlayer({
             isDrawingMode ? "pointer-events-none" : "",
           )}
           playsInline
-          controls={isMobile}
+          controls={false}
           preload="metadata"
         />
+
+        {/* Mobile needs explicit controls: browser-native chrome is inconsistent
+            in embedded iOS browsers and hides the review timecode/seek UI. */}
+        {!isDrawingMode && !error && (
+          <button
+            type="button"
+            onClick={(event) => {
+              event.stopPropagation();
+              togglePlay();
+            }}
+            className="absolute inset-0 m-auto flex h-16 w-16 items-center justify-center rounded-full bg-black/60 text-white shadow-lg transition-colors active:bg-black/80 sm:hidden"
+            aria-label={isPlaying ? "Pause" : "Play"}
+          >
+            {isPlaying ? <Pause className="h-8 w-8" /> : <Play className="ml-1 h-8 w-8" />}
+          </button>
+        )}
 
         {/* Loading spinner */}
         {isLoading && (
@@ -367,7 +372,7 @@ export function VideoPlayer({
       </div>
 
       {/* Progress bar */}
-      <div className="hidden sm:block shrink-0 bg-bg-primary">
+      <div className="block shrink-0 bg-bg-primary">
         <ProgressBar
           currentTime={currentTime}
           duration={duration}
@@ -379,7 +384,7 @@ export function VideoPlayer({
       </div>
 
       {/* Bottom transport bar (matches audio player style) */}
-      <div className="hidden sm:flex items-center justify-between h-12 px-4 bg-bg-secondary/80 border-t border-border shrink-0">
+      <div className="flex items-center justify-between h-12 px-3 sm:px-4 bg-bg-secondary/80 border-t border-border shrink-0">
         {/* Left: Play, Loop, Speed, Volume */}
         <div className="flex items-center gap-2">
           <button
@@ -397,7 +402,7 @@ export function VideoPlayer({
           <button
             onClick={() => setLoop((p) => !p)}
             className={cn(
-              "flex h-7 w-7 items-center justify-center rounded transition-colors",
+              "hidden sm:flex h-7 w-7 items-center justify-center rounded transition-colors",
               loop
                 ? "text-accent bg-accent/10"
                 : "text-text-tertiary hover:text-text-secondary hover:bg-bg-hover",
@@ -409,7 +414,7 @@ export function VideoPlayer({
 
           <button
             onClick={handleSpeedCycle}
-            className="flex h-7 items-center justify-center rounded px-1.5 text-xs font-medium text-text-secondary hover:bg-bg-hover hover:text-text-primary transition-colors tabular-nums"
+            className="hidden sm:flex h-7 items-center justify-center rounded px-1.5 text-xs font-medium text-text-secondary hover:bg-bg-hover hover:text-text-primary transition-colors tabular-nums"
             aria-label="Playback speed"
           >
             {playbackRate}x
@@ -417,7 +422,7 @@ export function VideoPlayer({
 
           <button
             onClick={toggleMute}
-            className="flex h-7 w-7 items-center justify-center rounded text-text-tertiary hover:text-text-secondary hover:bg-bg-hover transition-colors"
+            className="hidden sm:flex h-7 w-7 items-center justify-center rounded text-text-tertiary hover:text-text-secondary hover:bg-bg-hover transition-colors"
             aria-label={isMuted ? "Unmute" : "Mute"}
           >
             {isMuted || volume === 0 ? (
@@ -432,7 +437,7 @@ export function VideoPlayer({
         <div className="relative" ref={timeFormatRef}>
           <button
             onClick={() => setTimeFormatOpen((p) => !p)}
-            className="flex items-center gap-1.5 rounded-md bg-bg-tertiary px-3 py-1 hover:bg-bg-hover transition-colors"
+            className="flex items-center gap-1.5 rounded-md bg-bg-tertiary px-2 sm:px-3 py-1 hover:bg-bg-hover transition-colors"
           >
             <span className="font-mono text-sm text-text-primary tabular-nums tracking-wide">
               {timeFormat === "timecode" ? (
@@ -494,7 +499,7 @@ export function VideoPlayer({
             <select
               value={currentQuality}
               onChange={(e) => setQuality(parseInt(e.target.value, 10))}
-              className="bg-transparent text-text-secondary text-xs border border-border rounded px-1.5 py-1 cursor-pointer shrink-0 hover:text-text-primary transition-colors"
+              className="hidden sm:block bg-transparent text-text-secondary text-xs border border-border rounded px-1.5 py-1 cursor-pointer shrink-0 hover:text-text-primary transition-colors"
               aria-label="Quality"
             >
               <option value={-1} className="bg-bg-secondary">

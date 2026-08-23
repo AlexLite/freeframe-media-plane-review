@@ -894,8 +894,13 @@ function ShareReviewInner({
               <Download className="h-3 w-3" /> <span className="hidden sm:inline">{tr('Download', 'Скачать')}</span>
             </button>
           )}
-          <button onClick={() => setSidebarOpen(v => !v)} className="flex items-center justify-center h-8 w-8 rounded-md text-text-secondary hover:text-text-primary hover:bg-bg-hover transition-colors">
-            {sidebarOpen ? <PanelRightClose className="h-4 w-4" /> : <PanelRightOpen className="h-4 w-4" />}
+          <button
+            onClick={() => setSidebarOpen(v => !v)}
+            className="flex items-center justify-center h-8 w-8 rounded-md text-text-secondary hover:text-text-primary hover:bg-bg-hover transition-colors"
+            aria-label={tr('Comments', 'Комментарии')}
+          >
+            <MessageSquare className="h-4 w-4 md:hidden" />
+            {sidebarOpen ? <PanelRightClose className="hidden h-4 w-4 md:block" /> : <PanelRightOpen className="hidden h-4 w-4 md:block" />}
           </button>
         </div>
       </div>
@@ -941,7 +946,15 @@ function ShareReviewInner({
 
         {/* Right sidebar — reuses project comment panel */}
         {sidebarOpen && (
-          <div className="absolute inset-y-0 right-0 z-30 flex w-full max-w-[360px] flex-col border-l border-border bg-bg-secondary shadow-2xl md:static md:z-auto md:shrink-0 md:shadow-none">
+          <>
+            <button
+              type="button"
+              onClick={() => setSidebarOpen(false)}
+              aria-label={tr('Close comments', 'Закрыть комментарии')}
+              className="absolute inset-0 z-30 bg-black/50 md:hidden"
+            />
+            <div className="absolute inset-x-0 bottom-0 z-40 flex h-[min(72dvh,620px)] w-full flex-col rounded-t-2xl border-t border-border bg-bg-secondary shadow-2xl md:inset-y-0 md:right-0 md:h-auto md:max-w-[360px] md:rounded-none md:border-l md:border-t-0 md:shadow-none">
+              <div className="mx-auto mt-2 h-1 w-10 rounded-full bg-text-tertiary/40 md:hidden" />
             <div className="px-4 pt-3 pb-2 shrink-0">
               <div className="flex items-center bg-bg-tertiary rounded-lg p-0.5">
                 <button onClick={() => setActiveTab('comments')} className={`flex-1 py-1.5 text-[13px] font-medium rounded-md transition-all ${activeTab === 'comments' ? 'bg-bg-hover text-text-primary shadow-sm' : 'text-text-tertiary'}`}>
@@ -1014,6 +1027,7 @@ function ShareReviewInner({
               </>
             )}
           </div>
+          </>
         )}
       </div>
 
