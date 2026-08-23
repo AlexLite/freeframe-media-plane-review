@@ -307,8 +307,8 @@ export function ProgressBar({
     [duration],
   )
 
-  const handleMouseMove = useCallback(
-    (e: React.MouseEvent<HTMLDivElement>) => {
+  const handlePointerMove = useCallback(
+    (e: React.PointerEvent<HTMLDivElement>) => {
       const time = getTimeFromEvent(e.clientX)
       setHoverTime(time)
       const track = trackRef.current
@@ -324,42 +324,43 @@ export function ProgressBar({
     [isDragging, getTimeFromEvent, onSeek, seekPreview],
   )
 
-  const handleMouseLeave = useCallback(() => {
+  const handlePointerLeave = useCallback(() => {
     if (!isDragging) {
       setHoverTime(null)
       clearPreview()
     }
   }, [isDragging, clearPreview])
 
-  const handleMouseDown = useCallback(
-    (e: React.MouseEvent<HTMLDivElement>) => {
+  const handlePointerDown = useCallback(
+    (e: React.PointerEvent<HTMLDivElement>) => {
       e.preventDefault()
+      e.currentTarget.setPointerCapture?.(e.pointerId)
       setIsDragging(true)
       onSeek(getTimeFromEvent(e.clientX))
     },
     [getTimeFromEvent, onSeek],
   )
 
-  // Global mouse up / move to handle drag outside track
+  // Global pointer up / move to handle touch and mouse drag outside track.
   useEffect(() => {
     if (!isDragging) return
 
-    const handleGlobalMouseMove = (e: MouseEvent) => {
+    const handleGlobalPointerMove = (e: PointerEvent) => {
       onSeek(getTimeFromEvent(e.clientX))
     }
 
-    const handleGlobalMouseUp = (e: MouseEvent) => {
+    const handleGlobalPointerUp = (e: PointerEvent) => {
       setIsDragging(false)
       setHoverTime(null)
       clearPreview()
       onSeek(getTimeFromEvent(e.clientX))
     }
 
-    window.addEventListener('mousemove', handleGlobalMouseMove)
-    window.addEventListener('mouseup', handleGlobalMouseUp)
+    window.addEventListener('pointermove', handleGlobalPointerMove)
+    window.addEventListener('pointerup', handleGlobalPointerUp)
     return () => {
-      window.removeEventListener('mousemove', handleGlobalMouseMove)
-      window.removeEventListener('mouseup', handleGlobalMouseUp)
+      window.removeEventListener('pointermove', handleGlobalPointerMove)
+      window.removeEventListener('pointerup', handleGlobalPointerUp)
     }
   }, [isDragging, getTimeFromEvent, onSeek, clearPreview])
 
@@ -379,10 +380,10 @@ export function ProgressBar({
       {/* Track area */}
       <div
         ref={trackRef}
-        className="relative w-full h-1 group-hover/progress:h-1.5 transition-all duration-150 cursor-pointer bg-border rounded-full"
-        onMouseMove={handleMouseMove}
-        onMouseLeave={handleMouseLeave}
-        onMouseDown={handleMouseDown}
+        className="relative w-full h-2 sm:h-1 sm:group-hover/progress:h-1.5 touch-none transition-all duration-150 cursor-pointer bg-border rounded-full"
+        onPointerMove={handlePointerMove}
+        onPointerLeave={handlePointerLeave}
+        onPointerDown={handlePointerDown}
       >
         {/* Buffered range */}
         <div
@@ -418,7 +419,7 @@ export function ProgressBar({
 
         {/* Playhead thumb */}
         <div
-          className="absolute top-1/2 -translate-y-1/2 w-3 h-3 rounded-full bg-accent shadow-lg opacity-0 group-hover/progress:opacity-100 transition-opacity pointer-events-none z-10"
+          className="absolute top-1/2 -translate-y-1/2 w-3 h-3 rounded-full bg-accent shadow-lg opacity-100 sm:opacity-0 sm:group-hover/progress:opacity-100 transition-opacity pointer-events-none z-10"
           style={{ left: `${playPercent}%`, transform: 'translateX(-50%) translateY(-50%)' }}
         />
       </div>
