@@ -807,9 +807,32 @@ function ShareReviewInner({
   const [activeTab, setActiveTab] = React.useState<'comments' | 'fields'>('comments')
   const [AnnotationOverlay, setAnnotationOverlay] = React.useState<any>(null)
   const [AnnotationCanvas, setAnnotationCanvas] = React.useState<any>(null)
+  const [visibleViewportHeight, setVisibleViewportHeight] = React.useState<number | null>(null)
 
   React.useEffect(() => {
     setSidebarOpen(window.matchMedia('(min-width: 768px)').matches)
+  }, [])
+
+  // Some in-app iOS WebViews report a layout viewport behind their own bottom
+  // navigation bar. visualViewport is the actual visible area, so keep mobile
+  // review controls above that bar rather than trusting 100vh/100dvh alone.
+  React.useEffect(() => {
+    const viewport = window.visualViewport
+    if (!viewport) return
+    const update = () => {
+      setVisibleViewportHeight(
+        window.matchMedia('(max-width: 767px)').matches
+          ? Math.round(viewport.height)
+          : null,
+      )
+    }
+    update()
+    viewport.addEventListener('resize', update)
+    window.addEventListener('orientationchange', update)
+    return () => {
+      viewport.removeEventListener('resize', update)
+      window.removeEventListener('orientationchange', update)
+    }
   }, [])
 
   React.useEffect(() => {
@@ -873,7 +896,10 @@ function ShareReviewInner({
   }
 
   return (
-    <div className="flex flex-col h-screen h-[100dvh] bg-bg-primary text-text-primary md:h-screen">
+    <div
+      className="flex flex-col h-screen h-[100dvh] bg-bg-primary text-text-primary md:h-screen"
+      style={visibleViewportHeight ? { height: `${visibleViewportHeight}px` } : undefined}
+    >
       {/* Top bar — same style as project review */}
       <div className="flex items-center justify-between border-b border-border px-3 h-12 bg-bg-secondary shrink-0">
         <div className="flex items-center gap-1 min-w-0 flex-1">
