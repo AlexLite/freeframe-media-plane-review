@@ -133,12 +133,23 @@ export function VideoPlayer({
   const containerRef = useRef<HTMLDivElement>(null);
   const [streamUrl, setStreamUrl] = useState<string | null>(null);
   const [loop, setLoop] = useState(false);
+  const [isMobile, setIsMobile] = useState(false);
 
   const { isDrawingMode, timeFormat, setTimeFormat, setPlayheadTime, currentVersion } =
     useReviewStore();
   const { registerPauseHandler } = useReview();
   const [timeFormatOpen, setTimeFormatOpen] = useState(false);
   const timeFormatRef = useRef<HTMLDivElement>(null);
+
+  // iOS browsers share WebKit and provide the most reliable seek/fullscreen
+  // experience through the native video controls on narrow screens.
+  useEffect(() => {
+    const media = window.matchMedia("(max-width: 767px)");
+    const update = () => setIsMobile(media.matches);
+    update();
+    media.addEventListener("change", update);
+    return () => media.removeEventListener("change", update);
+  }, []);
 
   // Close time format dropdown on outside click
   useEffect(() => {
@@ -320,7 +331,7 @@ export function VideoPlayer({
       {/* Video area — fills available space, object-contain preserves aspect ratio with letterbox */}
       <div
         className="flex-1 relative min-h-0 bg-black overflow-hidden cursor-pointer"
-        onClick={handleContainerClick}
+        onClick={isMobile ? undefined : handleContainerClick}
       >
         <video
           ref={videoRef}
@@ -329,6 +340,7 @@ export function VideoPlayer({
             isDrawingMode ? "pointer-events-none" : "",
           )}
           playsInline
+          controls={isMobile}
           preload="metadata"
         />
 
@@ -355,7 +367,7 @@ export function VideoPlayer({
       </div>
 
       {/* Progress bar */}
-      <div className="shrink-0 bg-bg-primary">
+      <div className="hidden sm:block shrink-0 bg-bg-primary">
         <ProgressBar
           currentTime={currentTime}
           duration={duration}
@@ -367,7 +379,7 @@ export function VideoPlayer({
       </div>
 
       {/* Bottom transport bar (matches audio player style) */}
-      <div className="flex items-center justify-between h-12 px-4 bg-bg-secondary/80 border-t border-border shrink-0">
+      <div className="hidden sm:flex items-center justify-between h-12 px-4 bg-bg-secondary/80 border-t border-border shrink-0">
         {/* Left: Play, Loop, Speed, Volume */}
         <div className="flex items-center gap-2">
           <button
