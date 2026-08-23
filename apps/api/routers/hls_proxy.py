@@ -1,8 +1,7 @@
 """HLS proxy for secure video streaming.
 
-Rewrites m3u8 manifests so that:
-- Variant playlist URLs go through this proxy (with token auth)
-- Segment (.ts) URLs become presigned S3 URLs (direct to S3)
+Rewrites m3u8 manifests so that both variant playlists and media segments go
+through this proxy (with token auth).
 
 This eliminates the need for a public bucket policy on processed/*.
 """
@@ -12,11 +11,11 @@ import posixpath
 from datetime import datetime, timedelta, timezone
 
 from jose import jwt, JWTError
-from fastapi import APIRouter, HTTPException, Query
-from fastapi.responses import Response
+from fastapi import APIRouter, HTTPException, Query, Request
+from fastapi.responses import Response, StreamingResponse
 
 from ..config import settings
-from ..services.s3_service import generate_presigned_get_url, get_s3_client
+from ..services.s3_service import get_s3_client
 
 logger = logging.getLogger(__name__)
 
@@ -48,7 +47,7 @@ def _rewrite_manifest(content: str, s3_prefix: str, manifest_path: str, token: s
     """Rewrite URLs in an m3u8 manifest.
 
     - .m3u8 references -> proxy URLs with token (appended as query param)
-    - .ts references -> presigned S3 URLs
+    - .ts references -> same-origin proxy URLs with token auth
     """
     manifest_dir = posixpath.dirname(manifest_path)
     lines = content.split("\n")
@@ -72,10 +71,10 @@ def _rewrite_manifest(content: str, s3_prefix: str, manifest_path: str, token: s
             # Variant playlist -> proxy URL with token
             result.append(f"{relative_key}?token={token}")
         elif stripped.endswith(".ts"):
-            # Segment -> presigned S3 URL (direct to S3, 24-hour expiry to
-            # match the outer token lifetime so pause-and-resume works)
-            s3_key = f"{s3_prefix}/{relative_key}"
-            result.append(generate_presigned_get_url(s3_key, expires_in=86400))
+            # Keep segment downloads on the same origin as the player.  Safari
+            # is stricter than desktop browsers about a playlist that switches
+            # to a separate object-storage origin, especially on cellular.
+            result.append(f"{relative_key}?token={token}")
         else:
             result.append(line)
 
@@ -83,13 +82,12 @@ def _rewrite_manifest(content: str, s3_prefix: str, manifest_path: str, token: s
 
 
 @router.get("/hls/{path:path}")
-def hls_proxy(path: str, token: str = Query(...)):
-    """Proxy HLS manifests with URL rewriting for secure streaming."""
+def hls_proxy(path: str, request: Request, token: str = Query(...)):
+    """Serve a token-scoped HLS manifest or MPEG-TS segment from private S3."""
     s3_prefix = _verify_hls_token(token)
 
-    # Only proxy m3u8 manifests
-    if not path.endswith(".m3u8"):
-        raise HTTPException(status_code=400, detail="Only .m3u8 files are proxied")
+    if not (path.endswith(".m3u8") or path.endswith(".ts")):
+        raise HTTPException(status_code=400, detail="Only HLS manifests and segments are proxied")
 
     # Prevent directory traversal
     normalised = posixpath.normpath(path)
@@ -101,17 +99,35 @@ def hls_proxy(path: str, token: str = Query(...)):
     if not s3_key.startswith(s3_prefix + "/"):
         raise HTTPException(status_code=400, detail="Invalid path")
 
-    # Fetch manifest from S3
     s3 = get_s3_client()
     try:
-        obj = s3.get_object(Bucket=settings.s3_bucket, Key=s3_key)
-        content = obj["Body"].read().decode("utf-8")
+        get_args = {"Bucket": settings.s3_bucket, "Key": s3_key}
+        requested_range = request.headers.get("range")
+        if path.endswith(".ts") and requested_range:
+            get_args["Range"] = requested_range
+        obj = s3.get_object(**get_args)
     except s3.exceptions.NoSuchKey:
-        raise HTTPException(status_code=404, detail="Manifest not found")
+        raise HTTPException(status_code=404, detail="HLS media not found")
     except Exception as e:
-        logger.error("Failed to fetch HLS manifest %s: %s", s3_key, e)
-        raise HTTPException(status_code=404, detail="Manifest not found")
+        logger.error("Failed to fetch HLS media %s: %s", s3_key, e)
+        raise HTTPException(status_code=404, detail="HLS media not found")
 
+    if path.endswith(".ts"):
+        headers = {
+            "Accept-Ranges": "bytes",
+            "Content-Length": str(obj["ContentLength"]),
+            "Cache-Control": "private, max-age=3600",
+        }
+        if "ContentRange" in obj:
+            headers["Content-Range"] = obj["ContentRange"]
+        return StreamingResponse(
+            obj["Body"].iter_chunks(chunk_size=64 * 1024),
+            status_code=206 if "ContentRange" in obj else 200,
+            media_type=obj.get("ContentType") or "video/mp2t",
+            headers=headers,
+        )
+
+    content = obj["Body"].read().decode("utf-8")
     rewritten = _rewrite_manifest(content, s3_prefix, normalised, token)
 
     return Response(

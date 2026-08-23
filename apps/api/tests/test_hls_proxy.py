@@ -1,6 +1,6 @@
 """Tests for HLS streaming proxy."""
 import pytest
-from unittest.mock import MagicMock, patch
+from unittest.mock import MagicMock
 from jose import jwt
 
 
@@ -53,30 +53,24 @@ class TestVerifyHlsToken:
 class TestRewriteManifest:
     """Tests for m3u8 manifest URL rewriting."""
 
-    @patch("apps.api.routers.hls_proxy.generate_presigned_get_url")
-    def test_rewrites_ts_to_presigned(self, mock_presign):
-        mock_presign.return_value = "https://s3.example.com/presigned-segment.ts"
-
+    def test_rewrites_ts_to_same_origin_proxy_url(self):
         from apps.api.routers.hls_proxy import _rewrite_manifest
 
         content = "#EXTM3U\n#EXT-X-VERSION:3\n#EXTINF:2.000,\nsegment0.ts\n#EXT-X-ENDLIST"
         result = _rewrite_manifest(content, "hls/proj/ver", "720p/index.m3u8", "tok123")
 
-        assert "https://s3.example.com/presigned-segment.ts" in result
-        mock_presign.assert_called_once_with("hls/proj/ver/720p/segment0.ts", expires_in=86400)
+        assert "720p/segment0.ts?token=tok123" in result
+        assert "s3.example.com" not in result
 
-    @patch("apps.api.routers.hls_proxy.generate_presigned_get_url")
-    def test_rewrites_m3u8_to_proxy_url(self, mock_presign):
+    def test_rewrites_m3u8_to_proxy_url(self):
         from apps.api.routers.hls_proxy import _rewrite_manifest
 
         content = "#EXTM3U\n#EXT-X-STREAM-INF:BANDWIDTH=800000\n720p/index.m3u8"
         result = _rewrite_manifest(content, "hls/proj/ver", "master.m3u8", "tok123")
 
         assert "720p/index.m3u8?token=tok123" in result
-        mock_presign.assert_not_called()
 
-    @patch("apps.api.routers.hls_proxy.generate_presigned_get_url")
-    def test_preserves_comments_and_tags(self, mock_presign):
+    def test_preserves_comments_and_tags(self):
         from apps.api.routers.hls_proxy import _rewrite_manifest
 
         content = "#EXTM3U\n#EXT-X-VERSION:3\n#EXT-X-ENDLIST"
@@ -88,12 +82,12 @@ class TestRewriteManifest:
 class TestHlsProxyEndpoint:
     """Tests for directory traversal prevention."""
 
-    def test_rejects_non_m3u8(self):
+    def test_rejects_non_hls_media(self):
         from apps.api.routers.hls_proxy import hls_proxy, create_hls_token
 
         token = create_hls_token("hls/proj/ver")
         with pytest.raises(Exception) as exc_info:
-            hls_proxy("segment0.ts", token=token)
+            hls_proxy("segment0.mp4", MagicMock(), token=token)
         assert exc_info.value.status_code == 400
 
     def test_rejects_directory_traversal(self):
@@ -101,7 +95,7 @@ class TestHlsProxyEndpoint:
 
         token = create_hls_token("hls/proj/ver")
         with pytest.raises(Exception) as exc_info:
-            hls_proxy("../../etc/passwd.m3u8", token=token)
+            hls_proxy("../../etc/passwd.m3u8", MagicMock(), token=token)
         assert exc_info.value.status_code == 400
 
     def test_rejects_absolute_path(self):
@@ -109,5 +103,5 @@ class TestHlsProxyEndpoint:
 
         token = create_hls_token("hls/proj/ver")
         with pytest.raises(Exception) as exc_info:
-            hls_proxy("/etc/passwd.m3u8", token=token)
+            hls_proxy("/etc/passwd.m3u8", MagicMock(), token=token)
         assert exc_info.value.status_code == 400
