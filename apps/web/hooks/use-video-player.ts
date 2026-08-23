@@ -180,7 +180,14 @@ export function useVideoPlayer(src: string | null): UseVideoPlayerReturn {
 
     const isHlsSource = src.includes('.m3u8')
 
-    if (isHlsSource && Hls.isSupported()) {
+    // WebKit's native HLS path is more reliable than MSE/hls.js in embedded
+    // iOS browsers (VK, Telegram, etc.).  Some of them report MSE support but
+    // fail after the first interaction.  Prefer native HLS whenever available;
+    // hls.js remains the fallback for Chromium and other non-native clients.
+    if (isHlsSource && video.canPlayType('application/vnd.apple.mpegurl')) {
+      video.src = src
+      video.load()
+    } else if (isHlsSource && Hls.isSupported()) {
       const hls = new Hls({
         enableWorker: true,
         lowLatencyMode: false,
@@ -211,9 +218,6 @@ export function useVideoPlayer(src: string | null): UseVideoPlayerReturn {
       hls.on(Hls.Events.LEVEL_SWITCHED, (_event, data) => {
         setCurrentQuality(data.level)
       })
-    } else if (video.canPlayType('application/vnd.apple.mpegurl')) {
-      // Safari native HLS
-      video.src = src
     } else {
       // Direct URL (mp4, mp3, etc.)
       video.src = src
