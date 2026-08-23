@@ -371,8 +371,8 @@ export function VideoPlayer({
         )}
       </div>
 
-      {/* Progress bar */}
-      <div className="block shrink-0 bg-bg-primary">
+      {/* Desktop timeline — retain the existing comment-marker timeline. */}
+      <div className="hidden sm:block shrink-0 bg-bg-primary">
         <ProgressBar
           currentTime={currentTime}
           duration={duration}
@@ -381,6 +381,26 @@ export function VideoPlayer({
           streamUrl={streamUrl}
           onSeek={seek}
         />
+      </div>
+
+      {/* Touch timeline: a native range input is deliberately used here. It is
+          always visible and reliably draggable in Safari and in-app browsers. */}
+      <div className="sm:hidden shrink-0 border-t border-border bg-bg-primary px-3 pt-2 pb-1.5">
+        <input
+          type="range"
+          min={0}
+          max={Math.max(duration, 0)}
+          step={0.01}
+          value={Math.min(currentTime, Math.max(duration, 0))}
+          onChange={(event) => seek(Number(event.target.value))}
+          disabled={!duration}
+          aria-label="Video timeline"
+          className="block h-5 w-full cursor-pointer accent-accent disabled:cursor-default disabled:opacity-40"
+        />
+        <div className="mt-0.5 flex justify-between font-mono text-[11px] tabular-nums text-text-secondary">
+          <span>{displayTime(currentTime)}</span>
+          <span>{displayTime(duration)}</span>
+        </div>
       </div>
 
       {/* Bottom transport bar (matches audio player style) */}
